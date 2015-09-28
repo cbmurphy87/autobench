@@ -40,7 +40,7 @@ def load_user(id):
 
 
 def unauthorized():
-    return redirect(url_for('login_route'))
+    return redirect('/login')
 
 
 @app.before_request
@@ -52,9 +52,9 @@ def before_request():
 
 
 @app.route('/login', methods=['GET', 'POST'])
-def login_route():
+def login():
     if g.user is not None and g.user.is_authenticated:
-        return redirect(url_for('index_route'))
+        return redirect(url_for('index'))
 
     form = LoginForm()
     # validate login credentials
@@ -74,7 +74,7 @@ def login_route():
                 db.session.commit()
                 login_user(user, remember=True)
                 flash('Logged in successfully.')
-                return redirect(url_for('index_route'))
+                return redirect(url_for('index'))
             else:
                 flash('Wrong password. Try again.')
     return render_template('login.html',
@@ -84,24 +84,30 @@ def login_route():
 
 
 @app.route('/logout')
-def logout_route():
+def logout():
     logout_user()
     flash('You have been logged out.')
-    return redirect(url_for('login_route'))
+    return redirect('/login')
 
 
 # ============================= REGULAR VIEWS ===============================
 
 
 @app.route('/')
-def root_route():
-    return redirect(url_for('login_route'))
+@login_required
+def root():
+    user = g.user
+    session.permanent = True
+    return render_template('index.html',
+                           title='Home',
+                           date=get_date_last_modified(),
+                           user=user)
 
 
 # _______________________ INDEX ________________________
 @app.route('/index')
 @login_required
-def index_route():
+def index():
     user = g.user
     session.permanent = True
     return render_template('index.html',
