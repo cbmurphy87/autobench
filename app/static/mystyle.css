@@ -1,0 +1,294 @@
+body {
+    padding-left: 0;
+    font-family: "Arial", "Webdings", "Times New Roman", "Comic Sans", "Open Sans", sans-serif;
+    color: #00447c;
+    background-color: white;
+}
+
+.top_header {
+    height: 60px;
+    width: 100%;
+    padding-bottom: 20px;
+}
+
+.top_image {
+    position: relative;
+    height: 100%;
+}
+
+.base_footer {
+    position: fixed;
+    bottom: 18px;
+    background: white;
+}
+
+ul.li {
+    list-style-type: none;
+}
+
+h1 {
+    width:100%;
+    background: #00447c;
+    font-size: 25pt;
+    color: white;
+    text-align: center;
+    border-radius: 100px 20px 100px 20px;
+    margin: 0 auto;
+}
+
+h2 {
+    border-bottom: 1px solid #00447c;
+    color: #00447c;
+}
+
+.totheleft {
+    float: left;
+}
+
+ul.navbar li {
+    margin: 0.5em 0;
+    padding: 0.3em;
+    font-weight: bold;
+}
+
+ul.navbar a {
+    text-decoration: none;
+}
+
+ul.navbar a:link {
+    color: white;
+    font: "Times New Roman";
+}
+
+ul.navbar a:visited {
+    color: white;
+}
+
+address {
+    position: fixed;
+    left: 0em;
+    width: 100%;
+    bottom: 0em;
+    padding: 0em;
+    text-align: center;
+    margin-top: 0.5em;
+    background-color: #00447c;
+    color: white;
+}
+
+dt {
+    color: red;
+}
+
+/* ========================= sortable table ========================= */
+table.sortable a.sortheader {
+    text-decoration: none;
+    color: black;
+    display: block;
+}
+
+table.sortable span.sortarrow {
+    color: black;
+    text-decoration: none;
+}
+
+/* ========================= project status table ==================== */
+#projectstatus .header {
+    border-bottom: 1px solid #ddd;
+}
+
+#projectstatus th {
+    text-align: left;
+    padding: 7px 0px;
+}
+
+#projectstatus tbody tr:first-child th:first-child {
+    border-top-left-radius: 4px;
+}
+
+#projectstatus tbody tr:first-child th:last-child {
+    border-top-right-radius: 4px;
+}
+
+#projectstatus tbody tr:last-child td:first-child {
+    border-bottom-left-radius: 4px;
+}
+
+#projectstatus tr:last-child td:last-child {
+    border-bottom-right-radius: 4px;
+}
+
+/* ========================= project info table ==================== */
+#projectinfo .header {
+    border-bottom: 1px solid #ddd;
+}
+
+#projectinfo th {
+    text-align: left;
+    padding: 7px 0px;
+}
+
+#projectinfo tbody tr td:first-child {
+    border-right: 1px solid gray;
+}
+
+#projectinfo tbody tr:first-child td:first-child {
+    border-top-left-radius: 4px;
+}
+
+#projectinfo tbody tr:first-child td:last-child {
+    border-top-right-radius: 4px;
+}
+
+#projectinfo tbody tr:last-child td:first-child {
+    border-bottom-left-radius: 4px;
+}
+
+#projectinfo tr:last-child td:last-child {
+    border-bottom-right-radius: 4px;
+}
+
+/* ======================= pane ================================ */
+.pane.build-name a,
+.pane.build-name a:visited {
+    color: black;
+    text-decoration: underline;
+}
+
+.pane.build-details a,
+.pane.build-details a:visited {
+    color: black;
+    opacity: 0.6;
+    text-decoration: none;
+}
+
+.pane.build-details a:hover {
+    opacity: 1.0;
+    text-decoration: underline;
+}
+
+/* pane */
+
+.pane-frame {
+    border: solid 1px #f0f0f0;
+    border-radius: 4px;
+}
+
+#side-panel .pane-frame:hover, #side-panel .pane-frame.mouseover {
+    border: solid 1px #cecece;
+}
+
+.pane-header, .pane-footer {
+    padding: 8px 0px;
+    background-color: #eee;
+    border: solid 1px #f3f3f3;
+    border-left: none;
+    border-right: none;
+    color: #3b3b3b;
+}
+
+.pane-header {
+    border-top: none;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+}
+
+.pane-footer {
+    border-bottom: none;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+}
+
+.pane td {
+    padding: 4px 4px 3px 4px;
+    vertical-align: middle;
+}
+
+table.pane {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px #bbb solid;
+}
+
+td.pane {
+    padding: 3px 4px 3px 4px;
+    vertical-align: middle;
+}
+
+table.stripped tr:nth-child(even) {
+    background: #fbfbfb;
+}
+
+table.stripped-even tr:nth-child(even) {
+    background: #fbfbfb;
+}
+
+table.stripped-odd tr:nth-child(odd) {
+    background: #fbfbfb;
+}
+
+div.pane-header {
+    font-weight: bold;
+    padding-right: 24px;
+}
+
+div.pane-header .collapse {
+    float: right;
+    margin-left: 3px;
+}
+
+th.pane {
+    font-weight: bold;
+}
+
+/* bigtable */
+
+.bigtable tr {
+    border: 1px solid #bbb;
+    padding: 3px 4px 3px 4px;
+}
+
+table.bigtable.pane > tbody > tr > td:last-child {
+    border-right: none;
+}
+
+.pane-frame table, .pane-frame .bigtable tr {
+    border: none; /* Border will be provided by the pane-frame */
+}
+
+.bigtable th {
+    font-weight: bold;
+    border: none;
+    background-color: #f0f0f0;
+    padding: 6px 4px;
+    white-space: nowrap;
+}
+
+.bigtable td {
+    vertical-align: middle;
+    padding: 3px 4px 3px 4px;
+}
+
+table.stripped-odd tr:nth-child(odd) {
+    background: #fbfbfb;
+}
+
+.build_step p {
+    margin: 0 0 5px 0;
+}
+.build_step > br {
+    padding: 20px;
+    margin: 20px;
+}
+
+.build_step > p:nth-child(2) {
+    margin-top: 10px;
+}
+
+.add_inventory p {
+    margin: 5px;
+}
+
+.add_inventory p:last-child {
+    margin-bottom: 10px;
+}

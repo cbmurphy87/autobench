@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block stylelinks %}
+    <link rel="stylesheet" href={{ url_for('static', filename="login.css") }}
+          xmlns:height="http://www.w3.org/1999/xhtml">
+{% endblock %}
+{% block body %}
+    <body>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <ul>
+                {% for message in messages %}
+                    <li>{{ message }} </li>
+                {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+    <div id="login">
+        <div class="login_header" style="top: 34px;">
+            <img src={{ url_for('static', filename='pictures/micron_logo_black.png') }} style="position: relative; top: 20px; left: 30px; width:180px; height:120px;" alt="Oops!"></img>
+        </div>
+        <div class="login_left">
+            <div class="login_right">
+                <div class="login_content">
+                    <div id="login_info">
+                        <div class="hr"></div>
+                        <div class="login_title">
+                            <div class="login_text">
+                                <span id="login_lbl">Login</span>
+                            </div>
+                            <div class="login_help">
+                                <a href="#" id="get_help_id" title="help">
+                                    <span class="login_help_icon">&nbsp;</span>
+                                </a>
+                            </div>
+                        </div>
+                        <div class="login_server_info" id="server_info" style="font-size: 0.8em; padding: 2em 0;">
+                            Login with your Micron e-mail
+                        </div>
+                        <form action="" method="post" name="login">
+                            {{  form.hidden_tag() }}
+                            <div class="login_userinfo">
+                                <table>
+                                    <tbody>
+                                        <tr>
+                                            <td class="left">
+                                                <span id="username_lbl">
+                                                    E-mail:
+                                                </span>
+                                            </td>
+                                            <td class="right">
+                                                <span id="password_lbl">
+                                                    Password:
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="left_input">
+                                                {{ form.email }}
+                                            </td>
+                                            <td class="right_input">
+                                                {{ form.password }}
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                <div class="hr" style="position: relative; margin: 20px 0;"></div>
+                                <input type="submit" value="Submit">
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="login_footer"></div>
+        </div>
+    </div>
+    </body>
+{% endblock %}

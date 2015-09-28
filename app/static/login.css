@@ -1,0 +1,104 @@
+body {
+    color: black;
+    text-align: left;
+    background: url('pictures/login_background.png') no-repeat fixed center center;
+}
+
+div {
+    display: block;
+}
+
+div#login {
+    position: absolute;
+    width: 631px;
+    height: 500px;
+    top: 8%;
+    left: 50%;
+    margin-left: -316px;
+}
+
+div.login_left {
+    background: url("pictures/login_table_left.png") repeat-y left;
+    clear: both;
+}
+
+div.login_right {
+    background: url("pictures/login_table_right.png") repeat-y right;
+    margin-left: 6px;
+}
+
+div.login_content {
+    padding: 10px 40px 25px 40px;
+    margin-right: 7px;
+    background: #070909 url("pictures/login_table_gradient_blue.png") repeat-x top left;
+    position: relative;
+    height: 230px;
+    text-align: left;
+}
+
+div.login_div {
+    display: none;
+    background: url('pictures/progress.gif') 50% 50% no-repeat;
+}
+
+div.login_header {
+    height: 150px;
+    background: Transparent url('pictures/login_table_header_blue.png') no-repeat 50% 50%;
+    position:relative;
+}
+
+div.login_footer {
+    background: url('pictures/login_table_footer_blue.png') no-repeat top center;
+    height: 11px;
+}
+
+div.hr {
+    width: 100%;
+    clear: both;
+    height: 2px;
+    margin: 0 0 12px 0;
+    background: #7c7d7e url('pictures/hr_blue.png') repeat-x;
+    border: none;
+    font-size: 0;
+}
+
+div.login_title {
+    height: 40px;
+    width: 100%;
+    padding-top: 10px;
+    float: left;
+}
+
+div.login_text {
+    margin-left: 0;
+    padding-bottom: 0;
+    margin-top: 0;
+    font-size: 20px;
+    font-weight: bold;
+}
+
+div.login_help {
+    margin-right: 0;
+    position: absolute;
+    right: 40px;
+    top: 52px;
+}
+
+span.login_help_icon {
+    background: url('pictures/login_help_24.png') no-repeat top right;
+    height: 24px;
+    padding-left: 24px;
+    padding-top: 0;
+    padding-bottom: 0;
+    display: block;
+}
+
+div.login_userinfo {
+    font-size: 0.7em;
+    font-weight: bold;
+    color: white;
+}
+
+.login_userinfo table td {
+    padding-right: 10px;
+}
