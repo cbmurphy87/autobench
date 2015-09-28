@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+    <h2>Create a job</h2>
+    <form action='' method='post' name='create_job'>
+        {{ create_form.hidden_tag() }}
+        <p>
+            Job name:<br>
+            {{ create_form.job_name }}
+            {% for error in create_form.job_name.errors %}
+                <span style="color:red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+
+        <div class="build_step" style="border:1px solid #00447c; padding:10px;">
+            <a style="font-weight:bold;">Build Step 1</a>
+            {% for k, v in (('Target',create_form.target), ('Command', create_form.command),
+                ('Args', create_form.args), ('Kwargs', create_form.kwargs)) %}
+
+                <p>
+                    {{ k }}:<br>{{ v }}
+                    {% for error in v.errors %}
+                        <span style="color:red;">[{{ error }}]</span>
+                    {% endfor %}
+                </p>
+
+            {% endfor %}
+        </div>
+        <p>
+            {{ create_form.build }} Build<br>
+        </p>
+
+        <input type="submit" value="Submit">
+    </form>
+{% endblock %}

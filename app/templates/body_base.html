@@ -1,0 +1,33 @@
+{% extends "header_base.html" %}
+{% block body %}
+    <div class="top_header">
+        <img src={{ url_for('static', filename='pictures/micronlogo.jpg') }} class="top_image">
+        {% include "aae_navbar.html" %}
+    </div>
+    <div>
+        <h1>This is AutoBench</h1>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <ul>
+                    {% for message in messages %}
+                        <li>{{ message }} </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+        <div style="margin: 0 10px;">
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+    <div class='base_footer'>
+        {% if not user is defined %}
+            {% set name = "Noname" %}
+        {% else %}
+            {% set name = user.first_name %}
+        {% endif %}
+        Hello, {{ name }}!
+    </div>
+    <div>
+        <address>Last updated {{ date }} by Collin Murphy.</address>
+    </div>
+{% endblock %}

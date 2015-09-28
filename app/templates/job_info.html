@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="pane-frame" style="margin:1em 1em 1em 1em;">
+  <table id="projectinfo" class="sortable pane bigtable stripped-odd">
+    <tbody>
+    {% for key, value in job_info.items() %}
+      <tr>
+        <td>{{ key }}</td>
+        <td>
+        {% if value is string %}
+          {{ '{}'.format(value) }}
+        {% elif value is sequence %}
+        <ul>
+          {% for item in value %}
+            <li>{{ '{}'.format(item) }}</li>
+          {% endfor %}
+        </ul>
+        {% elif value is mapping %}
+        <div style="background:red;">
+          {% for k, v in value.items() %}
+            <li>{{ '{}: {}'.format(k, v)  }}</li>
+          {% endfor %}
+        </div>
+        {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

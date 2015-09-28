@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+    <h2>Home</h2>
+    This is the home page.
+    <div style="border:1px solid black;margin-top:25px;padding:20px;">
+        <div style="text-align:center;font-size:25px;font-weight:bold;padding-bottom:20px">
+            THIS is Otto AND a Bench
+        </div>
+        <div style="text-align:center;">
+            <span style="display:block;">
+            <img src={{ url_for('static', filename='pictures/otto.png') }} style='position:relative;height:200px;left:0px;top:0px;'>
+            <img src={{ url_for('static', filename='pictures/bench-flipped.jpg') }} style="position:relative;width:350px;height:200px;left:0px;bottom:0px;">
+            </span>
+        </div>
+    </div>
+{% endblock %}

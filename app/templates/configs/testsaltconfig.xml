@@ -1,0 +1,52 @@
+{% macro salt_builder(salt) %}
+    <com.waytta.SaltAPIBuilder plugin="saltstack@1.5.0">
+        <servername>http://salt-gru.aae.lcl:8000</servername>
+        <username>jenkins</username>
+        <userpass>Not24Get</userpass>
+        <authtype>pam</authtype>
+        <target>{{ salt.target.data }}</target>
+        <targettype>list</targettype>
+        <function>{{ salt.command.data }}</function>
+        <arguments>{{ salt.args.data }}</arguments>
+        <kwarguments>{{ salt.kwargs.data }}</kwarguments>
+        <clientInterfaces>
+            <nullObject>false</nullObject>
+            <properties
+                    class="org.apache.commons.collections.map.ListOrderedMap"
+                    serialization="custom">
+                <unserializable-parents/>
+                <org.apache.commons.collections.map.ListOrderedMap>
+                    <default>
+                        <insertOrder>
+                            <string>blockbuild</string>
+                            <string>jobPollTime</string>
+                            <string>clientInterface</string>
+                        </insertOrder>
+                    </default>
+                    <map>
+                        <entry>
+                            <string>blockbuild</string>
+                            <boolean>true</boolean>
+                        </entry>
+                        <entry>
+                            <string>jobPollTime</string>
+                            <string>10</string>
+                        </entry>
+                        <entry>
+                            <string>clientInterface</string>
+                            <string>local</string>
+                        </entry>
+                    </map>
+                </org.apache.commons.collections.map.ListOrderedMap>
+            </properties>
+        </clientInterfaces>
+        <clientInterface>local</clientInterface>
+        <blockbuild>true</blockbuild>
+        <jobPollTime>10</jobPollTime>
+        <batchSize>100%</batchSize>
+        <mods></mods>
+        <usePillar>false</usePillar>
+        <pillarkey></pillarkey>
+        <pillarvalue></pillarvalue>
+    </com.waytta.SaltAPIBuilder>
+{% endmacro %}

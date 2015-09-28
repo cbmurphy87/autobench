@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block scripts %}
+    function python(link) {
+        var form = document.createElement('form');
+        form.setAttribute('method', 'post');
+        form.setAttribute('value', link);
+        form.style.display = 'hidden';
+        document.body.appendChild(form);
+        form.submit();
+    }
+{% endblock %}
+{% block content %}
+    <h2>Jobs</h2>
+    <div class="pane-frame" style="width:50%;">
+        <table id="projectstatus" class="sortable pane bigtable stripped-odd">
+            <tbody>
+            <tr class="header">
+                <th>
+                    <a href="#" class="sortheader">
+                        &nbsp;S
+                        <span class="sortarrow"></span>
+                    </a>
+                </th>
+                <th>
+                    <a href="#" class="sortheader">
+                        &nbsp;Name
+                        <span class="sortarrow">&nbsp;&nbsp;&nbsp;</span>
+                    </a>
+                </th>
+                <th>
+                    <a href="#" class="sortheader">
+                        &nbsp;Last Build
+                        <span class="sortarrow"></span>
+                    </a>
+                </th>
+                <th>
+                    <a href="#" class="sortheader">
+                        &nbsp;
+                        <span class="sortarrow">&nbsp;&nbsp;&nbsp;</span>
+                    </a>
+                </th>
+            </tr>
+            {% for job in jobs %}
+                <tr>
+                    <td>
+                        {% if job['color'].endswith('anime') %}
+                            {% set ext = 'gif' %}
+                        {% else %}
+                            {% set ext = 'png' %}
+                        {% endif %}
+                        <img src={{ url_for('static', filename='pictures/{}.{}'.format(job['color'], ext)) }} style="width:16px;height:16px;">
+                    </td>
+                    <td>
+                        <a href='/jobs/{{ job['displayName'] }}'>
+                            {{ job['displayName'] }}
+                        </a>
+                    </td>
+                    <td>{{ result(job['displayName']) }}</td>
+                    <td>
+                        <a href='/testpost/{{ job['displayName'] }}'>
+                            <img src={{ url_for('static', filename='pictures/clock.png') }}>
+                        </a>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}
