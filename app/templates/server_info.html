@@ -1,0 +1,36 @@
+{% set server_fields = (('ID', 'id'),('Host Name','host_name'),
+('Model','model'),('CPU Count','cpu_count'),('CPU Model','cpu_model'),
+('Memory','memory_capacity')) %}
+
+<div id="moreinfo" class="pane-frame">
+    <div class="pane-frame">
+        <table id="server_info"
+               class="sortable pane bigtable stripped-odd">
+            <tbody>
+            <tr class="header">
+                {# create header for table #}
+                <th colspan="2">
+                    <a class="sortheader">
+                        Server Info
+                    </a>
+                </th>
+            </tr>
+            {# loop over field values for each parame #}
+            {% for k, v in server_fields %}
+                <tr>
+                    <td>
+                        <a>
+                            {{ k }}
+                        </a>
+                    </td>
+                    <td>
+                        <a>
+                            {{ server[v] }}
+                        </a>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>

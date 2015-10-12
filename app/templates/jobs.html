@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 {% block scripts %}
+    <script>
+    {{ super() }}
     function python(link) {
         var form = document.createElement('form');
         form.setAttribute('method', 'post');
@@ -8,6 +10,7 @@
         document.body.appendChild(form);
         form.submit();
     }
+    </script>
 {% endblock %}
 {% block content %}
     <h2>Jobs</h2>
@@ -57,7 +60,7 @@
                     </td>
                     <td>{{ result(job['displayName']) }}</td>
                     <td>
-                        <a href='/testpost/{{ job['displayName'] }}'>
+                        <a href='/build_job/{{ job['displayName'] }}'>
                             <img src={{ url_for('static', filename='pictures/clock.png') }}>
                         </a>
                     </td>

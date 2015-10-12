@@ -61,6 +61,18 @@
                                                 {{ form.password }}
                                             </td>
                                         </tr>
+                                        <tr>
+                                            <td class="left_input">
+                                                {% for error in form.email.errors %}
+                                                    <span style="color:red;">[{{ error }}]</span>
+                                                {% endfor %}
+                                            </td>
+                                            <td class="right_input">
+                                                {% for error in form.password.errors %}
+                                                    <span style="color:red;">[{{ error }}]</span>
+                                                {% endfor %}
+                                            </td>
+                                        </tr>
                                     </tbody>
                                 </table>
                                 <div class="hr" style="position: relative; margin: 20px 0;"></div>

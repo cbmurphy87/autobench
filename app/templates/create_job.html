@@ -1,4 +1,24 @@
 {% extends "base.html" %}
+
+{% block scripts %}
+    {{ super() }}
+    $(document).ready(function () {
+        $("#target").change(function() {
+            var e = document.getElementById("target");
+            var server_id = e.value;
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function() {
+                if (xhttp.readyState == 4 && xhttp.status == 200) {
+                    document.getElementById("server_info").innerHTML = xhttp.responseText;
+                }
+            }
+            xhttp.open("POST", "server_info", true);
+            xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+            xhttp.send(JSON.stringify({id: server_id}));
+        });
+    });
+{% endblock %}
+
 {% block content %}
     <h2>Create a job</h2>
     <form action='' method='post' name='create_job'>
@@ -11,23 +31,34 @@
             {% endfor %}
         </p>
 
-        <div class="build_step" style="border:1px solid #00447c; padding:10px;">
-            <a style="font-weight:bold;">Build Step 1</a>
-            {% for k, v in (('Target',create_form.target), ('Command', create_form.command),
-                ('Args', create_form.args), ('Kwargs', create_form.kwargs)) %}
-
-                <p>
-                    {{ k }}:<br>{{ v }}
-                    {% for error in v.errors %}
-                        <span style="color:red;">[{{ error }}]</span>
+        <div class="build_step" style="border:1px solid #00447c; padding:10px;
+        height:200px;">
+            <span>
+                <div style="height:150px;margin:auto;float:left">
+                    <a style="font-weight:bold;">Build Step 1</a>
+                    {% for k, v in (('Target',create_form.target),
+                    ('Command', create_form.command), ('Args', create_form.args),
+                    ('Kwargs', create_form.kwargs)) %}
+                        <p>
+                            {{ k }}:<br>{{ v }}
+                            {% for error in v.errors %}
+                                <span style="color:red;">[{{ error }}]</span>
+                            {% endfor %}
+                        </p>
                     {% endfor %}
-                </p>
-
-            {% endfor %}
+                </div>
+                {% set server = servers.order_by('id').first() %}
+                <div style="float:right">
+                    <span id="server_info">
+                        {% include "server_info.html" %}
+                    </span>
+                </div>
+            </span>
         </div>
         <p>
             {{ create_form.build }} Build<br>
         </p>
+        <span id="test_string"></span><br>
 
         <input type="submit" value="Submit">
     </form>

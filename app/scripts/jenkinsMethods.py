@@ -123,8 +123,17 @@ def build_job(job_name):
         return "No job by the name {}".format(job_name)
 
 
+def delete_job(job_name):
+
+    butler = make_butler()
+    try:
+        butler.delete_job(job_name)
+    except Exception as e:
+        print 'Failed to delete job {}: {}'.format(job_name, e)
+
+
 def main():
-    make_job(sys.argv[1])
+    delete_job("I'm Hungry.")
 
 
 if __name__ == '__main__':

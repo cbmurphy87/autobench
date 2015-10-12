@@ -2,8 +2,10 @@ import re
 from flask.ext.wtf import Form
 from wtforms import StringField, BooleanField, TextAreaField, PasswordField, \
     SelectField, IntegerField
+from wtforms.ext.sqlalchemy.fields import QuerySelectField
 from wtforms.validators import DataRequired, Length, Optional, NumberRange
 from wtforms.validators import ValidationError
+from app import models
 
 
 def dynamic_job_form(build_steps):
@@ -33,11 +35,25 @@ def MacAddress(separator=':'):
     return _mac
 
 
+def IPAddress(separator='.'):
+    message = 'Must be in the format "xxx{0}xxx{0}xxx{0}xxx"'\
+        .format(separator)
+
+    def _ip(form, field):
+        pattern = re.compile('^(?:\d{1,3}\.?){3}(?:\d{1,3})$')
+        if not pattern.match(field.data):
+            raise ValidationError(message)
+
+    return _ip
+
+
 class CreateForm(Form):
 
     job_name = StringField('job_name', validators=[DataRequired()])
     build = BooleanField('build', default=True)
-    target = SelectField('target', choices=[('mysql', 'MySQL')])
+    target = QuerySelectField('target', query_factory=models.Servers.query
+                              .order_by('id').all,
+                              get_label='id')
     command = StringField('command', validators=[DataRequired()])
     args = StringField('args')
     kwargs = StringField('kwargs')
@@ -45,7 +61,12 @@ class CreateForm(Form):
 
 class BuildStepForm(Form):
 
-    target = SelectField('target', choices=[('mysql', 'MySQL')])
+    target = QuerySelectField(query_factory=models.Servers.query
+                              .filter_by(available=True)
+                              .order_by('id'))
+    target2 = QuerySelectField(query_factory=models.Servers.query
+                               .filter_by(available=True)
+                               .order_by('id'))
     command = StringField('command', validators=[DataRequired()])
     args = StringField('args', validators=[Optional()])
     kwargs = StringField('kwargs', validators=[Optional()])
@@ -60,15 +81,7 @@ class LoginForm(Form):
 
 class AddInventoryForm(Form):
 
-    id = StringField('id', validators=(DataRequired(),))
-    oob_mac = StringField('oob_mac', validators=(MacAddress(),))
-    ib_mac = StringField('ib_mac', validators=(MacAddress(),))
-    model = StringField('model')
-    cpu_count = IntegerField('cpu_count',
-                             validators=(Optional(),
-                                         NumberRange(min=0, max=10)))
-    cpu_model = StringField('oob_mac')
-    memory_capacity = StringField('memory_capacity')
+    drac_ip = StringField('drac_ip', validators=(DataRequired(), IPAddress()))
     rack = IntegerField('rack', validators=(DataRequired(),
                                             NumberRange(min=1, max=15)))
     u = IntegerField('u', validators=(DataRequired(),

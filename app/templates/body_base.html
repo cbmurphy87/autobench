@@ -1,33 +1,38 @@
 {% extends "header_base.html" %}
+{% block scripts %}
+    {% include 'javascript/functions.js' %}
+{% endblock %}
+{% block scriptlinks %}
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+{% endblock %}
 {% block body %}
     <div class="top_header">
         <img src={{ url_for('static', filename='pictures/micronlogo.jpg') }} class="top_image">
         {% include "aae_navbar.html" %}
     </div>
     <div>
-        <h1>This is AutoBench</h1>
+        <h1>AutoBench</h1>
         {% with messages = get_flashed_messages() %}
             {% if messages %}
+                <div id="flashedmessages">
                 <ul>
                     {% for message in messages %}
-                        <li>{{ message }} </li>
+                        <li class="message">{{ message }} </li>
                     {% endfor %}
                 </ul>
+                </div>
+                <!--
+                <div style="margin:20px 0;">
+                    <button type='button' id="flash" style="margin:0 20px;">Toggle messages</button>
+                </div>
+                -->
             {% endif %}
         {% endwith %}
-        <div style="margin: 0 10px;">
+        <div style="margin: 0 20px;">
             {% block content %}{% endblock %}
         </div>
     </div>
-    <div class='base_footer'>
-        {% if not user is defined %}
-            {% set name = "Noname" %}
-        {% else %}
-            {% set name = user.first_name %}
-        {% endif %}
-        Hello, {{ name }}!
-    </div>
-    <div>
+    <div style="margin-top:2em;">
         <address>Last updated {{ date }} by Collin Murphy.</address>
     </div>
 {% endblock %}

@@ -10,7 +10,9 @@ from datetime import datetime
 import os
 import fnmatch
 from scripts.jenkinsMethods import *
-from scripts.db_actions import add_inventory
+from scripts.db_actions import *
+from multiprocessing import Process
+from jenkins import JenkinsException
 
 
 # ============================ HELPER METHODS =============================
@@ -45,7 +47,11 @@ def unauthorized():
 
 @app.before_request
 def before_request():
-    g.user = current_user
+    try:
+
+        g.user = current_user
+    except:
+        return render_template('500.html'), 500
 
 
 # ============================= LOGIN VIEWS ================================
@@ -62,9 +68,8 @@ def login():
         try:
             # get user from db
             user = Users.query.filter_by(email=str(form.email.data)).first()
-        except NoResultFound:
-            user = None
-            flash('Invalid e-mail. Try again.')
+        except Exception as e:
+            print 'Error fetching user: {}'.format(e)
         # if valid user
         if user:
             # check password
@@ -73,10 +78,12 @@ def login():
                 db.session.add(user)
                 db.session.commit()
                 login_user(user, remember=True)
-                flash('Logged in successfully.')
+                flash('Hello, {}.'.format(user.first_name))
                 return redirect(url_for('index'))
             else:
                 flash('Wrong password. Try again.')
+        else:
+            flash('Invalid e-mail. Try again.')
     return render_template('login.html',
                            title='Login',
                            date=get_date_last_modified(),
@@ -97,11 +104,29 @@ def logout():
 @login_required
 def root():
     user = g.user
-    session.permanent = True
     return render_template('index.html',
                            title='Home',
                            date=get_date_last_modified(),
                            user=user)
+
+
+@app.route('/script')
+def script():
+    print 'HI!'
+    print 'args:'
+    for k, v in request.args.items():
+        print '  ->{}: {}'.format(k, v)
+    return 'Hello'
+
+
+# _______________________ INFO _________________________
+# methods used to get inventory info
+@app.route('/server_info', methods=['POST'])
+def server_info():
+    server_id = request.get_json().get('id')
+    return render_template('server_info.html',
+                           server=models.Servers.query
+                           .filter_by(id=server_id).first())
 
 
 # _______________________ INDEX ________________________
@@ -121,29 +146,53 @@ def index():
 @login_required
 def inventory_route():
     user = g.user
-    servers = Servers.query.all()
+    servers = get_inventory()
+
     return render_template('inventory.html', title='Inventory',
                            date=get_date_last_modified(),
                            user=user, servers=servers)
 
 
 @app.route('/inventory/add', methods=['GET', 'POST'])
+@login_required
 def add_inventory_route():
     user = g.user
     add_form = AddInventoryForm()
     if add_form.validate_on_submit():
-        print 'Form is valid'
-        failed = add_inventory(add_form)
-        if not failed:
-            print 'Successful'
-            flash('Successfully added hardware.')
-            return redirect('/inventory')
-        else:
-            print 'Failed'
-            flash('Could not add hardware. Try again.')
+        flash('Adding server. Wait 30 seconds, then refresh.')
+        p = Process(target=add_inventory, args=(add_form,))
+        p.start()
+        return redirect('/inventory')
+
     return render_template('add_inventory.html', title='Add Inventory',
                            date=get_date_last_modified(), user=user,
                            add_inventory_form=add_form)
+
+
+@app.route('/inventory/<_id>')
+@login_required
+def inventory_id_route(_id):
+    user = g.user
+    server = Servers.query.get(_id)
+    drives = db.engine.execute("select *, S.id as serial_number "
+                               "from server_storage as S "
+                               "join storage_devices as D "
+                               "where S.device_id=D.id "
+                               "and S.server_id='{}' "
+                               "order by S.slot;".format(_id))
+
+    return render_template('inventory_id.html', title=_id, server=server,
+                           date=get_date_last_modified(), user=user,
+                           drives=drives)
+
+
+@app.route('/inventory/update/<mac>', methods=['GET', 'POST'])
+@login_required
+def update_inventory_route(mac):
+    flash('Updating server. Wait 30 seconds, then refresh.')
+    p = Process(target=update_inventory, args=(mac,))
+    p.start()
+    return redirect('inventory')
 
 
 # _______________________ TESTS ________________________
@@ -157,9 +206,9 @@ def tests_route():
 
 
 # _______________________ JOBS ________________________
-@app.route('/testpost/<job_name>', methods=['POST', 'GET'])
+@app.route('/build_job/<job_name>', methods=['POST', 'GET'])
 @login_required
-def testpost_route(job_name):
+def build_job_route(job_name):
     print 'Building job {}!'.format(job_name)
     status = build_job(job_name)
     flash(status)
@@ -172,6 +221,7 @@ def create_job_route():
     user = g.user
     create_form = CreateForm()
     build_form = BuildStepForm()
+    servers = models.Servers.query
     if create_form.validate_on_submit():
         make_job(create_form)
         flash('Created job {}'.format(create_form.job_name.data))
@@ -182,13 +232,17 @@ def create_job_route():
                            date=get_date_last_modified(),
                            create_form=create_form,
                            build_form=build_form,
-                           user=user)
+                           user=user, servers=servers)
 
 
 @app.route('/jobs', methods=['GET', 'POST'])
 @login_required
 def jobs_route():
     user = g.user
+    try:
+        jobs = get_all_info()
+    except JenkinsException:
+        return render_template('500.html'), 500
     return render_template('jobs.html', title='Jobs',
                            date=get_date_last_modified(),
                            jobs=get_all_info(),

@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 {# set server information fields for inventory #}
-{% set field_pairs = (('ID','id'),('Model','model'),('IB MAC','ib_mac'),
-('OOB MAC','oob_mac'),('CPU Count','cpu_count'),('CPU Model','cpu_model'),
-('Rack','rack'),('U','u'),('Available','available'),('Update',None)) %}
+{% set field_pairs = (('ID', 'id'),('Model','model'),
+('CPUs','cpu_count'),('Model','cpu_model'),('Memory','memory_capacity'),
+('Drives','model'),('Capacity','capacity'),('Count','count'),('Update',None)) %}
 
 {% block content %}
     <h2>Inventory</h2>
 
     <div style="padding-bottom: 10px;">
-        Machines available for testing:
+        Machines available for testing:<br>
     </div>
     <div class="pane-frame" style="width:100%;">
         <table id="projectstatus" class="sortable pane bigtable stripped-odd">
@@ -22,31 +22,46 @@
                         </a>
                     </th>
                 {% endfor %}
-                <th>
-                    {# loop over servers in inventory #}
-                    {% for server in servers %}
-                        <tr>
-                            {# loop over field values for each server #}
-                            {% for k, v in field_pairs %}
-                                <td>
-                                    <a>
-                                        {# if field is None, insert "update" button #}
-                                        {% if v != None %}
-                                            {{ server.v }}
+            </tr>
+            {# loop over servers in inventory #}
+            {% for server in servers %}
+                <tr>
+                    {# loop over field values for each server #}
+                    {% for k, v in field_pairs %}
+                        <td>
+                            <a>
+                                {# if field is None, insert "update" button #}
+                                {% if v != None %}
+                                    {% if k in ('Drives', 'Capacity', 'Count') %}
+                                        {% for drive in server['drive_counts'] %}
+                                            {{ drive[v] }}<br>
+                                        {% endfor %}
+                                    {% elif server[v] is not undefined %}
+                                        {% if k == 'ID' %}
+                                            <a href="/inventory/{{ server['id'] }}">
+                                                {{ server[v] }}
+                                            </a>
                                         {% else %}
-                                            <button type="button">Update
-                                            </button>
+                                            {{ server[v] }}
                                         {% endif %}
-                                    </a>
-                                </td>
-                            {% endfor %}
-                        </tr>
+                                    {% endif %}
+                                {% else %}
+                                    <form>
+                                        <button formaction='/inventory/update/{{ server.interfaces.filter_by(name='DRAC').first().mac }}'>
+                                            Update
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            </a>
+                        </td>
                     {% endfor %}
+                </tr>
+            {% endfor %}
             </tbody>
         </table>
     </div>
     {# add link to create inventory at bottom of inventory list #}
     <div style="padding-top: 10px;">
-        <a href="inventory/add">Add inventory</a>
+        <a href="/inventory/add">Add inventory</a>
     </div>
 {% endblock %}

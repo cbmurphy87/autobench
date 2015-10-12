@@ -71,7 +71,6 @@ address {
     bottom: 0em;
     padding: 0em;
     text-align: center;
-    margin-top: 0.5em;
     background-color: #00447c;
     color: white;
 }
@@ -291,4 +290,19 @@ table.stripped-odd tr:nth-child(odd) {
 
 .add_inventory p:last-child {
     margin-bottom: 10px;
+}
+
+img#otto {
+    position:relative;
+    height:250px;
+    left:0px;
+    top:0px;
+}
+
+img#bench {
+    position:relative;
+    width:350px;
+    height:200px;
+    left:0px;
+    bottom:0px;
 }

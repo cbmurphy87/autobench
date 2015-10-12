@@ -1,13 +1,15 @@
 from app import db
 
+# ================ Users for Flask Login ==================
+
 
 class Users(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
-    first_name = db.Column(db.String(32), index=True, unique=False)
-    last_name = db.Column(db.String(32), index=True, unique=False)
+    first_name = db.Column(db.String(32), index=True)
+    last_name = db.Column(db.String(32), index=True)
     email = db.Column(db.String(120), index=True, unique=True)
-    password = db.Column(db.String(120), unique=False)
+    password = db.Column(db.String(120))
     authenticated = db.Column(db.Boolean, default=False)
 
     def is_authenticated(self):
@@ -29,17 +31,26 @@ class Users(db.Model):
         return '<User {}>'.format(self.email)
 
 
+# ================= Server Inventory ======================
+
+
 class Servers(db.Model):
 
     id = db.Column(db.String(16), primary_key=True)
-    oob_mac = db.Column(db.String(12), unique=True)
-    ib_mac = db.Column(db.String(12), unique=True)
+    host_name = db.Column(db.String(16))
     model = db.Column(db.String(16))
     cpu_count = db.Column(db.Integer)
     cpu_model = db.Column(db.String(16))
-    memory_capacity = db.Column(db.Integer)
-    rack = db.Column(db.Integer)
-    u = db.Column(db.Integer)
+    memory_capacity = db.Column(db.String(16))
+    bios = db.Column(db.String(16))
+    interfaces = db.relationship('NetworkDevices',
+                                 backref='servers', lazy='dynamic')
+    unique_drives = db.relationship('StorageDevices',
+                                    secondary="server_storage")
+    drives = db.relationship('ServerStorage',
+                             backref='servers', lazy='dynamic')
+    rack = db.Column(db.Integer, default='?')
+    u = db.Column(db.Integer, default='?')
     available = db.Column(db.Boolean, default=False)
 
     def __repr__(self):
@@ -48,14 +59,21 @@ class Servers(db.Model):
 
 class StorageDevices(db.Model):
 
-    model = db.Column(db.String(16), primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, nullable=False)
+    manufacturer = db.Column(db.String(16))
+    model = db.Column(db.String(16))
     capacity = db.Column(db.Integer)
     standard = db.Column(db.String(8))
+    type = db.Column(db.String(8))
+
+    def __repr__(self):
+        return '<StorageDevice id {}>'.format(self.id)
 
 
 class CommunicationDevices(db.Model):
 
-    model = db.Column(db.String(16), primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
+    model = db.Column(db.String(16), unique=True)
     type = db.Column(db.String(16))
     protocol = db.Column(db.String(16))
     speed = db.Column(db.String(16))
@@ -65,25 +83,40 @@ class CommunicationDevices(db.Model):
 class ServerStorage(db.Model):
 
     id = db.Column(db.String(64), primary_key=True)
-    server_id = db.Column(db.Integer, db.ForeignKey('servers.id'))
-    device_model = db.Column(db.String(16),
-                             db.ForeignKey('storage_devices.model'))
+    device_id = db.Column(db.Integer, db.ForeignKey('storage_devices.id'))
+    server_id = db.Column(db.String(16), db.ForeignKey('servers.id'))
     slot = db.Column(db.Integer)
+    info = db.relationship('StorageDevices')
+
+    def __repr__(self):
+        return '<ServerStorage id {}>'.format(self.id)
 
 
 class ServerCommunication(db.Model):
 
-    id = db.Column(db.String(64), primary_key=True)
-    server = db.Column(db.Integer)
-    model = db.Column(db.String(16),
-                      db.ForeignKey('communication_devices.model'))
+    id = db.Column(db.String(64), db.ForeignKey('communication_devices.id'),
+                   primary_key=True)
+    server_id = db.Column(db.String(16), db.ForeignKey('servers.id'))
+    type = db.Column(db.String(16),
+                     db.CheckConstraint('type="network" '
+                                        'or type="storage"'))
     slot = db.Column(db.Integer)
 
 
-class AddressAssignments(db.Model):
+class NetworkDevices(db.Model):
 
-    mac = db.Column(db.String(12),
-                    db.ForeignKey('servers.oob_mac'),
-                    db.ForeignKey('servers.ib_mac'),
-                    primary_key=True)
-    ip_address = db.Column(db.String(15))
+    mac = db.Column(db.String(12), primary_key=True)
+    server_id = db.Column(db.String(16), db.ForeignKey('servers.id'))
+    ip = db.Column(db.String(15), unique=True)
+    name = db.Column(db.String(3))
+    slot = db.Column(db.Integer)
+    type = db.Column(db.String(3),
+                     db.CheckConstraint('type="ib" or type="oob"'))
+
+
+# =========================== Temporary Table ==========================
+
+class DeviceAddress(db.Model):
+
+    mac = db.Column(db.String(12), primary_key=True)
+    ip_address = db.Column(db.String(15), unique=True)

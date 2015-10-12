@@ -1,73 +1,20 @@
 {% extends 'base.html' %}
+{% set fields=(('iDRAC/IPMI IP Address','drac_ip'),('Rack','rack'),('U','u')) %}
 {% block content %}
     <h2>Add hardware</h2>
     <form action="" method="post" name="add_inventory">
-        {{ add_inventory_form.hidden_tag() }}
         <div class="add_inventory">
-
+        {% for k, v in fields %}
             <p>
-                ID:<br>
-                {{ add_inventory_form.id }}
-                {% for error in add_inventory_form.id.errors %}
+                {{ add_inventory_form.hidden_tag() }}
+                {{ k }}:<br>
+                {{ add_inventory_form[v] }}
+                {% for error in add_inventory_form[v].errors %}
                     <span style="color:red;">[{{ error }}]</span>
                 {% endfor %}
             </p>
+        {% endfor %}
 
-            <p>
-                Out-of-band MAC Address:<br>
-                {{ add_inventory_form.oob_mac }}
-                {% for error in add_inventory_form.oob_mac.errors %}
-                    <span style="color:red;">[{{ error }}]</span>
-                {% endfor %}
-            </p>
-
-            <p>
-                In-band MAC Address:<br>
-                {{ add_inventory_form.ib_mac }}
-                {% for error in add_inventory_form.ib_mac.errors %}
-                    <span style="color:red;">[{{ error }}]</span>
-                {% endfor %}
-            </p>
-
-            <p>
-                Model:<br>
-                {{ add_inventory_form.model }}
-                {% for error in add_inventory_form.model.errors %}
-                    <span style="color:red;">[{{ error }}]</span>
-                {% endfor %}
-            </p>
-
-            <p>
-                CPU Count:<br>
-                {{ add_inventory_form.cpu_count }}
-                {% for error in add_inventory_form.cpu_count.errors %}
-                    <span style="color:red;">[{{ error }}]</span>
-                {% endfor %}
-            </p>
-
-            <p>
-                CPU Model:<br>
-                {{ add_inventory_form.cpu_model }}
-                {% for error in add_inventory_form.cpu_model.errors %}
-                    <span style="color:red;">[{{ error }}]</span>
-                {% endfor %}
-            </p>
-
-            <p>
-                Rack:<br>
-                {{ add_inventory_form.rack }}
-                {% for error in add_inventory_form.rack.errors %}
-                    <span style="color:red;">[{{ error }}]</span>
-                {% endfor %}
-            </p>
-
-            <p>
-                U:<br>
-                {{ add_inventory_form.u }}
-                {% for error in add_inventory_form.u.errors %}
-                    <span style="color:red;">[{{ error }}]</span>
-                {% endfor %}
-            </p>
         </div>
         <input type="submit" value="submit">
     </form>

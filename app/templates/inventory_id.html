@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+
+{% set server_fields = (('ID', 'id'),('Host Name','host_name'),
+('Model','model'),('CPU Count','cpu_count'),('CPU Model','cpu_model'),
+('BIOS','bios'),('Memory','memory_capacity'),('Rack','rack'),('U','u'),
+('Available','available'))%}
+
+{% set drive_fields = (('Slot','slot'),('Manufacturer','manufacturer'),
+('Model','model'),('Capacity','capacity'),('Standard','standard'),
+('Type','type'),('Serial Number','id')) %}
+
+{% set network_fields = (('Device','name'),('Slot.[slot-port-virt]','slot'),
+('MAC','mac'),('IP','ip'),('Type','type')) %}
+
+{% block content %}
+    <!-- Basic server info -->
+    <h2 style="padding-bottom: 10px;">Basic Info</h2>
+    <div class="pane-frame" style="width:50%;">
+        <table id="projectstatus" class="sortable pane bigtable stripped-odd">
+            <tbody>
+            <tr class="header">
+                {# create header for table #}
+                {% for field in ('Field', 'Value') %}
+                    <th>
+                        <a class="sortheader">
+                            &nbsp;{{ field }}
+                        </a>
+                    </th>
+                {% endfor %}
+            </tr>
+            {# loop over field values for each parame #}
+            {% for k, v in server_fields %}
+                <tr>
+                    <td>
+                        <a>
+                            {{ k }}
+                        </a>
+                    </td>
+                    <td>
+                        <a>
+                            {{ server[v] }}
+                        </a>
+                    </td>
+                </tr>
+            {% endfor %}
+
+            </tbody>
+        </table>
+    </div>
+    <!-- Drive info -->
+    <h2 style="padding-bottom: 10px;">Drive Info</h2>
+    <div class="pane-frame" style="width:100%;">
+        <table id="projectstatus" class="sortable pane bigtable stripped-odd">
+            <tbody>
+            <tr class="header">
+                {# create header for inventory table #}
+                {% for k, v in drive_fields %}
+                    <th>
+                        <a class="sortheader">
+                            &nbsp;{{ k }}
+                        </a>
+                    </th>
+                {% endfor %}
+            </tr>
+            {# loop over drives in server #}
+            {% for drive in server.drives.order_by('slot') %}
+                <tr>
+                    {# loop over field values for each server #}
+                    {% for k, v in drive_fields %}
+                        <td>
+                            <a>
+                                {% if drive[v] is defined %}
+                                    {{ drive[v] }}
+                                {% else %}
+                                    {{ drive['info'][v] }}
+                                {% endif %}
+                            </a>
+                        </td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <!-- Networking info -->
+    <h2 style="padding-bottom: 10px;">Network Info</h2>
+    <div class="pane-frame" style="width:100%;">
+        <table id="projectstatus" class="sortable pane bigtable stripped-odd">
+            <tbody>
+            <tr class="header">
+                {# create header for inventory table #}
+                {% for k, v in network_fields %}
+                    <th>
+                        <a class="sortheader">
+                            &nbsp;{{ k }}
+                        </a>
+                    </th>
+                {% endfor %}
+            </tr>
+            {# loop over drives in server #}
+            {% for interface in server.interfaces %}
+                <tr>
+                    {# loop over field values for each server #}
+                    {% for k, v in network_fields %}
+                        <td>
+                            <a>
+                                {{ interface[v] }}
+                            </a>
+                        </td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div style="padding-top: 10px;">
+        <a href="/inventory">Back</a>
+    </div>
+{% endblock %}
