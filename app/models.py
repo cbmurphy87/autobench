@@ -49,6 +49,8 @@ class Servers(db.Model):
                                     secondary="server_storage")
     drives = db.relationship('ServerStorage',
                              backref='servers', lazy='dynamic')
+    virtual_drives = db.relationship('VirtualStorageDevices',
+                                     backref='servers', lazy='dynamic')
     rack = db.Column(db.Integer, default='?')
     u = db.Column(db.Integer, default='?')
     available = db.Column(db.Boolean, default=False)
@@ -68,6 +70,20 @@ class StorageDevices(db.Model):
 
     def __repr__(self):
         return '<StorageDevice id {}>'.format(self.id)
+
+
+class VirtualStorageDevices(db.Model):
+
+    id = db.Column(db.Integer, primary_key=True, nullable=False)
+    name = db.Column(db.String(16))
+    server_id = db.Column(db.String(16), db.ForeignKey('servers.id'))
+    number = db.Column(db.Integer)
+    capacity = db.Column(db.Integer)
+    raid = db.Column(db.String(16))
+
+    def __repr__(self):
+        return '<VirtualStorageDevice {}.{}>'.format(self.server_id,
+                                                     self.name)
 
 
 class CommunicationDevices(db.Model):
@@ -114,7 +130,25 @@ class NetworkDevices(db.Model):
                      db.CheckConstraint('type="ib" or type="oob"'))
 
 
-# =========================== Temporary Table ==========================
+# =========================== OS Models ==========================
+
+def make_name(self):
+    return '{} {}'.format(self.id, self.flavor)
+
+
+class OS(db.Model):
+
+    id = db.Column(db.Integer, primary_key=True)
+    flavor = db.Column(db.String(16))
+    version = db.Column(db.String(16))
+    kernel = db.Column(db.String(128))
+    initrd = db.Column(db.String(128))
+    append = db.Column(db.String(128))
+    validated = db.Column(db.Boolean, default=False)
+
+
+
+# =========================== Temporary ===========================
 
 class DeviceAddress(db.Model):
 

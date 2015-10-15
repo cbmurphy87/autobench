@@ -14,43 +14,25 @@
 {% endblock %}
 {% block content %}
     <h2>Jobs</h2>
-    <div class="pane-frame" style="width:50%;">
+    <div class="pane-frame"  style="min-width: 300px; width:50%;">
         <table id="projectstatus" class="sortable pane bigtable stripped-odd">
             <tbody>
             <tr class="header">
-                <th>
-                    <a href="#" class="sortheader">
-                        &nbsp;S
-                        <span class="sortarrow"></span>
-                    </a>
-                </th>
-                <th>
-                    <a href="#" class="sortheader">
-                        &nbsp;Name
-                        <span class="sortarrow">&nbsp;&nbsp;&nbsp;</span>
-                    </a>
-                </th>
-                <th>
-                    <a href="#" class="sortheader">
-                        &nbsp;Last Build
-                        <span class="sortarrow"></span>
-                    </a>
-                </th>
-                <th>
-                    <a href="#" class="sortheader">
-                        &nbsp;
-                        <span class="sortarrow">&nbsp;&nbsp;&nbsp;</span>
-                    </a>
-                </th>
+            {% for field in ('S', 'Name', 'Last Build', '') %}
+                {% if field == '' %}
+                        {% set class = " class='sorttable_nosort'" %}
+                    {% endif %}
+                <th{{ class }}>{{ field }}</th>
+            {% endfor %}
             </tr>
             {% for job in jobs %}
+                {% if job['color'].endswith('anime') %}
+                    {% set ext = 'gif' %}
+                {% else %}
+                    {% set ext = 'png' %}
+                {% endif %}
                 <tr>
                     <td>
-                        {% if job['color'].endswith('anime') %}
-                            {% set ext = 'gif' %}
-                        {% else %}
-                            {% set ext = 'png' %}
-                        {% endif %}
                         <img src={{ url_for('static', filename='pictures/{}.{}'.format(job['color'], ext)) }} style="width:16px;height:16px;">
                     </td>
                     <td>

@@ -28,6 +28,13 @@ users = [
      'email': 'dlattka@micron.com'}
 ]
 
+all_users = models.Users.query.all()
+
+for user in all_users:
+    db.session.delete(user)
+
+db.session.commit()
+
 for user in users:
     u = models.Users(first_name=user['first_name'], last_name=user['last_name'],
                      email=user['email'])

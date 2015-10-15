@@ -3,8 +3,10 @@ from flask.ext.wtf import Form
 from wtforms import StringField, BooleanField, TextAreaField, PasswordField, \
     SelectField, IntegerField
 from wtforms.ext.sqlalchemy.fields import QuerySelectField
-from wtforms.validators import DataRequired, Length, Optional, NumberRange
+from wtforms.validators import DataRequired, Length, Optional, NumberRange, \
+    required
 from wtforms.validators import ValidationError
+from sqlalchemy import collate
 from app import models
 
 
@@ -47,16 +49,42 @@ def IPAddress(separator='.'):
     return _ip
 
 
-class CreateForm(Form):
+class CreateJobForm(Form):
 
     job_name = StringField('job_name', validators=[DataRequired()])
     build = BooleanField('build', default=True)
     target = QuerySelectField('target', query_factory=models.Servers.query
                               .order_by('id').all,
-                              get_label='id')
+                              get_label='id', allow_blank=True,
+                              blank_text='Select a target')
     command = StringField('command', validators=[DataRequired()])
     args = StringField('args')
     kwargs = StringField('kwargs')
+
+
+class DeployForm(Form):
+
+    def make_name(self):
+
+        return '{} {}'.format(getattr(self, 'flavor'), getattr(self, 'version'))
+
+    def get_vds():
+
+        return models.VirtualStorageDevices.query\
+            .filter_by(server_id='HZLBR22').all()
+
+    target = QuerySelectField('target', query_factory=models.Servers.query
+                              .filter_by(available=True).order_by('id').all,
+                              get_label='id', allow_blank=True,
+                              blank_text='Select a target',
+                              validators=[required()])
+    os = QuerySelectField('os', query_factory=models.OS.query
+                          .filter_by(validated=True)
+                          .order_by(collate(models.OS.flavor, 'NOCASE'),
+                                    models.OS.version.desc()).all,
+                          get_label=make_name, allow_blank=True,
+                          blank_text='Select an OS',
+                          validators=[required()])
 
 
 class BuildStepForm(Form):
@@ -81,8 +109,8 @@ class LoginForm(Form):
 
 class AddInventoryForm(Form):
 
-    drac_ip = StringField('drac_ip', validators=(DataRequired(), IPAddress()))
-    rack = IntegerField('rack', validators=(DataRequired(),
-                                            NumberRange(min=1, max=15)))
-    u = IntegerField('u', validators=(DataRequired(),
-                                      NumberRange(min=1, max=42)))
+    drac_ip = StringField('drac_ip', validators=[DataRequired(), IPAddress()])
+    rack = IntegerField('rack', validators=[DataRequired(),
+                                            NumberRange(min=1, max=15)])
+    u = IntegerField('u', validators=[DataRequired(),
+                                      NumberRange(min=1, max=42)])

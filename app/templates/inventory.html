@@ -12,49 +12,50 @@
     </div>
     <div class="pane-frame" style="width:100%;">
         <table id="projectstatus" class="sortable pane bigtable stripped-odd">
-            <tbody>
-            <tr class="header">
+            <thead>
+                <tr class="header">
                 {# create header for inventory table #}
                 {% for k, v in field_pairs %}
-                    <th>
-                        <a class="sortheader">
-                            &nbsp;{{ k }}
-                        </a>
+                    {% if  v == None %}
+                        {% set class = " class='sorttable_nosort'" %}
+                    {% endif %}
+                    <th{{ class }}>
+                        {{ k }}
                     </th>
                 {% endfor %}
-            </tr>
+                </tr>
+            </thead>
+            <tbody>
             {# loop over servers in inventory #}
-            {% for server in servers %}
+            {%- for server in servers -%}
                 <tr>
-                    {# loop over field values for each server #}
-                    {% for k, v in field_pairs %}
-                        <td>
-                            <a>
-                                {# if field is None, insert "update" button #}
-                                {% if v != None %}
-                                    {% if k in ('Drives', 'Capacity', 'Count') %}
-                                        {% for drive in server['drive_counts'] %}
-                                            {{ drive[v] }}<br>
-                                        {% endfor %}
-                                    {% elif server[v] is not undefined %}
-                                        {% if k == 'ID' %}
-                                            <a href="/inventory/{{ server['id'] }}">
-                                                {{ server[v] }}
-                                            </a>
-                                        {% else %}
-                                            {{ server[v] }}
-                                        {% endif %}
-                                    {% endif %}
-                                {% else %}
-                                    <form>
-                                        <button formaction='/inventory/update/{{ server.interfaces.filter_by(name='DRAC').first().mac }}'>
-                                            Update
-                                        </button>
-                                    </form>
-                                {% endif %}
-                            </a>
-                        </td>
+                {# loop over field values for each server #}
+                {% for k, v in field_pairs %}
+                    <td>
+                    {# if field is None, insert "update" button #}
+                    {% if v != None %}
+                    {% if k in ('Drives', 'Capacity', 'Count') %}
+                    {% for drive in server['drive_counts'] %}
+                        {{ drive[v] }}<br>
                     {% endfor %}
+                    {% elif server[v] is not undefined %}
+                    {% if k == 'ID' %}
+                        <a href="/inventory/{{ server['id'] }}">
+                            {{ server[v] }}
+                        </a>
+                    {% else %}
+                        {{ server[v] }}
+                    {% endif %}
+                    {% endif %}
+                    {% else %}
+                        <form>
+                            <button formaction='/inventory/update/{{ server.interfaces.filter_by(name='DRAC').first().mac }}'>
+                                Update
+                            </button>
+                        </form>
+                    {% endif %}
+                    </td>
+                {% endfor %}
                 </tr>
             {% endfor %}
             </tbody>

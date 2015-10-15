@@ -1,9 +1,15 @@
 {% extends "base.html" %}
 
 {% block scripts %}
+    {# function to dynamically load selected server data #}
     {{ super() }}
     $(document).ready(function () {
         $("#target").change(function() {
+            if (this.options[this.selectedIndex].value == '__None') {
+                document.getElementById("os").disabled = true;
+            } else {
+                document.getElementById("os").disabled = false;
+            }
             var e = document.getElementById("target");
             var server_id = e.value;
             var xhttp = new XMLHttpRequest();
@@ -20,26 +26,16 @@
 {% endblock %}
 
 {% block content %}
-    <h2>Create a job</h2>
-    <form action='' method='post' name='create_job'>
+    <h2>Deploy a server</h2>
+    <form action='' method='post' name='deploy'>
         {{ form.hidden_tag() }}
-        <p>
-            Job name:<br>
-            {{ form.job_name }}
-            {% for error in form.job_name.errors %}
-                <span style="color:red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-
         <div class="build_step" style="border:1px solid #00447c; padding:10px;
-        height:190px;">
+        display:inline-block;">
             <span>
-                <div style="height:150px;margin:auto;float:left">
-                    <a style="font-weight:bold;">Build Step 1</a>
+                <div style="height:150px;margin:auto;float:left;">
                     {% for k, v in (('Target',form.target),
-                    ('Command', form.command),
-                    ('Args', form.args),
-                    ('Kwargs', form.kwargs)) %}
+                    ('OS', form.os(disabled=True))) %}
+                        <br>
                         <p>
                             {{ k }}:<br>{{ v }}
                             {% for error in v.errors %}
@@ -48,17 +44,12 @@
                         </p>
                     {% endfor %}
                 </div>
-                {% set server = servers.order_by('id').first() %}
-                <div style="float:right">
+                <div style="float:right;margin-left:30px;">
                     <span id="server_info"></span>
                 </div>
             </span>
         </div>
-
-        <p>
-            {{ form.build }} Build<br>
-        </p>
-
-        <input type="submit" value="Submit">
+        <br>
+        <input type="submit" value="Deploy">
     </form>
 {% endblock %}

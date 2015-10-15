@@ -4,6 +4,8 @@
     <script>
         {% block scripts %}{% endblock %}
     </script>
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/functions.js') }}></script>
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/sortable.js') }}></script>
     {% block stylelinks %}{% endblock %}
     {% if title %}
         <title>{{ title }} - AutoBench</title>

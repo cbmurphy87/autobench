@@ -4,7 +4,7 @@ from flask import render_template, flash, redirect, session, url_for, request, g
 from flask.ext.login import login_user, logout_user, current_user, login_required
 from sqlalchemy.orm.exc import NoResultFound
 from app import app, lm, db
-from app.forms import CreateForm, LoginForm, BuildStepForm, AddInventoryForm
+from app.forms import CreateJobForm, LoginForm, BuildStepForm, AddInventoryForm, DeployForm
 from models import Users, Servers, StorageDevices, ServerStorage, ServerCommunication
 from datetime import datetime
 import os
@@ -13,12 +13,14 @@ from scripts.jenkinsMethods import *
 from scripts.db_actions import *
 from multiprocessing import Process
 from jenkins import JenkinsException
+from aaebench.testautomation.syscontrol.file_transfer import SFTPManager
+from aaebench.testautomation.syscontrol.racadm import RacadmManager
 
 
 # ============================ HELPER METHODS =============================
 
 
-def get_date_last_modified():
+def _get_date_last_modified():
     try:
         matches = []
         for root, dirnames, filenames in os.walk(os.getcwd()):
@@ -46,7 +48,7 @@ def unauthorized():
 
 
 @app.before_request
-def before_request():
+def _before_request():
     try:
 
         g.user = current_user
@@ -58,9 +60,9 @@ def before_request():
 
 
 @app.route('/login', methods=['GET', 'POST'])
-def login():
+def _login():
     if g.user is not None and g.user.is_authenticated:
-        return redirect(url_for('index'))
+        return redirect(url_for('_root'))
 
     form = LoginForm()
     # validate login credentials
@@ -79,19 +81,19 @@ def login():
                 db.session.commit()
                 login_user(user, remember=True)
                 flash('Hello, {}.'.format(user.first_name))
-                return redirect(url_for('index'))
+                return redirect(url_for('_root'))
             else:
                 flash('Wrong password. Try again.')
         else:
             flash('Invalid e-mail. Try again.')
     return render_template('login.html',
                            title='Login',
-                           date=get_date_last_modified(),
+                           date=_get_date_last_modified(),
                            form=form)
 
 
 @app.route('/logout')
-def logout():
+def _logout():
     logout_user()
     flash('You have been logged out.')
     return redirect('/login')
@@ -102,16 +104,16 @@ def logout():
 
 @app.route('/')
 @login_required
-def root():
+def _root():
     user = g.user
     return render_template('index.html',
                            title='Home',
-                           date=get_date_last_modified(),
+                           date=_get_date_last_modified(),
                            user=user)
 
 
 @app.route('/script')
-def script():
+def _script():
     print 'HI!'
     print 'args:'
     for k, v in request.args.items():
@@ -122,40 +124,27 @@ def script():
 # _______________________ INFO _________________________
 # methods used to get inventory info
 @app.route('/server_info', methods=['POST'])
-def server_info():
+def _server_info():
     server_id = request.get_json().get('id')
     return render_template('server_info.html',
                            server=models.Servers.query
                            .filter_by(id=server_id).first())
 
 
-# _______________________ INDEX ________________________
-@app.route('/index')
-@login_required
-def index():
-    user = g.user
-    session.permanent = True
-    return render_template('index.html',
-                           title='Home',
-                           date=get_date_last_modified(),
-                           user=user)
-
-
 # _______________________ INVENTORY ________________________
 @app.route('/inventory')
 @login_required
-def inventory_route():
+def _inventory():
     user = g.user
     servers = get_inventory()
-
     return render_template('inventory.html', title='Inventory',
-                           date=get_date_last_modified(),
+                           date=_get_date_last_modified(),
                            user=user, servers=servers)
 
 
 @app.route('/inventory/add', methods=['GET', 'POST'])
 @login_required
-def add_inventory_route():
+def _add_inventory():
     user = g.user
     add_form = AddInventoryForm()
     if add_form.validate_on_submit():
@@ -165,50 +154,93 @@ def add_inventory_route():
         return redirect('/inventory')
 
     return render_template('add_inventory.html', title='Add Inventory',
-                           date=get_date_last_modified(), user=user,
+                           date=_get_date_last_modified(), user=user,
                            add_inventory_form=add_form)
 
 
 @app.route('/inventory/<_id>')
 @login_required
-def inventory_id_route(_id):
+def _inventory_id(_id):
     user = g.user
     server = Servers.query.get(_id)
-    drives = db.engine.execute("select *, S.id as serial_number "
-                               "from server_storage as S "
-                               "join storage_devices as D "
-                               "where S.device_id=D.id "
-                               "and S.server_id='{}' "
-                               "order by S.slot;".format(_id))
-
     return render_template('inventory_id.html', title=_id, server=server,
-                           date=get_date_last_modified(), user=user,
-                           drives=drives)
+                           date=_get_date_last_modified(), user=user)
 
 
 @app.route('/inventory/update/<mac>', methods=['GET', 'POST'])
 @login_required
-def update_inventory_route(mac):
+def _update_inventory(mac):
     flash('Updating server. Wait 30 seconds, then refresh.')
     p = Process(target=update_inventory, args=(mac,))
     p.start()
     return redirect('inventory')
 
 
-# _______________________ TESTS ________________________
-@app.route('/tests')
+# _______________________ Deploy ________________________
+# helper method for creating a separate process
+def _deploy_server(form):
+
+    print 'Deploying {} {} to {}!'.format(form.os.data.flavor,
+                                       form.os.data.version,
+                                       form.target.data.id)
+
+    pxe_file = render_template('pxeboot',
+                               kernel=form.os.data.kernel,
+                               initrd=form.os.data.initrd,
+                               append=form.os.data.append)
+
+    # gather data
+    server = form.target.data
+    interfaces = server.interfaces
+    interface = interfaces.filter_by(name='NIC.1').first()
+    eth0 = interface.mac.lower().replace(':', '-')
+    drac_ip = interfaces.filter_by(name='DRAC').first().ip
+    print 'iDRAC ip address is: {}'.format(drac_ip)
+
+    # send unique config file to pxe server
+    sftp = SFTPManager('pxe.aae.lcl')
+    client = sftp.create_sftp_client()
+    with client.open('/tftpboot/pxelinux.cfg/01-{}'.format(eth0), 'w') \
+            as f:
+        f.write(pxe_file)
+
+    # reboot server to PXE
+    racadm = RacadmManager(drac_ip)
+    racadm.boot_once('PXE')
+
+    # make server unavailable
+    try:
+        server = models.Servers.query.filter_by(id=server.id).first()
+        server.available = False
+        db.session.commit()
+        print 'Server {} now unavailable.'.format(server)
+    except Exception as e:
+        print 'Error making server unavailable: {}'.format(e)
+        db.session.rollback()
+
+
+@app.route('/deploy', methods=['GET', 'POST'])
 @login_required
-def tests_route():
+def _deploy():
     user = g.user
-    return render_template('tests.html', title='Tests',
-                           date=get_date_last_modified(),
-                           user=user)
+    form = DeployForm()
+    servers = models.Servers.query
+    if form.validate_on_submit():
+
+        # start subprocess to deploy system
+        p = Process(target=_deploy_server, args=(form,))
+        p.start()
+
+        return redirect(url_for('_jobs'))
+    return render_template('deploy.html', title='Tests',
+                           date=_get_date_last_modified(),
+                           user=user, form=form, servers=servers)
 
 
 # _______________________ JOBS ________________________
 @app.route('/build_job/<job_name>', methods=['POST', 'GET'])
 @login_required
-def build_job_route(job_name):
+def _build_job(job_name):
     print 'Building job {}!'.format(job_name)
     status = build_job(job_name)
     flash(status)
@@ -217,34 +249,34 @@ def build_job_route(job_name):
 
 @app.route('/create_job', methods=['GET', 'POST'])
 @login_required
-def create_job_route():
+def _create_job():
     user = g.user
-    create_form = CreateForm()
+    form = CreateJobForm()
     build_form = BuildStepForm()
     servers = models.Servers.query
-    if create_form.validate_on_submit():
-        make_job(create_form)
-        flash('Created job {}'.format(create_form.job_name.data))
+    if form.validate_on_submit():
+        make_job(form)
+        flash('Created job {}'.format(form.job_name.data))
         return redirect('/jobs')
     elif request.method == 'POST':
         flash("Invalid entries.")
     return render_template('create_job.html', title='Create Job',
-                           date=get_date_last_modified(),
-                           create_form=create_form,
+                           date=_get_date_last_modified(),
+                           form=form,
                            build_form=build_form,
                            user=user, servers=servers)
 
 
 @app.route('/jobs', methods=['GET', 'POST'])
 @login_required
-def jobs_route():
+def _jobs():
     user = g.user
     try:
         jobs = get_all_info()
     except JenkinsException:
         return render_template('500.html'), 500
     return render_template('jobs.html', title='Jobs',
-                           date=get_date_last_modified(),
+                           date=_get_date_last_modified(),
                            jobs=get_all_info(),
                            result=lambda x: get_last_result(x),
                            user=user)
@@ -252,13 +284,13 @@ def jobs_route():
 
 @app.route('/jobs/<jobname>')
 @login_required
-def job_info_route(jobname):
+def _job_info(jobname):
     user = g.user
     job_info = get_jenkins_job_info(jobname)
     if job_info:
         return render_template('job_info.html',
                                title='Job Info',
-                               date=get_date_last_modified(),
+                               date=_get_date_last_modified(),
                                job_info=job_info,
                                user=user)
     return redirect('/jobs')

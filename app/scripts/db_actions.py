@@ -216,6 +216,31 @@ def update_inventory(mac):
     else:
         print 'Server is not powered on. Cannot get drive info.'
 
+    # get server virtual drive info
+    try:
+        old_drives = models.VirtualStorageDevices.query \
+            .filter_by(server_id=server.id).all()
+        for _drive in old_drives:
+            db.session.delete(_drive)
+        db.session.commit()
+    except Exception as e:
+        print 'Error deleting VDs: {}'.format(e)
+
+    drives = racadm.get_vdisks()
+    for _drive in drives:
+        new_vd = models.VirtualStorageDevices(server_id=server.id)
+        for k, v in _drive.items():
+            if hasattr(new_vd, k):
+                setattr(new_vd, k, v)
+        try:
+            db.session.add(new_vd)
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            print 'Could not add VD {}.'.format(new_vd)
+        except InvalidRequestError:
+            db.session.rollback()
+
     print 'Success'
 
 

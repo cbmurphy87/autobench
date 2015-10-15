@@ -1,0 +1,17 @@
+{% set base_path = "http://172.16.0.15/" %}
+{% set kernel_path = base_path + "repos/" + kernel %}
+{% set initrd_path = base_path + "repos/" + initrd %}
+{% set append_path = "ks=" + base_path + "kscfg/" + append %}
+{% block content %}
+DEFAULT menu.c32
+PROMPT 1
+NOESCAPE 1
+TIMEOUT 1
+ONTIMEOUT BOOT
+
+LABEL BOOT
+        MENU LABEL Boot Image
+        KERNEL {{ kernel_path }}
+        INITRD {{ initrd_path }}
+        APPEND {{ append_path }}
+{% endblock %}

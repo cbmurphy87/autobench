@@ -1,7 +1,4 @@
 {% extends "header_base.html" %}
-{% block scripts %}
-    {% include 'javascript/functions.js' %}
-{% endblock %}
 {% block scriptlinks %}
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
 {% endblock %}
@@ -10,7 +7,7 @@
         <img src={{ url_for('static', filename='pictures/micronlogo.jpg') }} class="top_image">
         {% include "aae_navbar.html" %}
     </div>
-    <div>
+    <div style="min-width:450px;">
         <h1>AutoBench</h1>
         {% with messages = get_flashed_messages() %}
             {% if messages %}

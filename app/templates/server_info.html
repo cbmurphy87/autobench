@@ -2,35 +2,31 @@
 ('Model','model'),('CPU Count','cpu_count'),('CPU Model','cpu_model'),
 ('Memory','memory_capacity')) %}
 
-<div id="moreinfo" class="pane-frame">
-    <div class="pane-frame">
+{% if server is defined and server != None %}
+    <div id="moreinfo" class="pane-frame">
         <table id="server_info"
-               class="sortable pane bigtable stripped-odd">
+               class="pane bigtable stripped-odd">
             <tbody>
             <tr class="header">
                 {# create header for table #}
                 <th colspan="2">
-                    <a class="sortheader">
-                        Server Info
-                    </a>
+                    Server Info
                 </th>
             </tr>
             {# loop over field values for each parame #}
             {% for k, v in server_fields %}
                 <tr>
                     <td>
-                        <a>
-                            {{ k }}
-                        </a>
+                        {{ k }}
                     </td>
                     <td>
-                        <a>
-                            {{ server[v] }}
-                        </a>
+                        {{ server[v] }}
                     </td>
                 </tr>
             {% endfor %}
             </tbody>
         </table>
     </div>
-</div>
+{% else %}
+    <!-- no data -->
+{% endif %}

@@ -9,6 +9,9 @@
 ('Model','model'),('Capacity','capacity'),('Standard','standard'),
 ('Type','type'),('Serial Number','id')) %}
 
+{% set virtual_drive_fields = (('Number','number'),('Name','name'),
+('Capacity','capacity'),('RAID Level','raid')) %}
+
 {% set network_fields = (('Device','name'),('Slot.[slot-port-virt]','slot'),
 ('MAC','mac'),('IP','ip'),('Type','type')) %}
 
@@ -19,31 +22,24 @@
         <table id="projectstatus" class="sortable pane bigtable stripped-odd">
             <tbody>
             <tr class="header">
-                {# create header for table #}
-                {% for field in ('Field', 'Value') %}
-                    <th>
-                        <a class="sortheader">
-                            &nbsp;{{ field }}
-                        </a>
-                    </th>
-                {% endfor %}
+            {# create header for table #}
+            {% for field in ('Field', 'Value') %}
+                <th>
+                    {{ field }}
+                </th>
+            {% endfor %}
             </tr>
             {# loop over field values for each parame #}
             {% for k, v in server_fields %}
-                <tr>
-                    <td>
-                        <a>
-                            {{ k }}
-                        </a>
-                    </td>
-                    <td>
-                        <a>
-                            {{ server[v] }}
-                        </a>
-                    </td>
-                </tr>
+            <tr>
+                <td>
+                    {{ k }}
+                </td>
+                <td>
+                    {{ server[v] }}
+                </td>
+            </tr>
             {% endfor %}
-
             </tbody>
         </table>
     </div>
@@ -53,31 +49,58 @@
         <table id="projectstatus" class="sortable pane bigtable stripped-odd">
             <tbody>
             <tr class="header">
-                {# create header for inventory table #}
-                {% for k, v in drive_fields %}
-                    <th>
-                        <a class="sortheader">
-                            &nbsp;{{ k }}
-                        </a>
-                    </th>
-                {% endfor %}
+            {# create header for inventory table #}
+            {% for k, v in drive_fields %}
+                <th>
+                    {{ k }}
+                </th>
+            {% endfor %}
             </tr>
             {# loop over drives in server #}
             {% for drive in server.drives.order_by('slot') %}
-                <tr>
-                    {# loop over field values for each server #}
-                    {% for k, v in drive_fields %}
-                        <td>
-                            <a>
-                                {% if drive[v] is defined %}
-                                    {{ drive[v] }}
-                                {% else %}
-                                    {{ drive['info'][v] }}
-                                {% endif %}
-                            </a>
-                        </td>
-                    {% endfor %}
-                </tr>
+            <tr>
+            {# loop over field values for each server #}
+            {% for k, v in drive_fields %}
+                <td>
+                {% if drive[v] is defined %}
+                    {{ drive[v] }}
+                {% else %}
+                    {{ drive['info'][v] }}
+                {% endif %}
+                </td>
+            {% endfor %}
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <!-- Virtual drive info -->
+    <h2 style="padding-bottom: 10px;">Virtual Drive Info</h2>
+    <div class="pane-frame" style="width:100%;">
+        <table id="projectstatus" class="sortable pane bigtable stripped-odd">
+            <tbody>
+            <tr class="header">
+            {# create header for inventory table #}
+            {% for k, v in virtual_drive_fields %}
+                <th>
+                    {{ k }}
+                </th>
+            {% endfor %}
+            </tr>
+            {# loop over drives in server #}
+            {% for drive in server.virtual_drives.order_by('number') %}
+            <tr>
+            {# loop over field values for each server #}
+            {% for k, v in virtual_drive_fields %}
+                <td>
+                {% if drive[v] is defined %}
+                    {{ drive[v] }}
+                {% else %}
+                    Empty
+                {% endif %}
+                </td>
+            {% endfor %}
+            </tr>
             {% endfor %}
             </tbody>
         </table>
@@ -88,26 +111,22 @@
         <table id="projectstatus" class="sortable pane bigtable stripped-odd">
             <tbody>
             <tr class="header">
-                {# create header for inventory table #}
-                {% for k, v in network_fields %}
-                    <th>
-                        <a class="sortheader">
-                            &nbsp;{{ k }}
-                        </a>
-                    </th>
-                {% endfor %}
+            {# create header for inventory table #}
+            {% for k, v in network_fields %}
+                <th>
+                    {{ k }}
+                </th>
+            {% endfor %}
             </tr>
             {# loop over drives in server #}
             {% for interface in server.interfaces %}
                 <tr>
-                    {# loop over field values for each server #}
-                    {% for k, v in network_fields %}
-                        <td>
-                            <a>
-                                {{ interface[v] }}
-                            </a>
-                        </td>
-                    {% endfor %}
+                {# loop over field values for each server #}
+                {% for k, v in network_fields %}
+                    <td>
+                        {{ interface[v] }}
+                    </td>
+                {% endfor %}
                 </tr>
             {% endfor %}
             </tbody>
