@@ -1,5 +1,29 @@
 {% extends 'base.html' %}
 
+{# =============================================================== #}
+{# set head data #}
+{# =============================================================== #}
+
+{% block meta %}
+{{ super() }}
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+{% endblock %}
+
+{% block links %}
+    {{ super() }}
+    <link rel="stylesheet" href="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css">
+{% endblock %}
+
+{% block script %}
+    {{ super() }}
+    <script src="http://code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script src="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
+{% endblock %}
+
+{# =============================================================== #}
+{# set variables #}
+{# =============================================================== #}
+
 {% set server_fields = (('ID', 'id'),('Host Name','host_name'),
 ('Model','model'),('CPU Count','cpu_count'),('CPU Model','cpu_model'),
 ('BIOS','bios'),('Memory','memory_capacity'),('Rack','rack'),('U','u'),
@@ -7,7 +31,7 @@
 
 {% set drive_fields = (('Slot','slot'),('Manufacturer','manufacturer'),
 ('Model','model'),('Capacity','capacity'),('Standard','standard'),
-('Type','type'),('Serial Number','id')) %}
+('Type','type'),('Serial Number','serial_number')) %}
 
 {% set virtual_drive_fields = (('Number','number'),('Name','name'),
 ('Capacity','capacity'),('RAID Level','raid')) %}
@@ -15,10 +39,14 @@
 {% set network_fields = (('Device','name'),('Slot.[slot-port-virt]','slot'),
 ('MAC','mac'),('IP','ip'),('Type','type')) %}
 
+{# =============================================================== #}
+{# set body data #}
+{# =============================================================== #}
+
 {% block content %}
     <!-- Basic server info -->
     <h2 style="padding-bottom: 10px;">Basic Info</h2>
-    <div class="pane-frame" style="width:50%;">
+    <div class="pane-frame" style="width:auto;">
         <table id="projectstatus" class="sortable pane bigtable stripped-odd">
             <tbody>
             <tr class="header">
@@ -36,46 +64,68 @@
                     {{ k }}
                 </td>
                 <td>
-                    {{ server[v] }}
+                    {% if server[v] != None %}
+                        {{ server[v] }}
+                    {% else %}
+                        N/A
+                    {% endif %}
                 </td>
             </tr>
             {% endfor %}
+            <tr>
+                <td>
+                    Held By
+                </td>
+                <td>
+                    {% if server['holder'] != None %}
+                    {{ server['holder'].first_name }}
+                    {{ server['holder'].last_name }}
+                    {% else %}
+                    -
+                    {% endif %}
+                </td>
+            </tr>
             </tbody>
         </table>
     </div>
     <!-- Drive info -->
     <h2 style="padding-bottom: 10px;">Drive Info</h2>
-    <div class="pane-frame" style="width:100%;">
-        <table id="projectstatus" class="sortable pane bigtable stripped-odd">
-            <tbody>
-            <tr class="header">
-            {# create header for inventory table #}
-            {% for k, v in drive_fields %}
-                <th>
-                    {{ k }}
-                </th>
-            {% endfor %}
-            </tr>
-            {# loop over drives in server #}
-            {% for drive in server.drives.order_by('slot') %}
-            <tr>
-            {# loop over field values for each server #}
-            {% for k, v in drive_fields %}
-                <td>
-                {% if drive[v] is defined %}
-                    {{ drive[v] }}
-                {% else %}
-                    {{ drive['info'][v] }}
-                {% endif %}
-                </td>
-            {% endfor %}
-            </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-    </div>
+    {% if server.drives.all()|length >= 1 %}
+        <div class="pane-frame" style="width:100%;">
+            <table id="projectstatus" class="sortable pane bigtable stripped-odd">
+                <tbody>
+                <tr class="header">
+                {# create header for inventory table #}
+                {% for k, v in drive_fields %}
+                    <th>
+                        {{ k }}
+                    </th>
+                {% endfor %}
+                </tr>
+                {# loop over drives in server #}
+                {% for drive in server.drives.order_by('slot') %}
+                <tr>
+                {# loop over field values for each server #}
+                {% for k, v in drive_fields %}
+                    <td>
+                    {% if drive[v] is defined %}
+                        {{ drive[v] }}
+                    {% else %}
+                        {{ drive['info'][v] }}
+                    {% endif %}
+                    </td>
+                {% endfor %}
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        No drives found.
+    {% endif %}
     <!-- Virtual drive info -->
     <h2 style="padding-bottom: 10px;">Virtual Drive Info</h2>
+    {% if server.virtual_drives.all()|length >= 1 %}
     <div class="pane-frame" style="width:100%;">
         <table id="projectstatus" class="sortable pane bigtable stripped-odd">
             <tbody>
@@ -105,8 +155,12 @@
             </tbody>
         </table>
     </div>
+    {% else %}
+        No virtual drives found.
+    {% endif %}
     <!-- Networking info -->
     <h2 style="padding-bottom: 10px;">Network Info</h2>
+    {% if server.interfaces.all()|length >= 1 %}
     <div class="pane-frame" style="width:100%;">
         <table id="projectstatus" class="sortable pane bigtable stripped-odd">
             <tbody>
@@ -132,6 +186,9 @@
             </tbody>
         </table>
     </div>
+    {% else %}
+        No network interfaces found.
+    {% endif %}
     <div style="padding-top: 10px;">
         <a href="/inventory">Back</a>
     </div>

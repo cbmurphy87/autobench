@@ -78,15 +78,13 @@ def make_job(create_form):
     butler = make_butler()
     config_file = render_template('configs/config.xml',
                                   builders=[create_form])
-    config_file = config_file.encode('latin-1')
-    with open('/root/templates/rendered.xml', 'w+') as f:
-        f.write(config_file)
-    print type(config_file)
-    print config_file
+
+    # do we need to encode?
+    # config_file = config_file.encode('latin-1')
 
     # try to create job
     try:
-        butler.create_job(create_form.job_name.data, str(config_file))
+        butler.create_job(create_form.job_name.data, config_file)
     except Exception as e:
         print 'Exception: {}'.format(e)
         if butler.job_exists(create_form.job_name.data):

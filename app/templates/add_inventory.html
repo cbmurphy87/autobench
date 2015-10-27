@@ -1,15 +1,14 @@
 {% extends 'base.html' %}
-{% set fields=(('iDRAC/IPMI IP Address','drac_ip'),('Rack','rack'),('U','u')) %}
 {% block content %}
     <h2>Add hardware</h2>
-    <form action="" method="post" name="add_inventory">
+    <form action="" method="POST" name="add_inventory">
+        {{ form.hidden_tag() }}
         <div class="add_inventory">
-        {% for k, v in fields %}
+        {% for field in (form.drac_ip, form.rack, form.u) %}
             <p>
-                {{ add_inventory_form.hidden_tag() }}
-                {{ k }}:<br>
-                {{ add_inventory_form[v] }}
-                {% for error in add_inventory_form[v].errors %}
+                {{ field.label.text }}:<br>
+                {{ field }}
+                {% for error in field.errors %}
                     <span style="color:red;">[{{ error }}]</span>
                 {% endfor %}
             </p>

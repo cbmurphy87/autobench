@@ -11,6 +11,7 @@ class Users(db.Model):
     email = db.Column(db.String(120), index=True, unique=True)
     password = db.Column(db.String(120))
     authenticated = db.Column(db.Boolean, default=False)
+    admin = db.Column(db.Boolean, default=False)
 
     def is_authenticated(self):
         return self.authenticated
@@ -36,6 +37,7 @@ class Users(db.Model):
 
 class Servers(db.Model):
 
+    # parameters
     id = db.Column(db.String(16), primary_key=True)
     host_name = db.Column(db.String(16))
     model = db.Column(db.String(16))
@@ -43,6 +45,12 @@ class Servers(db.Model):
     cpu_model = db.Column(db.String(16))
     memory_capacity = db.Column(db.String(16))
     bios = db.Column(db.String(16))
+    rack = db.Column(db.Integer, default='?')
+    u = db.Column(db.Integer, default='?')
+    available = db.Column(db.Boolean, default=False)
+    held_by = db.Column(db.Integer, db.ForeignKey('users.id'))
+
+    # relationships
     interfaces = db.relationship('NetworkDevices',
                                  backref='servers', lazy='dynamic')
     unique_drives = db.relationship('StorageDevices',
@@ -51,10 +59,9 @@ class Servers(db.Model):
                              backref='servers', lazy='dynamic')
     virtual_drives = db.relationship('VirtualStorageDevices',
                                      backref='servers', lazy='dynamic')
-    rack = db.Column(db.Integer, default='?')
-    u = db.Column(db.Integer, default='?')
-    available = db.Column(db.Boolean, default=False)
+    holder = db.relationship('Users', backref='servers')
 
+    # magic methods
     def __repr__(self):
         return '<Server id {}>'.format(self.id)
 
@@ -98,7 +105,8 @@ class CommunicationDevices(db.Model):
 
 class ServerStorage(db.Model):
 
-    id = db.Column(db.String(64), primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
+    serial_number = db.Column(db.String(64), unique=True)
     device_id = db.Column(db.Integer, db.ForeignKey('storage_devices.id'))
     server_id = db.Column(db.String(16), db.ForeignKey('servers.id'))
     slot = db.Column(db.Integer)
@@ -123,7 +131,7 @@ class NetworkDevices(db.Model):
 
     mac = db.Column(db.String(12), primary_key=True)
     server_id = db.Column(db.String(16), db.ForeignKey('servers.id'))
-    ip = db.Column(db.String(15), unique=True)
+    ip = db.Column(db.String(15), unique=True, nullable=True)
     name = db.Column(db.String(3))
     slot = db.Column(db.Integer)
     type = db.Column(db.String(3),
@@ -131,11 +139,6 @@ class NetworkDevices(db.Model):
 
 
 # =========================== OS Models ==========================
-
-def make_name(self):
-    return '{} {}'.format(self.id, self.flavor)
-
-
 class OS(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
@@ -146,11 +149,6 @@ class OS(db.Model):
     append = db.Column(db.String(128))
     validated = db.Column(db.Boolean, default=False)
 
+    def __repr__(self):
 
-
-# =========================== Temporary ===========================
-
-class DeviceAddress(db.Model):
-
-    mac = db.Column(db.String(12), primary_key=True)
-    ip_address = db.Column(db.String(15), unique=True)
+        return '<OS: {} {}>'.format(self.flavor, self.version)

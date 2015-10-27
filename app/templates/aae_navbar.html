@@ -2,6 +2,7 @@
     <nav>
         <ul class="nav">
             <li><a href="/">Home</a></li>
+            <li><a href="/me">Me</a></li>
             <li><a href="/inventory">Inventory</a>
                 <ul>
                     <li><a href="/inventory">View Inventory</a></li>
@@ -15,6 +16,14 @@
                     <li><a href="/jobs">View/Edit Jobs</a></li>
                 </ul>
             </li>
+            {% if user.admin == true %}
+                <li><a href="/last_debug">Debug</a>
+                    <ul>
+                        <li><a href="/debug">Run Debug</a></li>
+                        <li><a href="/last_debug">View Last Debug</a></li>
+                    </ul>
+                </li>
+            {% endif %}
             <li><a href="/logout">Logout</a></li>
         </ul>
     </nav>

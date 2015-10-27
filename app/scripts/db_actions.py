@@ -30,7 +30,7 @@ def get_inventory():
     return servers
 
 
-def add_inventory(form):
+def add_inventory(form, user):
 
     """
     Add hardware to inventory
@@ -51,13 +51,16 @@ def add_inventory(form):
     racadm = RacadmManager(**s)
     server_info = racadm.get_server_info()
     if not server_info:
-        print 'Error fetching data. Make sure server is connected.'
+        message = 'Error fetching data. Make sure server is connected.'
+        print message
+        return message
     else:
         print server_info
 
     if 'drac' not in [x['name'].lower() for x in server_info.get('interfaces')]:
-        print 'Error getting server drac info.'
-        return
+        message = 'Error getting server drac info.'
+        print message
+        return message
 
     # add server and its interfaces to database
     server = models.Servers(rack=form.rack.data, u=form.u.data)
@@ -75,6 +78,8 @@ def add_inventory(form):
             else:
                 print 'key "{}" not in server:'.format(_k)
                 print '-> {}: {}'.format(_k, _v)
+
+    server.held_by = user.id
 
     try:
         db.session.add(server)
@@ -95,7 +100,9 @@ def add_inventory(form):
         drives = racadm.get_drive_info()
         check_or_add_drives(server, drives)
     else:
-        print 'Server is not powered on. Cannot get drive info.'
+        message = 'Server is not powered on. Cannot get drive info.'
+        print message
+        return message
 
 
 def get_power_status(mac):
@@ -297,37 +304,44 @@ def check_or_add_drives(server, drives):
             db.session.rollback()
 
         # add unique devices to server_storage table
-        for slot, _id in drive['ids'].items():
+        for slot, _sn in drive['sns'].items():
             try:
-                if not _id:
+                if not _sn:
                     message = 'No serial number found for drive in slot {}. ' \
                               'Check that server is powered on.'.format(slot)
                     print message
-                    flash(message)
-                    continue
                 device_id = models.StorageDevices.query.\
-                    filter_by(model=drive['model'],capacity=drive['capacity'])\
+                    filter_by(model=drive['model'], capacity=drive['capacity'])\
                     .first()
                 if not device_id:
                     message = 'No info found for drive in slot {}. ' \
                               'Not adding drive to inventory.'\
                         .format(drive.get('slot'))
                     print message
-                    flash(message)
                     continue
-                if models.ServerStorage.query.filter_by(id=_id).first():
-                    print 'Drive {} already in database.'.format(_id)
-                    continue
-                db.session.add(models.ServerStorage(id=_id,
-                                                    device_id=device_id.id,
-                                                    server_id=server.id,
-                                                    slot=slot))
+                existing_drive = models.ServerStorage.query\
+                    .filter_by(id=_sn).first()
+                if existing_drive:
+                    print 'Drive {} already in database.'.format(_sn)
+                    db.session.delete(existing_drive)
+                    try:
+                        db.session.commit()
+                    except:
+                        print 'Error deleting existing drive. Rolling back.'
+                        db.session.rollback()
+                        continue
+                add_drive = models.ServerStorage(device_id=device_id.id,
+                                                 server_id=server.id,
+                                                 slot=slot)
+                if _sn:
+                    add_drive.serial_number = _sn
+                db.session.add(add_drive)
                 db.session.commit()
             except InvalidRequestError as e:
                 db.session.rollback()
             except IntegrityError as e:
                 print 'Could not add drive {} to server_storage: {}'\
-                    .format(_id, e)
+                    .format(_sn, e)
 
 
 def main():

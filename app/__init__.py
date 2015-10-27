@@ -1,28 +1,33 @@
-from flask import Flask
-from flask.ext.sqlalchemy import SQLAlchemy
 from datetime import timedelta
+from flask import Flask
 from flask.ext.login import LoginManager
-from aaebench import customlogger
+from flask.ext.sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
+app.config.from_object('config')
+db = SQLAlchemy(app)
+lm = LoginManager()
+lm.init_app(app)
+lm.login_view = '_login'
+
+
+if not app.debug:
+    import logging
+    from logging.handlers import RotatingFileHandler
+    file_handler = RotatingFileHandler('tmp/microblog.log', 'a',
+                                       1 * 1024 * 1024, 10)
+    file_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s: '
+                                                '%(message)s [in %(pathname)s:'
+                                                '%(lineno)d]'))
+    app.logger.setLevel(logging.INFO)
+    file_handler.setLevel(logging.INFO)
+    app.logger.addHandler(file_handler)
+    app.logger.info('microblog startup')
+
+
 app.jinja_env.trim_blocks = True
 app.jinja_env.lstrip_blocks = True
 app.jinja_env.keep_trailing_newline = False
-app.config.from_object('config')
 app.permanent_session_lifetime = timedelta(seconds=10)
 
-
-lm = LoginManager()
-lm.init_app(app)
-lm.login_view = 'login'
-
-db = SQLAlchemy(app)
-
-app.jinja_env.trim_blocks = True
-
 from app import views, models
-
-
-ADMINS = ['aae@micron.com', 'cmurphy@micron.com']
-if not app.debug:
-    logger = customlogger.create_logger('aaebench')

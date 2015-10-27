@@ -1,8 +1,16 @@
 {% extends "base.html" %}
-{# set server information fields for inventory #}
-{% set field_pairs = (('ID', 'id'),('Model','model'),
+
+{# =============================================================== #}
+{# set variables #}
+{# =============================================================== #}
+
+{% set field_pairs = (('?', 'available'),('ID', 'id'),('Model','model'),
 ('CPUs','cpu_count'),('Model','cpu_model'),('Memory','memory_capacity'),
 ('Drives','model'),('Capacity','capacity'),('Count','count'),('Update',None)) %}
+
+{# =============================================================== #}
+{# set body data #}
+{# =============================================================== #}
 
 {% block content %}
     <h2>Inventory</h2>
@@ -17,7 +25,7 @@
                 {# create header for inventory table #}
                 {% for k, v in field_pairs %}
                     {% if  v == None %}
-                        {% set class = " class='sorttable_nosort'" %}
+                        {% set class = " class=sorttable_nosort" %}
                     {% endif %}
                     <th{{ class }}>
                         {{ k }}
@@ -29,33 +37,41 @@
             {# loop over servers in inventory #}
             {%- for server in servers -%}
                 <tr>
-                {# loop over field values for each server #}
-                {% for k, v in field_pairs %}
-                    <td>
-                    {# if field is None, insert "update" button #}
-                    {% if v != None %}
-                    {% if k in ('Drives', 'Capacity', 'Count') %}
-                    {% for drive in server['drive_counts'] %}
-                        {{ drive[v] }}<br>
-                    {% endfor %}
-                    {% elif server[v] is not undefined %}
-                    {% if k == 'ID' %}
-                        <a href="/inventory/{{ server['id'] }}">
+                    {# loop over field values for each server #}
+                    {% for k, v in field_pairs %}
+                        <td>
+                        {# if field is None, insert "update" button #}
+                        {% if v != None %}
+                        {% if k in ('Drives', 'Capacity', 'Count') %}
+                        {% for drive in server['drive_counts'] %}
+                            {{ drive[v] }}<br>
+                        {% endfor %}
+                        {% elif v == 'available' %}
+                        {% if server['available'] %}
+                            {% set color = 'blue' %}
+                        {% else %}
+                            {% set color = 'red' %}
+                        {% endif %}
+                            <img sorttable_customkey={{ color }} src={{ url_for('static', filename='pictures/{}.png'.format(color)) }} style="width:16px;height:16px;">
+                            <span style="display:none">{{ color }}</span>
+                        {% elif server[v] is not undefined %}
+                        {% if k == 'ID' %}
+                            <a href="/inventory/{{ server['id'] }}">
+                                {{ server[v] }}
+                            </a>
+                        {% else %}
                             {{ server[v] }}
-                        </a>
-                    {% else %}
-                        {{ server[v] }}
-                    {% endif %}
-                    {% endif %}
-                    {% else %}
-                        <form>
-                            <button formaction='/inventory/update/{{ server.interfaces.filter_by(name='DRAC').first().mac }}'>
-                                Update
-                            </button>
-                        </form>
-                    {% endif %}
-                    </td>
-                {% endfor %}
+                        {% endif %}
+                        {% endif %}
+                        {% else %}
+                            <form>
+                                <button formaction='/inventory/update/{{ server.interfaces.filter_by(name='DRAC').first().mac }}'>
+                                    Update
+                                </button>
+                            </form>
+                        {% endif %}
+                        </td>
+                    {% endfor %}
                 </tr>
             {% endfor %}
             </tbody>

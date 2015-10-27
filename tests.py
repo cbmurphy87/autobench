@@ -1,16 +1,31 @@
-#!flask/bin/python
+#!/usr/bin/python
 import os
 import unittest
 
+from coverage import coverage
+cov = coverage(branch=True, omit=['/opt/*',
+                                  '/usr/*',
+                                  'tests.py',
+                                  '*__init__.py'])
+cov.start()
+
 from config import basedir
 from app import app, db
-from app.models import User
+from app.models import Servers, Users, OS
+from app.scripts.jenkinsMethods import make_job
+from app.forms import CreateJobForm
+
+db.session.remove()
+
 
 class TestCase(unittest.TestCase):
+
     def setUp(self):
+        db.session.remove()
         app.config['TESTING'] = True
         app.config['WTF_CSRF_ENABLED'] = False
-        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'test.db')
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + \
+                                                os.path.join(basedir, 'test.db')
         self.app = app.test_client()
         db.create_all()
 
@@ -18,97 +33,65 @@ class TestCase(unittest.TestCase):
         db.session.remove()
         db.drop_all()
 
-    def test_avatar(self):
-        u = User(nickname='john', email='john@example.com')
-        avatar = u.avatar(128)
-        expected = 'http://www.gravatar.com/avatar/d4c74594d841139328695756648b6bd6'
-        assert avatar[0:len(expected)] == expected
+    def test_get_inventory(self):
 
-    def test_make_unique_nickname(self):
-        u = User(nickname='john', email='john@example.com')
-        db.session.add(u)
-        db.session.commit()
-        nickname = User.make_unique_nickname('john')
-        assert nickname != 'john'
-        u = User(nickname=nickname, email='susan@example.com')
-        db.session.add(u)
-        db.session.commit()
-        nickname2 = User.make_unique_nickname('john')
-        assert nickname2 != 'john'
-        assert nickname2 != nickname
+        inventory = Servers.query.all()
+        assert type(inventory) is list, type(inventory)
+        inventory = [x for x in inventory]
+        assert len(inventory) == 0, len(inventory)
 
-    def test_follow(self):
-        u1 = User(nickname='john', email='john@example.com')
-        u2 = User(nickname='susan', email='susan@example.com')
-        db.session.add(u1)
-        db.session.add(u2)
-        db.session.commit()
-        assert u1.unfollow(u2) is None
-        u = u1.follow(u2)
-        db.session.add(u)
-        db.session.commit()
-        assert u1.follow(u2) is None
-        assert u1.is_following(u2)
-        assert u1.followed.count() == 1
-        assert u1.followed.first().nickname == 'susan'
-        assert u2.followers.count() == 1
-        assert u2.followers.first().nickname == 'john'
-        u = u1.unfollow(u2)
-        assert u is not None
-        db.session.add(u)
-        db.session.commit()
-        assert not u1.is_following(u2)
-        assert u1.followed.count() == 0
-        assert u2.followers.count() == 0
+    def test_get_users(self):
 
-    def test_follow_posts(self):
-        # make four users
-        u1 = User(nickname='john', email='john@example.com')
-        u2 = User(nickname='susan', email='susan@example.com')
-        u3 = User(nickname='mary', email='mary@example.com')
-        u4 = User(nickname='david', email='david@example.com')
-        db.session.add(u1)
-        db.session.add(u2)
-        db.session.add(u3)
-        db.session.add(u4)
-        # make four posts
-        utcnow = datetime.utcnow()
-        p1 = Post(body="post from john", author=u1, timestamp=utcnow + timedelta(seconds=1))
-        p2 = Post(body="post from susan", author=u2, timestamp=utcnow + timedelta(seconds=2))
-        p3 = Post(body="post from mary", author=u3, timestamp=utcnow + timedelta(seconds=3))
-        p4 = Post(body="post from david", author=u4, timestamp=utcnow + timedelta(seconds=4))
-        db.session.add(p1)
-        db.session.add(p2)
-        db.session.add(p3)
-        db.session.add(p4)
-        db.session.commit()
-        # setup the followers
-        u1.follow(u1)  # john follows himself
-        u1.follow(u2)  # john follows susan
-        u1.follow(u4)  # john follows david
-        u2.follow(u2)  # susan follows herself
-        u2.follow(u3)  # susan follows mary
-        u3.follow(u3)  # mary follows herself
-        u3.follow(u4)  # mary follows david
-        u4.follow(u4)  # david follows himself
-        db.session.add(u1)
-        db.session.add(u2)
-        db.session.add(u3)
-        db.session.add(u4)
-        db.session.commit()
-        # check the followed posts of each user
-        f1 = u1.followed_posts().all()
-        f2 = u2.followed_posts().all()
-        f3 = u3.followed_posts().all()
-        f4 = u4.followed_posts().all()
-        assert len(f1) == 3
-        assert len(f2) == 2
-        assert len(f3) == 2
-        assert len(f4) == 1
-        assert f1 == [p4, p2, p1]
-        assert f2 == [p3, p2]
-        assert f3 == [p4, p3]
-        assert f4 == [p4]
+        users = Users.query.order_by('email').all()
+        assert type(users) == list
+        assert len(users) == 0
+
+    def test_get_oses(self):
+
+        oses = OS.query.all()
+        assert type(oses) == list
+        assert len(oses) == 0, len(oses)
+        nos = {'flavor': 'CentOS',
+               'version': '7 Latest',
+               'kernel': 'centos/7/os/x86_64/images/pxeboot/vmlinuz',
+               'initrd': 'centos/7/os/x86_64/images/pxeboot/initrd.img',
+               'append': 'centos/7.0.1503/minimal.ks ramdisk_size=100000',
+               'validated': True}
+        new_os = OS(**nos)
+        try:
+            db.session.add(new_os)
+            db.session.commit()
+        except:
+            db.session.rollback()
+
+        validated_oses = OS.query.filter_by(validated=True).all()
+        assert type(validated_oses) == list, type(validated_oses)
+        assert len(validated_oses) == 1, len(validated_oses)
+
+    def test_make_job(self):
+        job_name = 'test_job_coverage'
+        form = CreateJobForm()
+        form.job_name.data = job_name
+        form.build.data = False
+        form.target.data = 'notarget'
+        form.command = 'nocommand'
+        make_job(form)
+
 
 if __name__ == '__main__':
-    unittest.main()
+    db.session.remove()
+    try:
+        unittest.main()
+    except:
+        pass
+    cov.stop()
+    cov.save()
+    print("\n\nCoverage Report:\n")
+    cov.report()
+    print("HTML version: " + os.path.join(basedir, "tmp/coverage/index.html"))
+    pth = 'tmp/coverage'
+    for _file in os.listdir(pth):
+        os.remove(os.path.join(pth, _file))
+    cov.html_report(directory=pth)
+    cov.erase()
+    db.session.remove()

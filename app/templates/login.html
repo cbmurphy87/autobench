@@ -1,19 +1,29 @@
 {% extends "base.html" %}
+
+{# =============================================================== #}
+{# set head data #}
+{# =============================================================== #}
+
 {% block stylelinks %}
-    <link rel="stylesheet" href={{ url_for('static', filename="login.css") }}
-          xmlns:height="http://www.w3.org/1999/xhtml">
+    {{ super() }}
+    <link rel="stylesheet" href={{ url_for('static', filename="login.css") }} xmlns:height="http://www.w3.org/1999/xhtml">
 {% endblock %}
+
+{# =============================================================== #}
+{# set body data #}
+{# =============================================================== #}
+
 {% block body %}
-    <body>
-        {% with messages = get_flashed_messages() %}
-            {% if messages %}
-                <ul>
-                {% for message in messages %}
-                    <li>{{ message }} </li>
-                {% endfor %}
-                </ul>
-            {% endif %}
-        {% endwith %}
+    {# get flashed messages #}
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <ul>
+            {% for message in messages %}
+                <li>{{ message }}</li>
+            {% endfor %}
+            </ul>
+        {% endif %}
+    {% endwith %}
     <div id="login">
         <div class="login_header" style="top: 34px;">
             <img src={{ url_for('static', filename='pictures/micron_logo_black.png') }} style="position: relative; top: 20px; left: 30px; width:180px; height:120px;" alt="Oops!"></img>
@@ -42,32 +52,28 @@
                                 <table>
                                     <tbody>
                                         <tr>
-                                            <td class="left">
-                                                <span id="username_lbl">
-                                                    E-mail:
-                                                </span>
+                                            <td>
+                                                {{ form.email.label.text }}
                                             </td>
-                                            <td class="right">
-                                                <span id="password_lbl">
-                                                    Password:
-                                                </span>
+                                            <td>
+                                                {{ form.password.label.text }}
                                             </td>
                                         </tr>
                                         <tr>
-                                            <td class="left_input">
+                                            <td>
                                                 {{ form.email }}
                                             </td>
-                                            <td class="right_input">
+                                            <td>
                                                 {{ form.password }}
                                             </td>
                                         </tr>
                                         <tr>
-                                            <td class="left_input">
+                                            <td>
                                                 {% for error in form.email.errors %}
                                                     <span style="color:red;">[{{ error }}]</span>
                                                 {% endfor %}
                                             </td>
-                                            <td class="right_input">
+                                            <td>
                                                 {% for error in form.password.errors %}
                                                     <span style="color:red;">[{{ error }}]</span>
                                                 {% endfor %}
@@ -85,5 +91,4 @@
             <div class="login_footer"></div>
         </div>
     </div>
-    </body>
 {% endblock %}

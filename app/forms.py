@@ -51,15 +51,15 @@ def IPAddress(separator='.'):
 
 class CreateJobForm(Form):
 
-    job_name = StringField('job_name', validators=[DataRequired()])
-    build = BooleanField('build', default=True)
-    target = QuerySelectField('target', query_factory=models.Servers.query
+    job_name = StringField('Job Name', validators=[DataRequired()])
+    build = BooleanField('Build', default=True)
+    target = QuerySelectField('Target', query_factory=models.Servers.query
                               .order_by('id').all,
                               get_label='id', allow_blank=True,
                               blank_text='Select a target')
-    command = StringField('command', validators=[DataRequired()])
-    args = StringField('args')
-    kwargs = StringField('kwargs')
+    command = StringField('Command', validators=[DataRequired()])
+    args = StringField('Args')
+    kwargs = StringField('Kwargs')
 
 
 class DeployForm(Form):
@@ -68,17 +68,12 @@ class DeployForm(Form):
 
         return '{} {}'.format(getattr(self, 'flavor'), getattr(self, 'version'))
 
-    def get_vds():
-
-        return models.VirtualStorageDevices.query\
-            .filter_by(server_id='HZLBR22').all()
-
-    target = QuerySelectField('target', query_factory=models.Servers.query
+    target = QuerySelectField('Target', query_factory=models.Servers.query
                               .filter_by(available=True).order_by('id').all,
                               get_label='id', allow_blank=True,
                               blank_text='Select a target',
                               validators=[required()])
-    os = QuerySelectField('os', query_factory=models.OS.query
+    os = QuerySelectField('OS', query_factory=models.OS.query
                           .filter_by(validated=True)
                           .order_by(collate(models.OS.flavor, 'NOCASE'),
                                     models.OS.version.desc()).all,
@@ -95,22 +90,23 @@ class BuildStepForm(Form):
     target2 = QuerySelectField(query_factory=models.Servers.query
                                .filter_by(available=True)
                                .order_by('id'))
-    command = StringField('command', validators=[DataRequired()])
-    args = StringField('args', validators=[Optional()])
-    kwargs = StringField('kwargs', validators=[Optional()])
+    command = StringField('Command', validators=[DataRequired()])
+    args = StringField('Args', validators=[Optional()])
+    kwargs = StringField('Kwargs', validators=[Optional()])
     order = ('target', 'command', 'args', 'kwargs')
 
 
 class LoginForm(Form):
 
-    email = StringField('email', validators=[DataRequired()])
-    password = PasswordField('password', validators=[DataRequired()])
+    email = StringField('E-mail', validators=[DataRequired()])
+    password = PasswordField('Password', validators=[DataRequired()])
 
 
 class AddInventoryForm(Form):
 
-    drac_ip = StringField('drac_ip', validators=[DataRequired(), IPAddress()])
-    rack = IntegerField('rack', validators=[DataRequired(),
+    drac_ip = StringField('iDRAC/IPMI IP Address',
+                          validators=[DataRequired(), IPAddress()])
+    rack = IntegerField('Rack', validators=[DataRequired(),
                                             NumberRange(min=1, max=15)])
-    u = IntegerField('u', validators=[DataRequired(),
+    u = IntegerField('U', validators=[DataRequired(),
                                       NumberRange(min=1, max=42)])

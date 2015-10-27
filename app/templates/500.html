@@ -1,8 +1,17 @@
-<!-- extend base layout -->
 {% extends "base.html" %}
 
+{# =============================================================== #}
+{# set body data #}
+{# =============================================================== #}
+
 {% block content %}
-  <h1>An unexpected error has occurred</h1>
-  <p>The administrator has been notified. Sorry for the inconvenience!</p>
-  <p><a href='/index'>Back</a></p>
+    <h1>An unexpected error has occurred</h1>
+    <p>The administrator has been notified. Sorry for the inconvenience!</p>
+    {% if message is defined %}
+        <p>
+            Info:
+            {{ message }}
+        </p>
+    {% endif %}
+    <p><a href='/index'>Back</a></p>
 {% endblock %}

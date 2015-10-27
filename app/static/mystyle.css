@@ -263,6 +263,11 @@ table.bigtable.pane > tbody > tr > td:last-child {
     background-color: #f0f0f0;
     padding: 6px 4px;
     white-space: nowrap;
+    cursor: pointer;
+}
+
+.bigtable th.sorttable_nosort {
+    cursor: default;
 }
 
 .bigtable td {
@@ -287,7 +292,7 @@ table.stripped-odd tr:nth-child(odd) {
 }
 
 .add_inventory p {
-    margin: 5px;
+    margin: 0 5px 5px 0;
 }
 
 .add_inventory p:last-child {

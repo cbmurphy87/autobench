@@ -1,12 +1,34 @@
 {% extends "root.html" %}
+
+{# =============================================================== #}
+{# set head data #}
+{# =============================================================== #}
+
 {% block head %}
-    {% block scriptlinks %}{% endblock %}
-    <script>
-        {% block scripts %}{% endblock %}
-    </script>
+    {# include all links to scripts #}
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
     <script type="text/javascript" src={{ url_for('static', filename='javascript/functions.js') }}></script>
     <script type="text/javascript" src={{ url_for('static', filename='javascript/sortable.js') }}></script>
-    {% block stylelinks %}{% endblock %}
+    {% block links %}
+        <!-- No additional links -->
+    {% endblock %}
+    <script>
+    {% block scripts %}
+        <!-- No custom scripts -->
+        $(document).ready(function () {
+            $("li.message").click(function () {
+                alert('You clicked a message!')
+                $(this).fadeOut();
+            });
+        });
+    {% endblock %}
+    </script>
+    {# include all links to styles #}
+    <style>
+    {% block styles %}
+        <!-- No additional styles -->
+    {% endblock %}
+    </style>
     {% if title %}
         <title>{{ title }} - AutoBench</title>
     {% else %}
