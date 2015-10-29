@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+
+{% set user_fields = (('First Name','first_name'),('Last Name','last_name'),
+('E-mail','email'),('Admin','admin')) %}
+
+{% set server_fields = (('ID', 'id'),('Host Name','host_name'),
+('Model','model'),('CPU Count','cpu_count'),('CPU Model','cpu_model'),
+('Memory','memory_capacity'),('Release','release'))%}
+
+{% block content %}
+    <h2>My Info</h2>
+    <div class="pane-frame">
+        <table class="pane bigtable stripped">
+            <thead>
+                <tr class="header">
+                {# create header for inventory table #}
+                    <th colspan="2" style="text-align:center;">
+                        User Info
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+            {# loop over servers in inventory #}
+            {% for k, v in user_fields %}
+                <tr>
+                    <td style="text-align:right;">
+                        {{ k }}:
+                    </td>
+                    <td>
+                        <i>{{ user[v] }}</i>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <h2>My Servers</h2>
+    {% if user.servers %}
+    <div class="pane-frame" style="width:100%;">
+        <table id="projectstatus" class="sortable pane bigtable stripped">
+            <thead>
+                <tr class="header">
+                {# create header for inventory table #}
+                    {% for k, v in server_fields %}
+                    <th>
+                        {{ k }}
+                    </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+            {# loop over servers in inventory #}
+            {%- for server in user.servers -%}
+                <tr>
+                {% for k, v in server_fields %}
+                    <td>
+                    {% if v == 'id' %}
+                        {% set server_id = server['id'] %}
+                        <a href="/inventory/{{ server_id }}">
+                        {{ server_id }}
+                        </a>
+                    {% elif v == 'release' %}
+                        <form>
+                            <button formaction='/inventory/release/{{ server.id }}'>
+                                Release
+                            </button>
+                        </form>
+                    {% else %}
+                        {{ server[v] }}
+                    {% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+        You have no servers checked out.
+    {% endif %}
+    <h2>My Projects</h2>
+    {% if user.projects %}
+    <div class="pane-frame" style="width:100%;">
+        <table id="projectstatus" class="sortable pane bigtable stripped">
+            <thead>
+                <tr class="header">
+                {# create header for inventory table #}
+                    {% for k, v in server_fields %}
+                    <th>
+                        {{ k }}
+                    </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+            {# loop over servers in inventory #}
+            {%- for server in user.servers -%}
+                <tr>
+                {% for k, v in server_fields %}
+                    <td>
+                    {% if v == 'id' %}
+                        {% set server_id = server['id'] %}
+                        <a href="/inventory/{{ server_id }}">
+                        {{ server_id }}
+                        </a>
+                    {% elif v == 'release' %}
+                        <form>
+                            <button formaction='/inventory/release/{{ server.id }}'>
+                                Release
+                            </button>
+                        </form>
+                    {% else %}
+                        {{ server[v] }}
+                    {% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+        You have no projects yet.
+    {% endif %}
+{% endblock %}

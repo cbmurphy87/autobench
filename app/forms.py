@@ -68,8 +68,12 @@ class DeployForm(Form):
 
         return '{} {}'.format(getattr(self, 'flavor'), getattr(self, 'version'))
 
-    target = QuerySelectField('Target', query_factory=models.Servers.query
-                              .filter_by(available=True).order_by('id').all,
+    def get_held_servers():
+        return models.Servers.query \
+            .filter_by(available=True) \
+            .order_by('id').all
+
+    target = QuerySelectField('Target', query_factory=get_held_servers(),
                               get_label='id', allow_blank=True,
                               blank_text='Select a target',
                               validators=[required()])

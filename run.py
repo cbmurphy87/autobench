@@ -1,4 +1,4 @@
 #!/usr/bin/python
-from app import app
+from app import myapp, context
 
-app.run(host='0.0.0.0', port=80, threaded=True, debug=True)
+myapp.run(host='0.0.0.0', port=443, threaded=True, ssl_context='adhoc')

@@ -8,7 +8,7 @@ from flask.ext.login import login_user, logout_user, current_user, \
 from sqlalchemy import sql
 
 # ___________________________ App Imports ________________________
-from app import app, lm
+from app import myapp, lm
 from app.forms import CreateJobForm, LoginForm, BuildStepForm, \
     AddInventoryForm, DeployForm
 from models import Users, Servers
@@ -115,10 +115,10 @@ def load_user(id):
 
 
 def unauthorized():
-    return redirect('/login')
+    return redirect(url_for('_login', scheme='https'))
 
 
-@app.before_request
+@myapp.before_request
 def _before_request():
     try:
         g.user = current_user
@@ -127,7 +127,7 @@ def _before_request():
 
 
 # =========================== LOGIN VIEWS =============================
-@app.route('/login', methods=['GET', 'POST'])
+@myapp.route('/login', methods=['GET', 'POST'])
 def _login():
     if g.user is not None and g.user.is_authenticated:
         return redirect(url_for('_root'))
@@ -143,18 +143,12 @@ def _login():
         # if valid user
         if user:
             # check password
-            if str(form.password.data) == 'Not24Get':
+            if user.check_password(str(form.password.data)):
                 user.is_authenticated = True
                 db.session.add(user)
                 db.session.commit()
                 login_user(user, remember=True)
                 flash('Hello, {}.'.format(user.first_name))
-
-                next = request.args.get('next')
-                # next_is_valid should check if the user has valid
-                # permission to access the `next` url
-                if not next_is_valid(next):
-                    return abort(400)
 
                 return redirect(url_for('_root'))
             else:
@@ -172,7 +166,7 @@ def _login():
                            form=form)
 
 
-@app.route('/logout')
+@myapp.route('/logout')
 def _logout():
     logout_user()
     flash('You have been logged out.')
@@ -180,7 +174,7 @@ def _logout():
 
 
 # =========================== REGULAR VIEWS ===========================
-@app.route('/')
+@myapp.route('/')
 @login_required
 def _root():
     user = g.user
@@ -190,7 +184,7 @@ def _root():
                            user=user)
 
 
-@app.route('/script')
+@myapp.route('/script')
 @login_required
 def _script():
     print 'HI!'
@@ -200,11 +194,11 @@ def _script():
     return 'Hello'
 
 
-@app.route('/me')
+@myapp.route('/my_info')
 @login_required
-def _me():
+def _my_info():
     user = g.user
-    return render_template('about_me.html',
+    return render_template('my_info.html',
                            title='About Me',
                            date=_get_date_last_modified(),
                            user=user)
@@ -212,7 +206,7 @@ def _me():
 
 # _______________________ INFO _________________________
 # methods used to get inventory info
-@app.route('/server_info', methods=['POST'])
+@myapp.route('/server_info', methods=['POST'])
 @login_required
 def _server_info():
     server_id = request.get_json().get('id')
@@ -222,7 +216,7 @@ def _server_info():
 
 
 # _______________________ INVENTORY ________________________
-@app.route('/inventory')
+@myapp.route('/inventory')
 @login_required
 def _inventory():
     user = g.user
@@ -232,7 +226,7 @@ def _inventory():
                            user=user, servers=servers)
 
 
-@app.route('/inventory/add', methods=['GET', 'POST'])
+@myapp.route('/inventory/add', methods=['GET', 'POST'])
 @login_required
 def _add_inventory():
     user = g.user
@@ -248,7 +242,7 @@ def _add_inventory():
                            form=form)
 
 
-@app.route('/inventory/<_id>')
+@myapp.route('/inventory/<_id>')
 @login_required
 def _inventory_id(_id):
     user = g.user
@@ -257,7 +251,7 @@ def _inventory_id(_id):
                            date=_get_date_last_modified(), user=user)
 
 
-@app.route('/inventory/update/<mac>', methods=['GET', 'POST'])
+@myapp.route('/inventory/update/<mac>', methods=['GET', 'POST'])
 @login_required
 def _update_inventory(mac):
     flash('Updating server. Wait 30 seconds, then refresh.')
@@ -266,7 +260,7 @@ def _update_inventory(mac):
     return redirect('inventory')
 
 
-@app.route('/inventory/release/<id>', methods=['GET', 'POST'])
+@myapp.route('/inventory/release/<id>', methods=['GET', 'POST'])
 @login_required
 def _release_inventory(id):
     server = Servers.query.filter_by(id=id).first()
@@ -276,7 +270,7 @@ def _release_inventory(id):
         holding_user_id = user_holding.id
     except:
         print 'Could not get user holding server.'
-        return redirect(url_for('_me'))
+        return redirect(url_for('_my_info'))
     user = g.user
     if user.id == holding_user_id:
         server.available = True
@@ -287,11 +281,38 @@ def _release_inventory(id):
         except:
             print 'Error releasing server. Rolling back.'
             db.session.rollback()
-    return redirect(url_for('_me'))
+    return redirect(url_for('_inventory'))
+
+
+@myapp.route('/inventory/checkout/<id>', methods=['GET', 'POST'])
+@login_required
+def _checkout_inventory(id):
+    server = Servers.query.filter_by(id=id).first()
+    user_holding = server.holder
+    try:
+        if user_holding:
+            message = '{} has control of this server.' \
+                .format(str(user_holding))
+            flash(message)
+            return redirect('/inventory')
+    except Exception as e:
+        print e
+    user = g.user
+    if server.available and not server.holder:
+        try:
+            server.available = False
+            server.held_by = user.id
+            db.session.add(server)
+            db.session.commit()
+            return redirect('/inventory')
+        except:
+            print 'Could not checkout server {} for user {}. Rolling back.' \
+                .format(server, user)
+    return redirect(url_for('_inventory'))
 
 
 # _______________________ Deploy ________________________
-@app.route('/deploy', methods=['GET', 'POST'])
+@myapp.route('/deploy', methods=['GET', 'POST'])
 @login_required
 def _deploy():
     user = g.user
@@ -303,11 +324,10 @@ def _deploy():
         p = Process(target=_deploy_server, args=(form,))
         p.start()
 
-        message = 'Deploying {} {} to {} with ks {}.'\
+        message = 'Deploying {} {} to {}.'\
             .format(form.os.data.flavor,
                     form.os.data.version,
-                    form.target.data.id,
-                    form.os.data.append)
+                    form.target.data.id)
 
         flash(message)
 
@@ -323,7 +343,7 @@ def _deploy():
 
 
 # _______________________ JOBS ________________________
-@app.route('/build_job/<job_name>', methods=['POST', 'GET'])
+@myapp.route('/build_job/<job_name>', methods=['POST', 'GET'])
 @login_required
 def _build_job(job_name):
     print 'Building job {}!'.format(job_name)
@@ -332,7 +352,7 @@ def _build_job(job_name):
     return redirect('/jobs')
 
 
-@app.route('/create_job', methods=['GET', 'POST'])
+@myapp.route('/create_job', methods=['GET', 'POST'])
 @login_required
 def _create_job():
     user = g.user
@@ -352,7 +372,7 @@ def _create_job():
                            user=user, servers=servers)
 
 
-@app.route('/jobs', methods=['GET', 'POST'])
+@myapp.route('/jobs', methods=['GET', 'POST'])
 @login_required
 def _jobs():
     user = g.user
@@ -367,7 +387,7 @@ def _jobs():
                            user=user)
 
 
-@app.route('/jobs/<jobname>')
+@myapp.route('/jobs/<jobname>')
 @login_required
 def _job_info(jobname):
     user = g.user
@@ -382,7 +402,7 @@ def _job_info(jobname):
 
 
 # ________________________ Debug __________________________
-@app.route('/debug', methods=['GET'])
+@myapp.route('/debug', methods=['GET'])
 @login_required
 def _debug():
     p = Process(target=_run_debug, args=[])
@@ -390,7 +410,7 @@ def _debug():
     return redirect(url_for('_last_debug'))
 
 
-@app.route('/last_debug', methods=['GET'])
+@myapp.route('/last_debug', methods=['GET'])
 @login_required
 def _last_debug():
     user = g.user
@@ -398,27 +418,40 @@ def _last_debug():
                            date=_get_date_last_modified())
 
 
-@app.route('/last_debug_raw/<path>', methods=['GET'])
+@myapp.route('/last_debug_raw/<path>', methods=['GET'])
 @login_required
 def _last_debug_path(path):
     return send_from_directory('/root/autobench/tmp/coverage',
                                path)
 
 
-@app.route('/last_debug_raw/', methods=['GET'])
+@myapp.route('/last_debug_raw/', methods=['GET'])
 @login_required
 def _last_debug_raw():
     return send_from_directory('/root/autobench/tmp/coverage', 'index.html')
 
 
+@myapp.route('/last_debug_out', methods=['GET'])
+@login_required
+def _last_debug_out():
+    user = g.user
+    with open('last_debug.out', 'r') as f:
+        text = f.read()
+    if text:
+        return render_template('last_debug_out.html', title='Debug', user=user,
+                               date=_get_date_last_modified(), text=text)
+    flash('Could not get last debug output.')
+    return redirect(url_for('_last_debug'))
+
+
 # _______________________ Handlers ________________________
-@app.errorhandler(404)
+@myapp.errorhandler(404)
 def not_found_error(error):
     user = g.user
     return render_template('404.html', user=user), 404
 
 
-@app.errorhandler(500)
+@myapp.errorhandler(500)
 def internal_error(error):
     user = g.user
     db.session.rollback()

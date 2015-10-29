@@ -1,0 +1,15 @@
+{% extends "body_base.html" %}
+
+{% block styles %}
+    html, body {
+        height: 90%;
+    }
+{% endblock %}
+
+{% block content %}
+    <div style="height:100%;margin-top:20px;">
+        <pre>
+        {{ text }}
+        </pre>
+    </div>
+{% endblock %}

@@ -220,14 +220,6 @@ table.stripped tr:nth-child(even) {
     background: #fbfbfb;
 }
 
-table.stripped-even tr:nth-child(even) {
-    background: #fbfbfb;
-}
-
-table.stripped-odd tr:nth-child(odd) {
-    background: #fbfbfb;
-}
-
 div.pane-header {
     font-weight: bold;
     padding-right: 24px;
@@ -260,9 +252,12 @@ table.bigtable.pane > tbody > tr > td:last-child {
 .bigtable th {
     font-weight: bold;
     border: none;
-    background-color: #f0f0f0;
+    background-color: #e9e9e9;
     padding: 6px 4px;
     white-space: nowrap;
+}
+
+.sortable th {
     cursor: pointer;
 }
 
@@ -273,10 +268,6 @@ table.bigtable.pane > tbody > tr > td:last-child {
 .bigtable td {
     vertical-align: middle;
     padding: 3px 4px 3px 4px;
-}
-
-table.stripped-odd tr:nth-child(odd) {
-    background: #fbfbfb;
 }
 
 .build_step p {
@@ -312,4 +303,17 @@ img#bench {
     height:200px;
     left:0px;
     bottom:0px;
+}
+
+#projectstatus tr.heldserver,
+#projectstatus tr.heldserver > td > a {
+    color: white;
+}
+
+#projectstatus tr.heldserver:nth-child(odd) {
+    background-color: #20649c;
+}
+
+#projectstatus tr.heldserver:nth-child(even) {
+    background-color: #00447c;
 }

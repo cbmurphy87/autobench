@@ -4,9 +4,13 @@
 {# set variables #}
 {# =============================================================== #}
 
-{% set field_pairs = (('?', 'available'),('ID', 'id'),('Model','model'),
+{% set field_pairs = (('S', 'available'),('ID', 'id'),('Model','model'),
 ('CPUs','cpu_count'),('Model','cpu_model'),('Memory','memory_capacity'),
 ('Drives','model'),('Capacity','capacity'),('Count','count'),('Update',None)) %}
+
+{% block scripts %}
+
+{% endblock %}
 
 {# =============================================================== #}
 {# set body data #}
@@ -14,12 +18,11 @@
 
 {% block content %}
     <h2>Inventory</h2>
-
     <div style="padding-bottom: 10px;">
         Machines available for testing:<br>
     </div>
     <div class="pane-frame" style="width:100%;">
-        <table id="projectstatus" class="sortable pane bigtable stripped-odd">
+        <table id="projectstatus" class="sortable pane bigtable stripped">
             <thead>
                 <tr class="header">
                 {# create header for inventory table #}
@@ -36,24 +39,39 @@
             <tbody>
             {# loop over servers in inventory #}
             {%- for server in servers -%}
-                <tr>
+                {% if server.holder.id == user.id %}
+                    {% set class = " class=heldserver" %}
+                {% else %}
+                    {% set class = '' %}
+                {% endif %}
+                <tr{{ class }}>
                     {# loop over field values for each server #}
                     {% for k, v in field_pairs %}
                         <td>
                         {# if field is None, insert "update" button #}
                         {% if v != None %}
-                        {% if k in ('Drives', 'Capacity', 'Count') %}
-                        {% for drive in server['drive_counts'] %}
+                            {% if k in ('Drives', 'Capacity', 'Count') %}
+                            {% for drive in server['drive_counts'] %}
                             {{ drive[v] }}<br>
-                        {% endfor %}
-                        {% elif v == 'available' %}
-                        {% if server['available'] %}
-                            {% set color = 'blue' %}
-                        {% else %}
-                            {% set color = 'red' %}
-                        {% endif %}
-                            <img sorttable_customkey={{ color }} src={{ url_for('static', filename='pictures/{}.png'.format(color)) }} style="width:16px;height:16px;">
-                            <span style="display:none">{{ color }}</span>
+                            {% endfor %}
+                            {% elif v == 'available' %}
+                                {% if server['available'] %}
+                                    {% set color = 'blue' %}
+                                    {% set link = '/inventory/checkout/{}'.format(server.id) %}
+                                    {% set hover_title = 'Check out this server' %}
+                                {% elif server['held_by'] == user.id %}
+                                    {% set color = 'green' %}
+                                    {% set link = '/inventory/release/{}'.format(server.id) %}
+                                    {% set hover_title = 'Release this server' %}
+                                {% else %}
+                                    {% set color = 'red' %}
+                                    {% set link = '/inventory/checkout/{}'.format(server.id) %}
+                                    {% set hover_title = 'This server is being used by someone else.' %}
+                                {% endif %}
+                            <a href={{ link }} title="{{ hover_title }}">
+                                <img src={{ url_for('static', filename='pictures/{}.png'.format(color)) }} style="width:16px;height:16px;">
+                            </a>
+                                <span style="display:none">{{ color }}</span>
                         {% elif server[v] is not undefined %}
                         {% if k == 'ID' %}
                             <a href="/inventory/{{ server['id'] }}">

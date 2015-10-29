@@ -4,7 +4,7 @@
         <username>jenkins</username>
         <userpass>Not24Get</userpass>
         <authtype>pam</authtype>
-        <target>{{ salt.target.data.hostname }}</target>
+        <target>{{ salt.target.data.id }}</target>
         <targettype>list</targettype>
         <function>{{ salt.command.data }}</function>
         <arguments>{{ salt.args.data }}</arguments>

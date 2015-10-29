@@ -1,6 +1,7 @@
 #!/usr/bin/python
 import os
 import unittest
+import tempfile
 
 from coverage import coverage
 cov = coverage(branch=True, omit=['/opt/*',
@@ -10,10 +11,9 @@ cov = coverage(branch=True, omit=['/opt/*',
 cov.start()
 
 from config import basedir
-from app import app, db
+from app import myapp, db
 from app.models import Servers, Users, OS
-from app.scripts.jenkinsMethods import make_job
-from app.forms import CreateJobForm
+from app.scripts.db_actions import get_inventory
 
 db.session.remove()
 
@@ -22,16 +22,20 @@ class TestCase(unittest.TestCase):
 
     def setUp(self):
         db.session.remove()
-        app.config['TESTING'] = True
-        app.config['WTF_CSRF_ENABLED'] = False
-        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + \
-                                                os.path.join(basedir, 'test.db')
-        self.app = app.test_client()
+        self.db_fd, myapp.config['DATABASE'] = tempfile.mkstemp()
+        myapp.config['TESTING'] = True
+        myapp.config['WTF_CSRF_ENABLED'] = False
+        myapp.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + \
+                                                  os.path.join(basedir,
+                                                               'test.db')
+        self.app = myapp.test_client()
         db.create_all()
 
     def tearDown(self):
-        db.session.remove()
+        os.close(self.db_fd)
+        os.unlink(myapp.config['DATABASE'])
         db.drop_all()
+        db.session.remove()
 
     def test_get_inventory(self):
 
@@ -40,11 +44,37 @@ class TestCase(unittest.TestCase):
         inventory = [x for x in inventory]
         assert len(inventory) == 0, len(inventory)
 
-    def test_get_users(self):
+    def test_get_inventory_method(self):
+        inventory = get_inventory()
+        assert type(inventory) == list, type(inventory)
+        assert len(inventory) == 0, len(inventory)
 
-        users = Users.query.order_by('email').all()
+    def test_users(self):
+
+        users = Users.query.all()
         assert type(users) == list
         assert len(users) == 0
+        new_user = Users(first_name='test',
+                         last_name='user',
+                         email='testuser@aaebench.micron.com',
+                         password='testpassword',
+                         admin=False)
+        try:
+            db.session.add(new_user)
+            db.session.commit()
+        except:
+            db.session.rollback()
+            assert False, 'Could not add user to db.'
+
+        users = Users.query.order_by('email')
+        all_users = users.all()
+        assert type(all_users) == list
+        assert len(all_users) == 1
+
+        test_user = users.first()
+        assert int(test_user.get_id()) == 1, test_user.get_id()
+        assert str(test_user) == '<User testuser@aaebench.micron.com>', \
+            str(test_user)
 
     def test_get_oses(self):
 
@@ -68,14 +98,30 @@ class TestCase(unittest.TestCase):
         assert type(validated_oses) == list, type(validated_oses)
         assert len(validated_oses) == 1, len(validated_oses)
 
-    def test_make_job(self):
-        job_name = 'test_job_coverage'
-        form = CreateJobForm()
-        form.job_name.data = job_name
-        form.build.data = False
-        form.target.data = 'notarget'
-        form.command = 'nocommand'
-        make_job(form)
+    def test_add_server(self):
+
+        servers = Servers.query
+        all_servers = servers.all()
+        assert type(all_servers) == list, type(all_servers)
+        assert len(all_servers) == 0, len(all_servers)
+
+        new_server = Servers(id='TESTID', host_name='testhostname',
+                             model='test model', cpu_count='5',
+                             cpu_model='test cpu', memory_capacity='999 TB',
+                             bios='1.2.3.4', rack='12', u='13')
+        try:
+            db.session.add(new_server)
+            db.session.commit()
+        except:
+            db.session.rollback()
+            assert False, 'Could not add server to db.'
+
+        servers = Servers.query
+        all_servers = servers.all()
+        first_server = servers.first()
+        assert type(all_servers) == list, type(all_servers)
+        assert len(all_servers) == 1, len(all_servers)
+        assert str(first_server) == '<Server id TESTID>'
 
 
 if __name__ == '__main__':

@@ -44,45 +44,57 @@
 {# =============================================================== #}
 
 {% block content %}
+    {% if server.available %}
+        <h2>This Server is Available</h2>
+        <p>Would you like to check it out?</p>
+        <form>
+            <button formaction='/inventory/checkout/{{ server.id }}' style="font-size:0.9em;">
+                Checkout
+            </button>
+        </form>
+    {% elif server.holder.id == user.id %}
+        <h3>You have this server checked out!</h3>
+        Go to the <a href="/my_info">My Info</a> page to see all of your servers.
+    {% endif %}
     <!-- Basic server info -->
     <h2 style="padding-bottom: 10px;">Basic Info</h2>
     <div class="pane-frame" style="width:auto;">
-        <table id="projectstatus" class="sortable pane bigtable stripped-odd">
+        <table id="projectstatus" class="sortable pane bigtable stripped">
             <tbody>
             <tr class="header">
             {# create header for table #}
-            {% for field in ('Field', 'Value') %}
-                <th>
-                    {{ field }}
+                <th style="text-align:right;">
+                    Field:
                 </th>
-            {% endfor %}
+                <th>
+                    Value
+                </th>
             </tr>
             {# loop over field values for each parame #}
             {% for k, v in server_fields %}
             <tr>
-                <td>
-                    {{ k }}
+                <td style="text-align:right;">
+                    {{ k }}:
                 </td>
                 <td>
                     {% if server[v] != None %}
-                        {{ server[v] }}
+                        <i>{{ server[v] }}</i>
                     {% else %}
-                        N/A
+                        <i>N/A</i>
                     {% endif %}
                 </td>
             </tr>
             {% endfor %}
             <tr>
-                <td>
-                    Held By
+                <td style="text-align:right">
+                    Held By:
                 </td>
                 <td>
-                    {% if server['holder'] != None %}
-                    {{ server['holder'].first_name }}
-                    {{ server['holder'].last_name }}
-                    {% else %}
-                    -
-                    {% endif %}
+                {% if server['holder'] != None %}
+                    <i>{{ server['holder'].first_name }} {{ server['holder'].last_name }}</i>
+                {% else %}
+                    Nobody
+                {% endif %}
                 </td>
             </tr>
             </tbody>
@@ -92,7 +104,7 @@
     <h2 style="padding-bottom: 10px;">Drive Info</h2>
     {% if server.drives.all()|length >= 1 %}
         <div class="pane-frame" style="width:100%;">
-            <table id="projectstatus" class="sortable pane bigtable stripped-odd">
+            <table id="projectstatus" class="sortable pane bigtable stripped">
                 <tbody>
                 <tr class="header">
                 {# create header for inventory table #}
@@ -127,7 +139,7 @@
     <h2 style="padding-bottom: 10px;">Virtual Drive Info</h2>
     {% if server.virtual_drives.all()|length >= 1 %}
     <div class="pane-frame" style="width:100%;">
-        <table id="projectstatus" class="sortable pane bigtable stripped-odd">
+        <table id="projectstatus" class="sortable pane bigtable stripped">
             <tbody>
             <tr class="header">
             {# create header for inventory table #}
@@ -162,7 +174,7 @@
     <h2 style="padding-bottom: 10px;">Network Info</h2>
     {% if server.interfaces.all()|length >= 1 %}
     <div class="pane-frame" style="width:100%;">
-        <table id="projectstatus" class="sortable pane bigtable stripped-odd">
+        <table id="projectstatus" class="sortable pane bigtable stripped">
             <tbody>
             <tr class="header">
             {# create header for inventory table #}

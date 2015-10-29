@@ -1,4 +1,5 @@
 from app import db
+from werkzeug.security import check_password_hash
 
 # ================ Users for Flask Login ==================
 
@@ -28,8 +29,14 @@ class Users(db.Model):
         except NameError:
             return str(self.id)
 
+    def check_password(self, password):
+        return check_password_hash(self.password, password)
+
     def __repr__(self):
         return '<User {}>'.format(self.email)
+
+    def __str__(self):
+        return '{} {}'.format(self.first_name, self.last_name)
 
 
 # ================= Server Inventory ======================
@@ -152,3 +159,11 @@ class OS(db.Model):
     def __repr__(self):
 
         return '<OS: {} {}>'.format(self.flavor, self.version)
+
+
+# =========================== Projects ==========================
+class Projects(db.Model):
+
+    id = db.Column(db.String('16'), primary_key=True)
+    owner_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    date_created = db.String('32')

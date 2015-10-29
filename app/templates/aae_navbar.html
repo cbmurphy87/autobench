@@ -1,15 +1,15 @@
 {% block navbar %}
     <nav>
         <ul class="nav">
-            <li><a href="/">Home</a></li>
-            <li><a href="/me">Me</a></li>
+            <li class="nodrop"><a href="/">Home</a></li>
+            <li class="nodrop"><a href="/my_info">My Info</a></li>
             <li><a href="/inventory">Inventory</a>
                 <ul>
                     <li><a href="/inventory">View Inventory</a></li>
                     <li><a href="/inventory/add">Add Inventory</a></li>
                 </ul>
             </li>
-            <li><a href="/deploy">Deploy</a></li>
+            <li class="nodrop"><a href="/deploy">Deploy</a></li>
             <li><a href="/jobs">Jobs</a>
                 <ul>
                     <li><a href="/create_job">Create Job</a></li>
@@ -21,10 +21,11 @@
                     <ul>
                         <li><a href="/debug">Run Debug</a></li>
                         <li><a href="/last_debug">View Last Debug</a></li>
+                        <li><a href="/last_debug_out">View Last Output</a></li>
                     </ul>
                 </li>
             {% endif %}
-            <li><a href="/logout">Logout</a></li>
+            <li class="nodrop"><a href="/logout">Logout</a></li>
         </ul>
     </nav>
 {% endblock %}

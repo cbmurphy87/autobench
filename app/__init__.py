@@ -2,16 +2,21 @@ from datetime import timedelta
 from flask import Flask
 from flask.ext.login import LoginManager
 from flask.ext.sqlalchemy import SQLAlchemy
+from OpenSSL import SSL
+from flask_sslify import SSLify
 
-app = Flask(__name__)
-app.config.from_object('config')
-db = SQLAlchemy(app)
+context = SSL.Context(SSL.TLSv1_2_METHOD)
+
+myapp = Flask(__name__)
+sslify = SSLify(myapp)
+myapp.config.from_object('config')
+db = SQLAlchemy(myapp)
 lm = LoginManager()
-lm.init_app(app)
+lm.init_app(myapp)
 lm.login_view = '_login'
 
 
-if not app.debug:
+if not myapp.debug:
     import logging
     from logging.handlers import RotatingFileHandler
     file_handler = RotatingFileHandler('tmp/microblog.log', 'a',
@@ -19,15 +24,15 @@ if not app.debug:
     file_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s: '
                                                 '%(message)s [in %(pathname)s:'
                                                 '%(lineno)d]'))
-    app.logger.setLevel(logging.INFO)
+    myapp.logger.setLevel(logging.INFO)
     file_handler.setLevel(logging.INFO)
-    app.logger.addHandler(file_handler)
-    app.logger.info('microblog startup')
+    myapp.logger.addHandler(file_handler)
+    myapp.logger.info('microblog startup')
 
 
-app.jinja_env.trim_blocks = True
-app.jinja_env.lstrip_blocks = True
-app.jinja_env.keep_trailing_newline = False
-app.permanent_session_lifetime = timedelta(seconds=10)
+myapp.jinja_env.trim_blocks = True
+myapp.jinja_env.lstrip_blocks = True
+myapp.jinja_env.keep_trailing_newline = False
+myapp.permanent_session_lifetime = timedelta(seconds=10)
 
 from app import views, models

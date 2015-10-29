@@ -43,11 +43,17 @@ nav li > ul {
 .nav > li:hover,
 .nav > li:hover > a {
     background-color: #00447c;
+    border-radius: 10px 10px 0 0;
 }
 
+/* switch color of background and text */
 .nav li:hover > a {
     background-color: #00447c;
     color: white;
+}
+
+.nav > li.nodrop > a, .nav > li.nodrop {
+    border-radius: 10px;
 }
 
 .nav li a:first-child:nth-last-child(2):before {
@@ -58,12 +64,24 @@ nav li > ul {
     border: transparent;
 }
 
-/* submenu positioning*/
+/* submenu positioning */
 .nav ul {
     position: absolute;
     white-space: nowrap;
     z-index: 1;
     left: -99999em;
+}
+
+.nav > li > ul {
+    border-radius: 0 10px 10px 10px;
+}
+
+.nav > li > ul > li:first-child > a {
+    border-radius: 0 10px 0 0;
+}
+
+.nav > li > ul > li:last-child > a {
+    border-radius: 0 0 10px 10px;
 }
 
 .nav > li:hover > ul {

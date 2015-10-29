@@ -1,15 +1,18 @@
 #!/usr/bin/python
 from app import db, models
+from werkzeug.security import generate_password_hash
 
 
 def load_users():
     users = [
         {'first_name': 'Collin',
          'last_name': 'Murphy',
-         'email': 'cmurphy@micron.com'},
+         'email': 'cmurphy@micron.com',
+         'admin': True},
         {'first_name': 'Wes',
          'last_name': 'Vaske',
-         'email': 'wvaske@micron.com'},
+         'email': 'wvaske@micron.com',
+         'admin': True},
         {'first_name': 'Ryan',
          'last_name': 'Meredith',
          'email': 'rmeredith@micron.com'},
@@ -27,20 +30,27 @@ def load_users():
          'email': 'asankaran@micron.com'},
         {'first_name': 'Dennis',
          'last_name': 'Lattka',
-         'email': 'dlattka@micron.com'}
+         'email': 'dlattka@micron.com'},
+        {'first_name': 'LOCKED',
+         'last_name': 'USER',
+         'email': 'lock',
+         'password': 'CrAzYlOnGpAsSwOrDfOrLoCkAcCoUnT'}
     ]
 
-    all_users = models.Users.query.all()
-
-    for user in all_users:
-        db.session.delete(user)
-
-    db.session.commit()
+    existing_users = models.Users.query
 
     for user in users:
-        u = models.Users(first_name=user['first_name'], last_name=user['last_name'],
-                         email=user['email'])
-        db.session.add(u)
+        existing_user = existing_users.filter_by(email=user['email']).first()
+        if existing_user:
+            print 'User {} already exists. Updating.'.format(str(existing_user))
+            for k, v in user.items():
+                setattr(existing_user, k, v)
+        else:
+            password = generate_password_hash(user.get('password', 'Not24Get'))
+            new_user = models.Users(first_name=user['first_name'],
+                                    last_name=user['last_name'],
+                                    email=user['email'], password=password)
+            db.session.add(new_user)
 
     db.session.commit()
 
