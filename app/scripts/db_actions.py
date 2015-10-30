@@ -4,6 +4,35 @@ from app import db, models
 from flask import flash
 from sqlalchemy.exc import IntegrityError, InvalidRequestError
 from aaebench.testautomation.syscontrol.racadm import RacadmManager
+from werkzeug.security import generate_password_hash
+
+
+def update_user_info(form, user):
+
+    user = models.Users.query.filter_by(id=user.id).first()
+    if not user:
+        return 'Could not update info.'
+
+    for field, data in form.data.items():
+        if hasattr(user, field) and field != 'password':
+            setattr(user, field, data)
+    if form.new_password.data:
+        if form.new_password.data == form.verify_new_password.data:
+            new_password = generate_password_hash(form.new_password.data)
+            if new_password:
+                user.password = new_password
+        else:
+            return 'Passwords did not match.'
+
+    try:
+        db.session.add(user)
+        db.session.commit()
+    except Exception as e:
+        print 'Error updating user info: {}'.format(e)
+        db.session.rollback()
+        return 'Could not update info.'
+
+    return 'Successfully updated your info.'
 
 
 def get_inventory():
@@ -275,7 +304,7 @@ def check_or_add_drives(server, drives):
     for drive in drives:
         print drive
 
-        # check if drive model is already in database
+        # check if drive MODEL is already in database
         drive_model, capacity = drive.get('model'), drive.get('capacity')
         try:
             print 'Checking if {} {} in database already.'\
@@ -303,7 +332,7 @@ def check_or_add_drives(server, drives):
             print 'Error filtering query. Rolling back.'
             db.session.rollback()
 
-        # add unique devices to server_storage table
+        # add UNIQUE devices (with serial number) to server_storage table
         for slot, _sn in drive['sns'].items():
             try:
                 if not _sn:
@@ -333,11 +362,12 @@ def check_or_add_drives(server, drives):
                 add_drive = models.ServerStorage(device_id=device_id.id,
                                                  server_id=server.id,
                                                  slot=slot)
+                # add serial number, if found
                 if _sn:
                     add_drive.serial_number = _sn
                 db.session.add(add_drive)
                 db.session.commit()
-            except InvalidRequestError as e:
+            except InvalidRequestError:
                 db.session.rollback()
             except IntegrityError as e:
                 print 'Could not add drive {} to server_storage: {}'\

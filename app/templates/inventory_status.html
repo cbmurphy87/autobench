@@ -1,0 +1,16 @@
+{% if server.available %}
+    <h3>This Server is available</h3>
+    <p>Would you like to check it out?</p>
+    <button onclick="checkout('{{ server.id }}','')">
+        Checkout
+    </button>
+{% elif server.holder.id == user.id %}
+    <h3>You have this server checked out!</h3>
+    <p>Go to the <a href="/my_info">My Info</a> page to see all of your servers.</p>
+    <button onclick="release('{{ server.id }}','')">
+        Release
+    </button>
+{% else %}
+    <h3>This Server is not available</h3>
+    <p>Server is held by {{ user_holding }}</p>
+{% endif %}

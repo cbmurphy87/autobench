@@ -2,13 +2,9 @@ from datetime import timedelta
 from flask import Flask
 from flask.ext.login import LoginManager
 from flask.ext.sqlalchemy import SQLAlchemy
-from OpenSSL import SSL
-from flask_sslify import SSLify
-
-context = SSL.Context(SSL.TLSv1_2_METHOD)
 
 myapp = Flask(__name__)
-sslify = SSLify(myapp)
+
 myapp.config.from_object('config')
 db = SQLAlchemy(myapp)
 lm = LoginManager()
@@ -19,7 +15,7 @@ lm.login_view = '_login'
 if not myapp.debug:
     import logging
     from logging.handlers import RotatingFileHandler
-    file_handler = RotatingFileHandler('tmp/microblog.log', 'a',
+    file_handler = RotatingFileHandler('autobench.log', 'a',
                                        1 * 1024 * 1024, 10)
     file_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s: '
                                                 '%(message)s [in %(pathname)s:'

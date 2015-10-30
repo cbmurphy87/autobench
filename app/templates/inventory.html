@@ -8,8 +8,45 @@
 ('CPUs','cpu_count'),('Model','cpu_model'),('Memory','memory_capacity'),
 ('Drives','model'),('Capacity','capacity'),('Count','count'),('Update',None)) %}
 
-{% block scripts %}
+{% block links %}
+    <script src="http://code.jquery.com/jquery-1.11.3.min.js"></script>
+{% endblock %}
 
+{% block scripts %}
+    function checkout(id, next) {
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function () {
+            if (xhttp.readyState == 4 && xhttp.status == 200) {
+                location.reload();
+            }
+        };
+        xhttp.open("POST", "/inventory/checkout", true);
+        xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+        xhttp.send(JSON.stringify({id: id, next: next}));
+    }
+    function release(id, next) {
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+            if (xhttp.readyState == 4 && xhttp.status == 200) {
+                location.reload();
+            }
+        };
+        xhttp.open("POST", "/inventory/release", true);
+        xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+        xhttp.send(JSON.stringify({id: id, next: next}));
+    }
+    function update(id, next) {
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+            if (xhttp.readyState == 4 && xhttp.status == 200) {
+                location.reload();
+                alert('Updating server. Wait 30 seconds, then reload page.');
+            }
+        };
+        xhttp.open("POST", "/inventory/update", true);
+        xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+        xhttp.send(JSON.stringify({id: id, next: next}));
+    }
 {% endblock %}
 
 {# =============================================================== #}
@@ -19,10 +56,10 @@
 {% block content %}
     <h2>Inventory</h2>
     <div style="padding-bottom: 10px;">
-        Machines available for testing:<br>
+        <h3>Machines available for testing:</h3>
     </div>
-    <div class="pane-frame" style="width:100%;">
-        <table id="projectstatus" class="sortable pane bigtable stripped">
+    <div class="pane-frame" style="width:100%;min-width:800px;">
+        <table id="aaetable" class="sortable pane bigtable stripped">
             <thead>
                 <tr class="header">
                 {# create header for inventory table #}
@@ -57,18 +94,18 @@
                             {% elif v == 'available' %}
                                 {% if server['available'] %}
                                     {% set color = 'blue' %}
-                                    {% set link = '/inventory/checkout/{}'.format(server.id) %}
+                                    {% set onclick = "checkout('{}','/inventory')".format(server.id) %}
                                     {% set hover_title = 'Check out this server' %}
                                 {% elif server['held_by'] == user.id %}
                                     {% set color = 'green' %}
-                                    {% set link = '/inventory/release/{}'.format(server.id) %}
+                                    {% set onclick = "release('{}','/inventory')".format(server.id) %}
                                     {% set hover_title = 'Release this server' %}
                                 {% else %}
                                     {% set color = 'red' %}
-                                    {% set link = '/inventory/checkout/{}'.format(server.id) %}
+                                    {% set onclick = "checkout('{}','/inventory')".format(server.id) %}
                                     {% set hover_title = 'This server is being used by someone else.' %}
                                 {% endif %}
-                            <a href={{ link }} title="{{ hover_title }}">
+                            <a onclick="return {{ onclick }}" title="{{ hover_title }}">
                                 <img src={{ url_for('static', filename='pictures/{}.png'.format(color)) }} style="width:16px;height:16px;">
                             </a>
                                 <span style="display:none">{{ color }}</span>
@@ -82,11 +119,9 @@
                         {% endif %}
                         {% endif %}
                         {% else %}
-                            <form>
-                                <button formaction='/inventory/update/{{ server.interfaces.filter_by(name='DRAC').first().mac }}'>
-                                    Update
-                                </button>
-                            </form>
+                            <button onclick="update('{{ server.id }}','')">
+                                Update
+                            </button>
                         {% endif %}
                         </td>
                     {% endfor %}

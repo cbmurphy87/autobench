@@ -49,6 +49,7 @@ def load_users():
             password = generate_password_hash(user.get('password', 'Not24Get'))
             new_user = models.Users(first_name=user['first_name'],
                                     last_name=user['last_name'],
+                                    user_name=user['email'].split('@')[0],
                                     email=user['email'], password=password)
             db.session.add(new_user)
 

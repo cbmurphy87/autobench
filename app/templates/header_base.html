@@ -9,6 +9,14 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
     <script type="text/javascript" src={{ url_for('static', filename='javascript/functions.js') }}></script>
     <script type="text/javascript" src={{ url_for('static', filename='javascript/sortable.js') }}></script>
+    <link rel="stylesheet" href={{ url_for('static', filename='mystyle.css') }}>
+    <link rel="stylesheet" href={{ url_for('static', filename='aaenavbar.css') }}>
+    <link href="http://fonts.googleapis.com/css?family=Corben:bold" rel="stylesheet" type="text/css">
+    <link href="http://fonts.googleapis.com/css?family=Nobile" rel="stylesheet" type="text/css">
+    <link href="http://fonts.googleapis.com/css?family=Droid+Serif" rel="stylesheet" type="text/css">
+    <link href="http://fonts.googleapis.com/css?family=Droid+Sans" rel="stylesheet" type="text/css">
+    <link href="http://fonts.googleapis.com/css?family=Nobile" rel="stylesheet" type="text/css">
+
     {% block links %}
         <!-- No additional links -->
     {% endblock %}
@@ -28,7 +36,6 @@
     {% else %}
         <title>AutoBench</title>
     {% endif %}
-    <link rel="stylesheet" href={{ url_for('static', filename='mystyle.css') }}>
-    <link rel="stylesheet" href={{ url_for('static', filename='aaenavbar.css') }}>
+
 
 {% endblock %}

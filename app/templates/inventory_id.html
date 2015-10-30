@@ -9,15 +9,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 {% endblock %}
 
-{% block links %}
-    {{ super() }}
-    <link rel="stylesheet" href="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css">
-{% endblock %}
-
-{% block script %}
+{% block scripts %}
     {{ super() }}
     <script src="http://code.jquery.com/jquery-1.11.3.min.js"></script>
-    <script src="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
+    <script>
+        function checkout(id, next) {
+            var status_div = document.getElementById("inventory_status");
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function () {
+                if (xhttp.readyState == 4 && xhttp.status == 200) {
+                    status_div.innerHTML = xhttp.responseText;
+                }
+            };
+            xhttp.open("POST", "checkout", true);
+            xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+            xhttp.send(JSON.stringify({id: id, next: next}));
+        }
+        function release(id, next) {
+            var status_div = document.getElementById("inventory_status");
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function() {
+                if (xhttp.readyState == 4 && xhttp.status == 200) {
+                    status_div.innerHTML = xhttp.responseText;
+                }
+            };
+            xhttp.open("POST", "release", true);
+            xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+            xhttp.send(JSON.stringify({id: id, next: next}));
+        }
+    </script>
 {% endblock %}
 
 {# =============================================================== #}
@@ -44,22 +64,14 @@
 {# =============================================================== #}
 
 {% block content %}
-    {% if server.available %}
-        <h2>This Server is Available</h2>
-        <p>Would you like to check it out?</p>
-        <form>
-            <button formaction='/inventory/checkout/{{ server.id }}' style="font-size:0.9em;">
-                Checkout
-            </button>
-        </form>
-    {% elif server.holder.id == user.id %}
-        <h3>You have this server checked out!</h3>
-        Go to the <a href="/my_info">My Info</a> page to see all of your servers.
-    {% endif %}
+
+    <div id="inventory_status">
+        {% include "inventory_status.html" %}
+    </div>
     <!-- Basic server info -->
     <h2 style="padding-bottom: 10px;">Basic Info</h2>
     <div class="pane-frame" style="width:auto;">
-        <table id="projectstatus" class="sortable pane bigtable stripped">
+        <table id="aaetable" class="sortable pane bigtable stripped">
             <tbody>
             <tr class="header">
             {# create header for table #}
@@ -104,7 +116,7 @@
     <h2 style="padding-bottom: 10px;">Drive Info</h2>
     {% if server.drives.all()|length >= 1 %}
         <div class="pane-frame" style="width:100%;">
-            <table id="projectstatus" class="sortable pane bigtable stripped">
+            <table id="aaetable" class="sortable pane bigtable stripped">
                 <tbody>
                 <tr class="header">
                 {# create header for inventory table #}
@@ -139,7 +151,7 @@
     <h2 style="padding-bottom: 10px;">Virtual Drive Info</h2>
     {% if server.virtual_drives.all()|length >= 1 %}
     <div class="pane-frame" style="width:100%;">
-        <table id="projectstatus" class="sortable pane bigtable stripped">
+        <table id="aaetable" class="sortable pane bigtable stripped">
             <tbody>
             <tr class="header">
             {# create header for inventory table #}
@@ -174,7 +186,7 @@
     <h2 style="padding-bottom: 10px;">Network Info</h2>
     {% if server.interfaces.all()|length >= 1 %}
     <div class="pane-frame" style="width:100%;">
-        <table id="projectstatus" class="sortable pane bigtable stripped">
+        <table id="aaetable" class="sortable pane bigtable stripped">
             <tbody>
             <tr class="header">
             {# create header for inventory table #}

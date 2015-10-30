@@ -10,7 +10,7 @@ from sqlalchemy import sql
 # ___________________________ App Imports ________________________
 from app import myapp, lm
 from app.forms import CreateJobForm, LoginForm, BuildStepForm, \
-    AddInventoryForm, DeployForm
+    AddInventoryForm, DeployForm, EditInfoForm
 from models import Users, Servers
 
 # ___________________________ Standard Imports ________________________
@@ -204,6 +204,32 @@ def _my_info():
                            user=user)
 
 
+@myapp.route('/my_info/edit', methods=['GET', 'POST'])
+@login_required
+def _edit_my_info():
+    user = g.user
+    form = EditInfoForm()
+    if form.validate_on_submit():
+        if user.check_password(str(form.password.data)):
+            message = update_user_info(form, user)
+            flash(message)
+            print message
+            return redirect(url_for('_my_info'))
+        else:
+            flash('Invalid password. Try again.')
+    print form.errors
+
+    for attr in user.__dict__.keys():
+        if attr in form.data.keys():
+            field = getattr(form, attr)
+            field.data = getattr(user, attr)
+
+    return render_template('edit_my_info.html',
+                           title='Edit About Me',
+                           date=_get_date_last_modified(),
+                           user=user, form=form)
+
+
 # _______________________ INFO _________________________
 # methods used to get inventory info
 @myapp.route('/server_info', methods=['POST'])
@@ -247,68 +273,90 @@ def _add_inventory():
 def _inventory_id(_id):
     user = g.user
     server = Servers.query.get(_id)
+    user_holding = server.holder
     return render_template('inventory_id.html', title=_id, server=server,
-                           date=_get_date_last_modified(), user=user)
+                           date=_get_date_last_modified(), user=user,
+                           user_holding=user_holding)
 
 
-@myapp.route('/inventory/update/<mac>', methods=['GET', 'POST'])
+@myapp.route('/inventory/update', methods=['GET', 'POST'])
 @login_required
-def _update_inventory(mac):
-    flash('Updating server. Wait 30 seconds, then refresh.')
-    p = Process(target=update_inventory, args=(mac,))
-    p.start()
+def _update_inventory():
+    _id = request.get_json().get('id')
+    try:
+        server = Servers.query.filter_by(id=_id).first()
+        mac = server.interfaces.filter_by(type='oob').first().mac
+        flash('Updating server. Wait 30 seconds, then refresh.')
+        p = Process(target=update_inventory, args=(mac,))
+        p.start()
+    except Exception:
+        print 'Could not update server {}.'.format(server.id)
     return redirect('inventory')
 
 
-@myapp.route('/inventory/release/<id>', methods=['GET', 'POST'])
+@myapp.route('/inventory/status', methods=['GET', 'POST'])
 @login_required
-def _release_inventory(id):
-    server = Servers.query.filter_by(id=id).first()
-    user_holding = server.holder
-    print user_holding
-    try:
-        holding_user_id = user_holding.id
-    except:
-        print 'Could not get user holding server.'
-        return redirect(url_for('_my_info'))
+def _inventory_status():
+    _id = request.get_json().get('id')
+    next = request.get_json().get('next')
     user = g.user
-    if user.id == holding_user_id:
-        server.available = True
-        server.held_by = sql.null()
-        try:
-            db.session.add(server)
-            db.session.commit()
-        except:
-            print 'Error releasing server. Rolling back.'
-            db.session.rollback()
-    return redirect(url_for('_inventory'))
+    server = Servers.query.filter_by(id=_id).first()
+    user_holding = server.holder
+    if next:
+        return redirect(next)
+    return render_template('inventory_status.html', server=server,
+                           user=user, user_holding=user_holding)
 
 
-@myapp.route('/inventory/checkout/<id>', methods=['GET', 'POST'])
+@myapp.route('/inventory/checkout', methods=['GET', 'POST'])
 @login_required
-def _checkout_inventory(id):
-    server = Servers.query.filter_by(id=id).first()
-    user_holding = server.holder
-    try:
-        if user_holding:
-            message = '{} has control of this server.' \
-                .format(str(user_holding))
-            flash(message)
-            return redirect('/inventory')
-    except Exception as e:
-        print e
+def _checkout_id():
+    _id = request.get_json().get('id')
+    next = request.get_json().get('next')
+    print 'Checking out {}'.format(_id)
     user = g.user
+    server = Servers.query.filter_by(id=_id).first()
+    user_holding = server.holder
     if server.available and not server.holder:
         try:
             server.available = False
             server.held_by = user.id
             db.session.add(server)
             db.session.commit()
-            return redirect('/inventory')
         except:
-            print 'Could not checkout server {} for user {}. Rolling back.' \
-                .format(server, user)
-    return redirect(url_for('_inventory'))
+            db.session.rollback()
+    if next:
+        return redirect(next)
+    return render_template('inventory_status.html', server=server,
+                           user=user, user_holding=user_holding)
+
+
+@myapp.route('/inventory/release', methods=['GET', 'POST'])
+@login_required
+def _release():
+    _id = request.get_json().get('id')
+    next = request.get_json().get('next')
+    print 'Releasing {}'.format(_id)
+    user = g.user
+    server = Servers.query.filter_by(id=_id).first()
+    user_holding = server.holder
+    try:
+        holding_user_id = user_holding.id
+
+        if user.id == holding_user_id:
+            server.available = True
+            server.held_by = sql.null()
+            try:
+                db.session.add(server)
+                db.session.commit()
+            except:
+                db.session.rollback()
+    except:
+        print 'Could not get user holding server.'
+    if next:
+        return redirect(next)
+    return render_template('inventory_status.html', server=server,
+                           user=user, user_holding=user_holding)
 
 
 # _______________________ Deploy ________________________

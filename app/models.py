@@ -9,6 +9,7 @@ class Users(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     first_name = db.Column(db.String(32), index=True)
     last_name = db.Column(db.String(32), index=True)
+    user_name = db.Column(db.String(32), index=True)
     email = db.Column(db.String(120), index=True, unique=True)
     password = db.Column(db.String(120))
     authenticated = db.Column(db.Boolean, default=False)
@@ -164,6 +165,6 @@ class OS(db.Model):
 # =========================== Projects ==========================
 class Projects(db.Model):
 
-    id = db.Column(db.String('16'), primary_key=True)
+    id = db.Column(db.String(16), primary_key=True)
     owner_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    date_created = db.String('32')
+    date_created = db.Column(db.String(32))

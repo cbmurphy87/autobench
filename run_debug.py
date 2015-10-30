@@ -1,5 +1,6 @@
 #!/usr/bin/python
-from app import myapp, context
+from app import myapp
 
-myapp.run(host='0.0.0.0', port=500, threaded=True, ssl_context='adhoc',
-          debug=True)
+myapp.debug = True
+
+myapp.run(host='0.0.0.0', port=80, threaded=True, debug=True)

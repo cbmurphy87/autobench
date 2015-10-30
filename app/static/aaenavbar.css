@@ -13,7 +13,7 @@ nav ul {
 }
 
 nav li > ul {
-    border: 1px solid #00447c;
+    border: 1px solid #414042;
 }
 
 .nav {
@@ -23,7 +23,7 @@ nav li > ul {
 
 .nav a {
     display: block;
-    background: white;
+    background: transparent;
     color: #00447c;
     font-weight: 600;
     font-size: 14px;
@@ -40,20 +40,10 @@ nav li > ul {
     float: left;
 }
 
-.nav > li:hover,
-.nav > li:hover > a {
-    background-color: #00447c;
-    border-radius: 10px 10px 0 0;
-}
-
 /* switch color of background and text */
 .nav li:hover > a {
-    background-color: #00447c;
-    color: white;
-}
-
-.nav > li.nodrop > a, .nav > li.nodrop {
-    border-radius: 10px;
+    background-color: #006db7;
+    color: #eceef0;
 }
 
 .nav li a:first-child:nth-last-child(2):before {
@@ -72,26 +62,13 @@ nav li > ul {
     left: -99999em;
 }
 
-.nav > li > ul {
-    border-radius: 0 10px 10px 10px;
-}
-
-.nav > li > ul > li:first-child > a {
-    border-radius: 0 10px 0 0;
-}
-
-.nav > li > ul > li:last-child > a {
-    border-radius: 0 0 10px 10px;
-}
-
 .nav > li:hover > ul {
-    background-color: #00447c;
+    background-color: white;
     left: auto;
     min-width: 100%;
 }
 
 .nav > li li:hover > ul {
-    background-color: #00447c;
     padding: 0 0;
     left: 100%;
     margin-left: 0;

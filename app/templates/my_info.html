@@ -1,11 +1,25 @@
 {% extends 'base.html' %}
 
 {% set user_fields = (('First Name','first_name'),('Last Name','last_name'),
-('E-mail','email'),('Admin','admin')) %}
+('E-mail','email'),('Username','user_name')) %}
 
 {% set server_fields = (('ID', 'id'),('Host Name','host_name'),
 ('Model','model'),('CPU Count','cpu_count'),('CPU Model','cpu_model'),
 ('Memory','memory_capacity'),('Release','release'))%}
+
+{% block scripts %}
+    function release(id, next) {
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+            if (xhttp.readyState == 4 && xhttp.status == 200) {
+                location.reload()
+            }
+        };
+        xhttp.open("POST", "/inventory/release", true);
+        xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+        xhttp.send(JSON.stringify({id: id, next: next}));
+    }
+{% endblock %}
 
 {% block content %}
     <h2>My Info</h2>
@@ -34,10 +48,13 @@
             </tbody>
         </table>
     </div>
+    <div style="padding-top:5px;">
+        <a href="/my_info/edit">Edit My Info</a>
+    </div>
     <h2>My Servers</h2>
     {% if user.servers %}
     <div class="pane-frame" style="width:100%;">
-        <table id="projectstatus" class="sortable pane bigtable stripped">
+        <table id="aaetable" class="sortable pane bigtable stripped">
             <thead>
                 <tr class="header">
                 {# create header for inventory table #}
@@ -56,15 +73,13 @@
                     <td>
                     {% if v == 'id' %}
                         {% set server_id = server['id'] %}
-                        <a href="/inventory/{{ server_id }}">
+                        <a href="/inventory/{{ server_id }}/info">
                         {{ server_id }}
                         </a>
                     {% elif v == 'release' %}
-                        <form>
-                            <button formaction='/inventory/release/{{ server.id }}'>
-                                Release
-                            </button>
-                        </form>
+                        <button onclick="release('{{ server.id }}','')">
+                            Release
+                        </button>
                     {% else %}
                         {{ server[v] }}
                     {% endif %}
@@ -81,7 +96,7 @@
     <h2>My Projects</h2>
     {% if user.projects %}
     <div class="pane-frame" style="width:100%;">
-        <table id="projectstatus" class="sortable pane bigtable stripped">
+        <table id="aaetable" class="sortable pane bigtable stripped">
             <thead>
                 <tr class="header">
                 {# create header for inventory table #}

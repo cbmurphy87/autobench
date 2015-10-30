@@ -14,6 +14,7 @@ from config import basedir
 from app import myapp, db
 from app.models import Servers, Users, OS
 from app.scripts.db_actions import get_inventory
+from werkzeug.security import generate_password_hash
 
 db.session.remove()
 
@@ -49,15 +50,31 @@ class TestCase(unittest.TestCase):
         assert type(inventory) == list, type(inventory)
         assert len(inventory) == 0, len(inventory)
 
+        new_server = Servers(id='TESTID', host_name='testhostname',
+                             model='test model', cpu_count='5',
+                             cpu_model='test cpu', memory_capacity='999 TB',
+                             bios='1.2.3.4', rack='12', u='13')
+        try:
+            db.session.add(new_server)
+            db.session.commit()
+        except:
+            db.session.rollback()
+            assert False, 'Could not add server to db.'
+
+        inventory = get_inventory()
+        assert type(inventory) == list, type(inventory)
+        assert len(inventory) == 1, len(inventory)
+
     def test_users(self):
 
         users = Users.query.all()
         assert type(users) == list
         assert len(users) == 0
+        password = generate_password_hash('testpassword')
         new_user = Users(first_name='test',
                          last_name='user',
                          email='testuser@aaebench.micron.com',
-                         password='testpassword',
+                         password=password,
                          admin=False)
         try:
             db.session.add(new_user)
@@ -73,8 +90,14 @@ class TestCase(unittest.TestCase):
 
         test_user = users.first()
         assert int(test_user.get_id()) == 1, test_user.get_id()
-        assert str(test_user) == '<User testuser@aaebench.micron.com>', \
+        assert repr(test_user) == '<User testuser@aaebench.micron.com>', \
+            repr(test_user)
+        assert str(test_user) == 'test user', \
             str(test_user)
+        assert test_user.check_password('testpassword'), \
+            'password check failed: {}'.format(test_user.password)
+        assert not test_user.check_password('wrongpassword'), \
+            'wrong password check failed'
 
     def test_get_oses(self):
 

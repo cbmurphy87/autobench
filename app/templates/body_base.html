@@ -7,11 +7,17 @@
 
 {% block body %}
     <div class="top_header">
-        <img src={{ url_for('static', filename='pictures/micronlogo.jpg') }} class="top_image">
-        {% include "aae_navbar.html" %}
+        <span style="display:inline-block;min-width:1000px;">
+            <div style="display:inline-block;">
+                <img src={{ url_for('static', filename='pictures/micronlogos/high_res_micron_logo_black.png') }} class="top_image">
+            </div>
+            <div style="display:inline-block;">
+                {% include "aae_navbar.html" %}
+            </div>
+        </span>
+        <h1 style="width:100%">AutoBench</h1>
     </div>
-    <div style="min-width:450px;height:100%;">
-        <h1>AutoBench</h1>
+    <div style="min-width:450px;height:100%;margin-top:10px;">
         {% with messages = get_flashed_messages() %}
             {% if messages %}
                 <div id="flashedmessages">
@@ -21,11 +27,6 @@
                     {% endfor %}
                 </ul>
                 </div>
-                <!--
-                <div style="margin:20px 0;">
-                    <button type='button' id="flash" style="margin:0 20px;">Toggle messages</button>
-                </div>
-                -->
             {% endif %}
         {% endwith %}
         <div style="margin: 0 20px;height:100%;">
