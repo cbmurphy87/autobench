@@ -5,7 +5,7 @@ from flask import render_template, flash, redirect, session, url_for, request, \
     g, abort, send_from_directory
 from flask.ext.login import login_user, logout_user, current_user, \
     login_required
-from sqlalchemy import sql
+from sqlalchemy import sql, or_
 
 # ___________________________ App Imports ________________________
 from app import myapp, lm
@@ -17,6 +17,7 @@ from models import Users, Servers
 from datetime import datetime
 import fnmatch
 from jenkins import JenkinsException
+from json import JSONEncoder
 from multiprocessing import Process
 import os
 from subprocess import Popen, PIPE
@@ -259,7 +260,7 @@ def _add_inventory():
     form = AddInventoryForm()
     if form.validate_on_submit():
         flash('Adding server. Wait 30 seconds, then refresh.')
-        p = Process(target=add_inventory, args=(form,user))
+        p = Process(target=add_inventory, args=(form, user))
         p.start()
         return redirect('/inventory')
 
@@ -298,12 +299,12 @@ def _update_inventory():
 @login_required
 def _inventory_status():
     _id = request.get_json().get('id')
-    next = request.get_json().get('next')
+    _next = request.get_json().get('next')
     user = g.user
     server = Servers.query.filter_by(id=_id).first()
     user_holding = server.holder
-    if next:
-        return redirect(next)
+    if _next:
+        return redirect(_next)
     return render_template('inventory_status.html', server=server,
                            user=user, user_holding=user_holding)
 
@@ -312,11 +313,10 @@ def _inventory_status():
 @login_required
 def _checkout_id():
     _id = request.get_json().get('id')
-    next = request.get_json().get('next')
-    print 'Checking out {}'.format(_id)
+    _next = request.get_json().get('next')
     user = g.user
+    print 'User {} checking out {}'.format(user, _id)
     server = Servers.query.filter_by(id=_id).first()
-    user_holding = server.holder
     if server.available and not server.holder:
         try:
             server.available = False
@@ -325,24 +325,39 @@ def _checkout_id():
             db.session.commit()
         except:
             db.session.rollback()
-    if next:
-        return redirect(next)
-    return render_template('inventory_status.html', server=server,
-                           user=user, user_holding=user_holding)
+    if _next:
+        return redirect(_next)
+    # check status of server
+    server = Servers.query.filter_by(id=_id).first()
+    try:
+        if server.held_by == user.id:
+            i_am_holder = True
+            title = 'Release this server'
+        else:
+            i_am_holder = False
+            holder_name = str(server.holder)
+            title = 'This server is held by {}'.format(holder_name)
+        server_json = JSONEncoder().encode({'available': server.available,
+                                            'i_am_holder': i_am_holder,
+                                            'title': title})
+        return server_json
+    except Exception as e:
+        print "Couldn't encode server: {}".format(e)
+    return JSONEncoder().encode({'available': False,
+                                 'held_by': 'unknown'})
 
 
 @myapp.route('/inventory/release', methods=['GET', 'POST'])
 @login_required
 def _release():
     _id = request.get_json().get('id')
-    next = request.get_json().get('next')
-    print 'Releasing {}'.format(_id)
+    _next = request.get_json().get('next')
     user = g.user
+    print 'User {} releasing {}'.format(user, _id)
     server = Servers.query.filter_by(id=_id).first()
     user_holding = server.holder
     try:
         holding_user_id = user_holding.id
-
         if user.id == holding_user_id:
             server.available = True
             server.held_by = sql.null()
@@ -351,12 +366,24 @@ def _release():
                 db.session.commit()
             except:
                 db.session.rollback()
+            title = 'Check out this server'
+        else:
+            title = 'Server in unknown state'
+            server.available = False
+        i_am_holder = False
+
+        server_json = JSONEncoder().encode({'available': server.available,
+                                            'i_am_holder': i_am_holder,
+                                            'title': title})
+        return server_json
     except:
         print 'Could not get user holding server.'
-    if next:
-        return redirect(next)
-    return render_template('inventory_status.html', server=server,
-                           user=user, user_holding=user_holding)
+    if _next:
+        return redirect(_next)
+    print 'Error releasing server. Server may be in unknown state.'
+    return JSONEncoder().encode({'available': server.available,
+                                 'i_am_holder': False,
+                                 'title': 'Error getting status'})
 
 
 # _______________________ Deploy ________________________
@@ -365,9 +392,16 @@ def _release():
 def _deploy():
     user = g.user
     form = DeployForm()
+    form.target.query_factory = models.Servers.query \
+        .filter_by(held_by=user.id).order_by('id').all
     servers = models.Servers.query
     if form.validate_on_submit():
-
+        # check that user owns server
+        if not form.target.data.held_by == user.id:
+            flash('You do not own this server!')
+            return render_template('deploy.html', title='Tests',
+                                   date=_get_date_last_modified(),
+                                   user=user, form=form, servers=servers)
         # start subprocess to deploy system
         p = Process(target=_deploy_server, args=(form,))
         p.start()

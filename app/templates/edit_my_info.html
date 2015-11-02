@@ -37,16 +37,20 @@
                         <td style="text-align:right;">
                         {{ field.label.text }}:
                         </td>
-                        <td>
+                        <td style="text-align:left;">
                         {% if field_name == 'verify_new_password' %}
                             {{ field(disabled=True) }}
                         {% else %}
                         {{ field }}
                         {% endif %}
-                        {% for error in field.errors %}
-                            <span style="color:red;">[{{ error }}]</span>
-                        {% endfor %}
                         </td>
+                        {% if field.errors %}
+                            <td>
+                            {% for error in field.errors %}
+                                <span style="color:red;">[{{ error }}]</span>
+                            {% endfor %}
+                            </td>
+                        {% endif %}
                     </tr>
                 {% endfor %}
                 </tbody>

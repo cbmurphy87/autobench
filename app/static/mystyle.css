@@ -131,8 +131,7 @@ table.sortable span.sortarrow {
 .pane-frame {
     display: inline-block;
     white-space: nowrap;
-    border: solid 1px #f0f0f0;
-    border-radius: 4px;
+    border: solid 1px white;
 }
 
 #side-panel .pane-frame:hover, #side-panel .pane-frame.mouseover {
@@ -168,7 +167,7 @@ table.sortable span.sortarrow {
 table.pane {
     width: 100%;
     border-collapse: collapse;
-    border: 1px #bbb solid;
+    border: 1px solid black;
 }
 
 td.pane {
@@ -177,11 +176,11 @@ td.pane {
 }
 
 table.stripped tr:nth-child(odd) {
-    background: #ccced0;
+    background: #eceef0;
 }
 
 table.stripped tr:nth-child(even) {
-    background: #b3b5b8;
+    background: #d3d5d8;
 }
 
 div.pane-header {
@@ -203,7 +202,6 @@ th.pane {
 .bigtable tr {
     text-align: center;
     color: black;
-    border: 1px solid #bbb;
     padding: 3px 4px 3px 4px;
 }
 
@@ -234,7 +232,6 @@ table.bigtable.pane > tbody > tr > td:last-child {
 
 .bigtable td {
     vertical-align: middle;
-    padding: 6px 4px;
 }
 
 .build_step p {
@@ -282,7 +279,7 @@ img#bench {
 }
 
 #aaetable tr.heldserver:nth-child(even) {
-    background-color: #5395FF;
+    background-color: #63A5FF;
 }
 
 button {

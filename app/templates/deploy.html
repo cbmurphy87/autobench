@@ -9,7 +9,8 @@
     {{ super() }}
     $(document).ready(function () {
         $("#target").change(function() {
-            if (this.options[this.selectedIndex].value == '__None') {
+            var selection = this.options[this.selectedIndex].value;
+            if (selection == '__None') {
                 document.getElementById("os").disabled = true;
             } else {
                 document.getElementById("os").disabled = false;

@@ -8,38 +8,75 @@
 ('CPUs','cpu_count'),('Model','cpu_model'),('Memory','memory_capacity'),
 ('Drives','model'),('Capacity','capacity'),('Count','count'),('Update',None)) %}
 
-{% block links %}
-    <script src="http://code.jquery.com/jquery-1.11.3.min.js"></script>
-{% endblock %}
-
 {% block scripts %}
     function checkout(id, next) {
         var xhttp = new XMLHttpRequest();
         xhttp.onreadystatechange = function () {
             if (xhttp.readyState == 4 && xhttp.status == 200) {
-                location.reload();
+                var response = xhttp.responseText;
+                var jsonResponse = JSON.parse(response);
+                var row = document.getElementById(id);
+                // change row class if held by you
+                if (jsonResponse.i_am_holder == true) {
+                    // change class to highlight row
+                    row.className = 'heldserver';
+                    var row_a = row.getElementsByTagName("A")[0];
+                    // change link to release
+                    row_a.setAttribute("onclick", "return release('" + id + "','')");
+                    row_a.title = jsonResponse.title;
+                    // change image to green circle
+                    var a_img = row_a.getElementsByTagName("IMG")[0];
+                    a_img.src = '/static/pictures/green.png';
+
+                } else {
+                    row.className = '';
+                    var row_a = row.getElementsByTagName("A")[0];
+                    var row_img = row_a.getElementsByTagName("IMG")[0];
+                    row_img.src = '/static/pictures/red.png';
+                }
             }
         };
         xhttp.open("POST", "/inventory/checkout", true);
         xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
         xhttp.send(JSON.stringify({id: id, next: next}));
     }
+
     function release(id, next) {
         var xhttp = new XMLHttpRequest();
         xhttp.onreadystatechange = function() {
             if (xhttp.readyState == 4 && xhttp.status == 200) {
-                location.reload();
+                var response = xhttp.responseText;
+                var jsonResponse = JSON.parse(response);
+                var row = document.getElementById(id);
+                // change row class if held by you
+                if (jsonResponse.i_am_holder == false) {
+                    // change class to unhighlight row
+                    row.className = '';
+                    var row_a = row.getElementsByTagName("A")[0];
+                    // change link to checkout
+                    row_a.setAttribute("onclick", "return checkout('" + id + "','')");
+                    row_a.title = jsonResponse.title;
+                    // change image to blue circle
+                    var a_img = row_a.getElementsByTagName("IMG")[0];
+                    a_img.src = '/static/pictures/blue.png';
+
+                } else {
+                    row.className = '';
+                    var row_a = row.getElementsByTagName("A")[0];
+                    var row_img = row_a.getElementsByTagName("IMG")[0];
+                    row_img.src = '/static/pictures/red.png';
+                }
             }
         };
         xhttp.open("POST", "/inventory/release", true);
         xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
         xhttp.send(JSON.stringify({id: id, next: next}));
     }
+
     function update(id, next) {
         var xhttp = new XMLHttpRequest();
         xhttp.onreadystatechange = function() {
             if (xhttp.readyState == 4 && xhttp.status == 200) {
-                location.reload();
                 alert('Updating server. Wait 30 seconds, then reload page.');
             }
         };
@@ -54,7 +91,7 @@
 {# =============================================================== #}
 
 {% block content %}
-    <h2>Inventory</h2>
+    <h2 id="testelement">Inventory</h2>
     <div style="padding-bottom: 10px;">
         <h3>Machines available for testing:</h3>
     </div>
@@ -77,11 +114,11 @@
             {# loop over servers in inventory #}
             {%- for server in servers -%}
                 {% if server.holder.id == user.id %}
-                    {% set class = " class=heldserver" %}
+                    {% set class = "heldserver" %}
                 {% else %}
                     {% set class = '' %}
                 {% endif %}
-                <tr{{ class }}>
+                <tr id="{{ server.id }}" class="{{ class }}">
                     {# loop over field values for each server #}
                     {% for k, v in field_pairs %}
                         <td>
@@ -94,16 +131,16 @@
                             {% elif v == 'available' %}
                                 {% if server['available'] %}
                                     {% set color = 'blue' %}
-                                    {% set onclick = "checkout('{}','/inventory')".format(server.id) %}
+                                    {% set onclick = "checkout('{}','')".format(server.id) %}
                                     {% set hover_title = 'Check out this server' %}
                                 {% elif server['held_by'] == user.id %}
                                     {% set color = 'green' %}
-                                    {% set onclick = "release('{}','/inventory')".format(server.id) %}
+                                    {% set onclick = "release('{}','')".format(server.id) %}
                                     {% set hover_title = 'Release this server' %}
                                 {% else %}
                                     {% set color = 'red' %}
-                                    {% set onclick = "checkout('{}','/inventory')".format(server.id) %}
-                                    {% set hover_title = 'This server is being used by someone else.' %}
+                                    {% set onclick = "alert(\"You can't check out this server\")".format(server.id) %}
+                                    {% set hover_title = 'This server is held by {}'.format(server.holder) %}
                                 {% endif %}
                             <a onclick="return {{ onclick }}" title="{{ hover_title }}">
                                 <img src={{ url_for('static', filename='pictures/{}.png'.format(color)) }} style="width:16px;height:16px;">

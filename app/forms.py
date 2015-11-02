@@ -82,16 +82,11 @@ class CreateJobForm(Form):
 
 
 class DeployForm(Form):
+
     def make_name(self):
         return '{} {}'.format(getattr(self, 'flavor'), getattr(self, 'version'))
 
-    def get_held_servers():
-        return models.Servers.query \
-            .filter_by(available=True) \
-            .order_by('id').all
-
-    target = QuerySelectField('Target', query_factory=get_held_servers(),
-                              get_label='id', allow_blank=True,
+    target = QuerySelectField('Target', get_label='id', allow_blank=True,
                               blank_text='Select a target',
                               validators=[required()])
     os = QuerySelectField('OS', query_factory=models.OS.query

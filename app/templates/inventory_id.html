@@ -9,35 +9,46 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 {% endblock %}
 
+{% block links %}
+
+{% endblock %}
+    <script src="http://code.jquery.com/jquery-1.11.3.min.js"></script>
 {% block scripts %}
     {{ super() }}
-    <script src="http://code.jquery.com/jquery-1.11.3.min.js"></script>
-    <script>
-        function checkout(id, next) {
-            var status_div = document.getElementById("inventory_status");
-            var xhttp = new XMLHttpRequest();
-            xhttp.onreadystatechange = function () {
-                if (xhttp.readyState == 4 && xhttp.status == 200) {
-                    status_div.innerHTML = xhttp.responseText;
-                }
-            };
-            xhttp.open("POST", "checkout", true);
-            xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
-            xhttp.send(JSON.stringify({id: id, next: next}));
-        }
-        function release(id, next) {
-            var status_div = document.getElementById("inventory_status");
-            var xhttp = new XMLHttpRequest();
-            xhttp.onreadystatechange = function() {
-                if (xhttp.readyState == 4 && xhttp.status == 200) {
-                    status_div.innerHTML = xhttp.responseText;
-                }
-            };
-            xhttp.open("POST", "release", true);
-            xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
-            xhttp.send(JSON.stringify({id: id, next: next}));
-        }
-    </script>
+    function checkout(id, next) {
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function () {
+            if (xhttp.readyState == 4 && xhttp.status == 200) {
+                updateStatus(id, "");
+            }
+        };
+        xhttp.open("POST", "checkout", true);
+        xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+        xhttp.send(JSON.stringify({id: id, next: next}));
+    }
+    function release(id, next) {
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+            if (xhttp.readyState == 4 && xhttp.status == 200) {
+                updateStatus(id, "");
+            }
+        };
+        xhttp.open("POST", "release", true);
+        xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+        xhttp.send(JSON.stringify({id: id, next: next}));
+    }
+    function updateStatus(id, method, next) {
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+            if (xhttp.readyState == 4 && xhttp.status == 200) {
+                var statusDiv = document.getElementById('inventory_status');
+                statusDiv.innerHTML = xhttp.responseText;
+            }
+        };
+        xhttp.open("POST", '/inventory/status', true);
+        xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+        xhttp.send(JSON.stringify({id: id, next: next}));
+    }
 {% endblock %}
 
 {# =============================================================== #}

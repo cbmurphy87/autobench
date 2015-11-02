@@ -12,7 +12,13 @@
         var xhttp = new XMLHttpRequest();
         xhttp.onreadystatechange = function() {
             if (xhttp.readyState == 4 && xhttp.status == 200) {
-                location.reload()
+                document.getElementById(id).remove();
+            }
+            // check if all servers are released
+            var aaetable = document.getElementById("aaetable");
+            if (aaetable.rows.length <= 1) {
+                var myServers = document.getElementById("my_servers");
+                myServers.innerHTML = "You have no servers checked out.";
             }
         };
         xhttp.open("POST", "/inventory/release", true);
@@ -53,46 +59,48 @@
     </div>
     <h2>My Servers</h2>
     {% if user.servers %}
-    <div class="pane-frame" style="width:100%;">
-        <table id="aaetable" class="sortable pane bigtable stripped">
-            <thead>
-                <tr class="header">
-                {# create header for inventory table #}
+    <div id="my_servers">
+        <div class="pane-frame" style="width:100%;">
+            <table id="aaetable" class="sortable pane bigtable stripped">
+                <thead>
+                    <tr class="header">
+                    {# create header for inventory table #}
+                        {% for k, v in server_fields %}
+                        <th>
+                            {{ k }}
+                        </th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                {# loop over servers in inventory #}
+                {%- for server in user.servers -%}
+                    <tr id="{{ server.id }}">
                     {% for k, v in server_fields %}
-                    <th>
-                        {{ k }}
-                    </th>
-                    {% endfor %}
-                </tr>
-            </thead>
-            <tbody>
-            {# loop over servers in inventory #}
-            {%- for server in user.servers -%}
-                <tr>
-                {% for k, v in server_fields %}
-                    <td>
-                    {% if v == 'id' %}
-                        {% set server_id = server['id'] %}
-                        <a href="/inventory/{{ server_id }}/info">
-                        {{ server_id }}
-                        </a>
-                    {% elif v == 'release' %}
-                        <button onclick="release('{{ server.id }}','')">
-                            Release
-                        </button>
-                    {% else %}
-                        {{ server[v] }}
-                    {% endif %}
-                    </td>
-                    {% endfor %}
-                </tr>
-            {% endfor %}
-            </tbody>
-        </table>
+                        <td>
+                        {% if v == 'id' %}
+                            {% set server_id = server['id'] %}
+                            <a href="/inventory/{{ server_id }}">
+                            {{ server_id }}
+                            </a>
+                        {% elif v == 'release' %}
+                            <button onclick="release('{{ server.id }}','')">
+                                Release
+                            </button>
+                        {% else %}
+                            {{ server[v] }}
+                        {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+            You have no servers checked out.
+        {% endif %}
     </div>
-    {% else %}
-        You have no servers checked out.
-    {% endif %}
     <h2>My Projects</h2>
     {% if user.projects %}
     <div class="pane-frame" style="width:100%;">
