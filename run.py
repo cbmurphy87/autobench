@@ -1,8 +1,4 @@
 #!/usr/bin/python
-from app import myapp, context
+from app import myapp
 
-from flask_sslify import SSLify
-
-SSLify(myapp)
-
-myapp.run(host='0.0.0.0', port=443, threaded=True, ssl_context='adhoc')
+myapp.run(host='0.0.0.0', port=80, threaded=True)

@@ -99,7 +99,7 @@ def _deploy_server(form):
 
 # method to run new debug
 def _run_debug():
-    test_path = os.path.join(os.getcwd(), 'tests.py')
+    test_path = os.path.join(os.getcwd(), 'unit_tests.py')
     p = Popen(test_path, stdout=PIPE, stderr=PIPE)
     response, err = p.communicate()
     with open(os.path.join(os.getcwd(), 'last_debug.out'), 'w+') as f:

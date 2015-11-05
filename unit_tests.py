@@ -6,7 +6,7 @@ import tempfile
 from coverage import coverage
 cov = coverage(branch=True, omit=['/opt/*',
                                   '/usr/*',
-                                  'tests.py',
+                                  'unit_tests.py',
                                   '*__init__.py'])
 cov.start()
 
