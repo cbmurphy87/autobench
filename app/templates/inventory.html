@@ -16,24 +16,23 @@
                 var response = xhttp.responseText;
                 var jsonResponse = JSON.parse(response);
                 var row = document.getElementById(id);
+                var row_a = row.getElementsByTagName("A")[0];
+                var a_img = row_a.getElementsByTagName("IMG")[0];
                 // change row class if held by you
                 if (jsonResponse.i_am_holder == true) {
                     // change class to highlight row
                     row.className = 'heldserver';
-                    var row_a = row.getElementsByTagName("A")[0];
                     // change link to release
                     row_a.setAttribute("onclick", "return release('" + id + "','')");
-                    row_a.title = jsonResponse.title;
-                    // change image to green circle
-                    var a_img = row_a.getElementsByTagName("IMG")[0];
+                    // change button to green
                     a_img.src = '/static/pictures/green.png';
-
                 } else {
                     row.className = '';
-                    var row_a = row.getElementsByTagName("A")[0];
-                    var row_img = row_a.getElementsByTagName("IMG")[0];
-                    row_img.src = '/static/pictures/red.png';
+                    row_a.setAttribute("onclick", "return release('" + id + "','')");
+                    a_img.src = '/static/pictures/red.png';
                 }
+                # change title and button color
+                row_a.title = jsonResponse.title;
             }
         };
         xhttp.open("POST", "/inventory/checkout", true);

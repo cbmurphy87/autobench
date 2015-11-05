@@ -116,7 +116,7 @@ def load_user(id):
 
 
 def unauthorized():
-    return redirect(url_for('_login', scheme='https'))
+    return redirect(url_for('_login'))
 
 
 @myapp.before_request
@@ -323,7 +323,8 @@ def _checkout_id():
             server.held_by = user.id
             db.session.add(server)
             db.session.commit()
-        except:
+        except Exception as e:
+            'Exception in checkout: {}'.format(e)
             db.session.rollback()
     if _next:
         return redirect(_next)
@@ -333,18 +334,24 @@ def _checkout_id():
         if server.held_by == user.id:
             i_am_holder = True
             title = 'Release this server'
+            color = 'green'
         else:
             i_am_holder = False
             holder_name = str(server.holder)
             title = 'This server is held by {}'.format(holder_name)
+            color = 'red'
         server_json = JSONEncoder().encode({'available': server.available,
                                             'i_am_holder': i_am_holder,
-                                            'title': title})
+                                            'title': title,
+                                            'color': color})
         return server_json
     except Exception as e:
         print "Couldn't encode server: {}".format(e)
     return JSONEncoder().encode({'available': False,
-                                 'held_by': 'unknown'})
+                                 'i_am_holder': False,
+                                 'held_by': 'unknown',
+                                 'title': 'Server state is unknown',
+                                 'color': 'red'})
 
 
 @myapp.route('/inventory/release', methods=['GET', 'POST'])
@@ -367,14 +374,17 @@ def _release():
             except:
                 db.session.rollback()
             title = 'Check out this server'
+            color = 'blue'
         else:
             title = 'Server in unknown state'
             server.available = False
+            color = 'red'
         i_am_holder = False
 
         server_json = JSONEncoder().encode({'available': server.available,
                                             'i_am_holder': i_am_holder,
-                                            'title': title})
+                                            'title': title,
+                                            'color': color})
         return server_json
     except:
         print 'Could not get user holding server.'
