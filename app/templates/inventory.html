@@ -121,8 +121,8 @@
                     {# loop over field values for each server #}
                     {% for k, v in field_pairs %}
                         <td>
-                        {# if field is None, insert "update" button #}
-                        {% if v != None %}
+                        {# if field is not None, populate k:v #}
+                        {% if v!= None %}
                             {% if k in ('Drives', 'Capacity', 'Count') %}
                             {% for drive in server['drive_counts'] %}
                             {{ drive[v] }}<br>
@@ -141,28 +141,29 @@
                                     {% set onclick = "alert(\"You cannot check out this server\")".format(server.id) %}
                                     {% set hover_title = 'This server is held by {}'.format(server.holder) %}
                                 {% endif %}
-                            <a onclick="return {{ onclick }}" title="{{ hover_title }}">
-                                <img src={{ url_for('static', filename='pictures/{}.png'.format(color)) }} style="width:16px;height:16px;">
-                            </a>
+                                <a onclick="return {{ onclick }}" title="{{ hover_title }}">
+                                    <img src={{ url_for('static', filename='pictures/{}.png'.format(color)) }} style="width:16px;height:16px;">
+                                </a>
                                 <span style="display:none">{{ color }}</span>
-                        {% elif server[v] is not undefined %}
-                        {% if k == 'ID' %}
-                            <a href="/inventory/{{ server['id'] }}">
-                                {{ server[v] }}
-                            </a>
-                        {% else %}
-                            {{ server[v] }}
-                        {% endif %}
-                        {% endif %}
-                        {% else %}
-                            {% if server.id|length > 7 %}
-                            {% set disabled = 'disabled ' %}
+                            {% elif server[v] is not undefined %}
+                            {% if k == 'ID' %}
+                                <a href="/inventory/{{ server['id'] }}">
+                                    {{ server[v] }}
+                                </a>
                             {% else %}
-                            {% set disabled = '' %}
+                                {{ server[v] }}
                             {% endif %}
+                            {% endif %}
+                        {# else (field is None), insert "update" button #}
+                        {% else %}
+                            {# if id > 8, server is Supermicro #}
+                            {% if server.make|lower == 'supermicro' %}
+                                &nbsp;
+                            {% else %}
                             <button {{ disabled }}onclick="update('{{ server.id }}','')">
                                 Update
                             </button>
+                            {% endif %}
                         {% endif %}
                         </td>
                     {% endfor %}

@@ -364,6 +364,36 @@ def _checkout_id():
                                  'color': 'red'})
 
 
+@myapp.route('/inventory/delete', methods=['GET', 'POST'])
+@login_required
+def _delete_id():
+    _id = request.get_json().get('id')
+    _next = request.get_json().get('next')
+    user = g.user
+    print 'User {} is deleting server {}'.format(user, _id)
+    server = Servers.query.filter_by(id=_id).first()
+    try:
+        db.session.delete(server)
+        db.session.commit()
+        print 'Server successfully delted.'
+    except Exception as e:
+        print 'Error deleting server {}: {}'.format(_id, e)
+        db.session.rollback()
+
+    i_am_holder = (server.held_by == user.id)
+    if i_am_holder:
+        title = 'Release this server'
+        color = 'green'
+    else:
+        title = 'This server is held by {}'.format(str(server.holder))
+        color = 'red'
+    server_json = JSONEncoder().encode({'available': server.available,
+                                        'i_am_holder': i_am_holder,
+                                        'title': title,
+                                        'color': color})
+    return server_json
+
+
 @myapp.route('/inventory/release', methods=['GET', 'POST'])
 @login_required
 def _release():

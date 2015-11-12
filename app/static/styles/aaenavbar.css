@@ -2,7 +2,7 @@ nav {
     position: absolute;
     top: 0;
     right: 0;
-    display: block;
+    display: inline;
     text-align: center;
 }
 

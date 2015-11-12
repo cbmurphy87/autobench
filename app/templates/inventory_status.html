@@ -1,3 +1,9 @@
+{% if user.admin %}
+    You are admin, so you can delete this from inventory:
+    <button onclick="deleteServer('{{ server.id }}','/inventory')">
+        Delete
+    </button>
+{% endif %}
 {% if server.available %}
     <h3>This Server is available</h3>
     <p>Would you like to check it out?</p>

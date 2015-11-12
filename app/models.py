@@ -61,7 +61,8 @@ class Servers(db.Model):
 
     # relationships
     interfaces = db.relationship('NetworkDevices',
-                                 backref='servers', lazy='dynamic')
+                                 backref='servers', lazy='dynamic',
+                                 cascade='delete')
     unique_drives = db.relationship('StorageDevices',
                                     secondary="server_storage")
     drives = db.relationship('ServerStorage',

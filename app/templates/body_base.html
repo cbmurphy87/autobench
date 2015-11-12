@@ -7,15 +7,15 @@
 
 {% block body %}
     <div class="top_header">
-        <span style="display:inline-block;min-width:1000px;">
-            <div style="display:inline-block;">
+        <span style="display:inline-block;width:100%;min-width:1000px;margin-bottom:80px;">
+            <div style="position:fixed;">
                 <img src={{ url_for('static', filename='pictures/micronlogos/high_res_micron_logo_black.png') }} class="top_image">
             </div>
-            <div style="display:inline-block;">
+            <div style="display:inline-block;position:fixed;z-index:1;right:0px;top:0px;width:500px;">
                 {% include "aae_navbar.html" %}
             </div>
         </span>
-        <h1 style="width:100%">AutoBench</h1>
+        <h1 style="width:100%;">AutoBench</h1>
     </div>
     <div style="min-width:450px;height:100%;margin-top:10px;">
         {% with messages = get_flashed_messages() %}
