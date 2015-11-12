@@ -25,6 +25,7 @@ from subprocess import Popen, PIPE
 # ___________________________ AAEBench Imports ________________________
 from aaebench.testautomation.syscontrol.file_transfer import SFTPManager
 from aaebench.testautomation.syscontrol.racadm import RacadmManager
+from aaebench.parents.managers import GenericManager
 
 # ___________________________ Flask Imports ________________________
 from scripts.jenkinsMethods import *
@@ -79,6 +80,15 @@ def _deploy_server(form):
 
     with client.open(filename, 'w') as f:
         f.write(pxe_file)
+
+    salt_master_manager = GenericManager(hostname='salt-gru.aae.lcl',
+                                         username='salt',
+                                         password='Not24Get',
+                                         local=False,
+                                         ending='$')
+    command = ['salt-key', '-d', server.id, '-y']
+    salt_master_manager.connection.exec_command(command)
+    salt_master_manager.close()
 
     # reboot server to PXE
     racadm = RacadmManager(drac_ip)

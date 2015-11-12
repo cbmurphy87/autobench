@@ -138,7 +138,7 @@
                                     {% set hover_title = 'Release this server' %}
                                 {% else %}
                                     {% set color = 'red' %}
-                                    {% set onclick = "alert(\"You can't check out this server\")".format(server.id) %}
+                                    {% set onclick = "alert(\"You cannot check out this server\")".format(server.id) %}
                                     {% set hover_title = 'This server is held by {}'.format(server.holder) %}
                                 {% endif %}
                             <a onclick="return {{ onclick }}" title="{{ hover_title }}">
@@ -155,7 +155,12 @@
                         {% endif %}
                         {% endif %}
                         {% else %}
-                            <button onclick="update('{{ server.id }}','')">
+                            {% if server.id|length > 7 %}
+                            {% set disabled = 'disabled ' %}
+                            {% else %}
+                            {% set disabled = '' %}
+                            {% endif %}
+                            <button {{ disabled }}onclick="update('{{ server.id }}','')">
                                 Update
                             </button>
                         {% endif %}

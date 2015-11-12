@@ -1,10 +1,59 @@
 #!/usr/bin/python
 
-from app import db, models
-from flask import flash
+from app import myapp, db, models, forms
 from sqlalchemy.exc import IntegrityError, InvalidRequestError
 from aaebench.testautomation.syscontrol.racadm import RacadmManager
 from werkzeug.security import generate_password_hash
+from subprocess import Popen, PIPE
+import re
+
+
+def get_ip_from_mac(mac):
+
+    command = 'ssh aaebench@atxlab.aae.lcl ' \
+              '"cat /var/lib/dhcp/db/dhcpd.leases"'
+    p = Popen(command, stdout=PIPE, stderr=PIPE, shell=True)
+    leases, errors = p.communicate()
+
+    if errors and not leases:
+        print "errors:\n{}".format(errors)
+        raise IOError("Could not read dhcpd leases file: {}".format(errors))
+
+    sstring = r'(?is)' \
+              r'lease\s+' \
+              r'(?P<ip_address>\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}).*?' \
+              r'hardware\s+ethernet\s+' \
+              r'(?P<mac>\w{2}:\w{2}:\w{2}:\w{2}:\w{2}:\w{2})'
+
+    addresses = [m.groupdict() for m in re.finditer(sstring, leases)
+                 if m.groupdict().get('mac').lower() == mac.lower()]
+
+    if addresses:
+        return addresses.pop().get('ip_address')
+
+
+def get_mac_from_ip(ip):
+
+    command = 'ssh aaebench@atxlab.aae.lcl ' \
+              '"cat /var/lib/dhcp/db/dhcpd.leases"'
+    p = Popen(command, stdout=PIPE, stderr=PIPE, shell=True)
+    leases, errors = p.communicate()
+
+    if errors and not leases:
+        print "errors:\n{}".format(errors)
+        raise IOError("Could not read dhcpd leases file: {}".format(errors))
+
+    sstring = r'(?is)' \
+              r'lease\s+' \
+              r'(?P<ip_address>\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}).*?' \
+              r'hardware\s+ethernet\s+' \
+              r'(?P<mac>\w{2}:\w{2}:\w{2}:\w{2}:\w{2}:\w{2})'
+
+    addresses = [m.groupdict() for m in re.finditer(sstring, leases)
+                 if m.groupdict().get('ip_address').lower() == ip.lower()]
+
+    if addresses:
+        return addresses.pop().get('ip_address')
 
 
 def update_user_info(form, user):
@@ -63,14 +112,105 @@ def add_inventory(form, user):
 
     """
     Add hardware to inventory
-    :param entry: dictionary of entry values
-    :type entry: dict
     :return: success of adding entry
     :rtype: bool
     """
 
+    # get ip address either from field, or translate from mac address
+    if len(form.drac_address.data) > 16:
+        mac_address = form.drac_address.data
+        ip_address = get_ip_from_mac(mac_address)
+    else:
+        ip_address = form.drac_address
+        mac_address = get_mac_from_ip(ip_address)
+
+    nic_info = {'ip_address': ip_address,
+                'mac_address': mac_address}
+
+    # if dell, do this
+    try:
+        return add_dell_info(nic_info=nic_info, form=form, user=user)
+    except IOError:
+        # else it's supermicro, and do this
+        print 'not a dell server. try supermicro.'
+        return add_smc_info(nic_info=nic_info, form=form, user=user)
+
+
+def add_smc_info(nic_info, form, user):
+
+    ip_address = nic_info.get('ip_address')
+    mac_address = nic_info.get('mac_address')
+
+    command = ['/root/SMCIPMITool_2.11.0/SMCIPMITool', ip_address, 'ADMIN',
+               'ADMIN', 'ipmi', 'fru']
+    smcipmi = Popen(command, stdout=PIPE, stderr=PIPE)
+    system_info, errors = smcipmi.communicate()
+
+    print 'info:\n{}'.format(system_info)
+    if errors:
+        print 'Errors:\n{}'.format(errors)
+
+    ss = re.compile(r'(?is)'
+                    r'Product\s+PartModel\s+Number\s+\(PPM\)\s+=\s+'
+                    r'(?P<model>.*?)\s+'
+                    r'Product\s+Version\s+\(PV\).+?'
+                    r'Product\s+Serial\s+Number\s+\(PS\)\s+=\s+'
+                    r'(?P<id>.+?)\s+')
+
+    info = ss.search(system_info)
+    if info:
+        server_info = info.groupdict()
+    else:
+        print 'Could not get server info.'
+        return
+
+    server = models.Servers(rack=form.rack.data, u=form.u.data)
+    server.held_by = user.id
+    server.make = 'Supermicro'
+
+    nic_info = {'name': 'ipmi',
+                'ip': ip_address,
+                'mac': mac_address,
+                'slot': 'Dedicated',
+                'type': 'oob',
+                'server_id': server_info.get('id')}
+
+    print 'Nic info: {}'.format(nic_info)
+
+    ipmi_interface = models.NetworkDevices(**nic_info)
+    server.interfaces.append(ipmi_interface)
+
+    if info:
+        print
+        for _k, _v in server_info.items():
+            if hasattr(server, _k):
+                setattr(server, _k, _v)
+            else:
+                print 'key "{}" not in server:'.format(_k)
+                print '-> {}: {}'.format(_k, _v)
+    else:
+        print 'error getting info'
+        return
+
+    try:
+        db.session.add(server)
+        db.session.add(ipmi_interface)
+        db.session.commit()
+    except InvalidRequestError:
+        db.session.rollback()
+        print "Non-unique server entry. Rolling back."
+    except IntegrityError as e:
+        print 'Server {} already there: {}'.format(server, e)
+        return
+
+
+def add_dell_info(nic_info, form, user):
+
+    ip_address = nic_info.get('ip_address')
+    mac_address = nic_info.get('mac_address')
+
     s = {
-            'hostname': form.drac_ip.data,
+            'hostname': ip_address,
             'username': 'root',
             'password': 'Not24Get',
             'verbose': True,
@@ -82,7 +222,7 @@ def add_inventory(form, user):
     if not server_info:
         message = 'Error fetching data. Make sure server is connected.'
         print message
-        return message
+        raise IOError(message)
     else:
         print server_info
 
@@ -109,6 +249,7 @@ def add_inventory(form, user):
                 print '-> {}: {}'.format(_k, _v)
 
     server.held_by = user.id
+    server.make = 'Dell'
 
     try:
         db.session.add(server)
@@ -375,11 +516,10 @@ def check_or_add_drives(server, drives):
 
 
 def main():
-    servers = get_inventory()
-    for server in servers:
-        print server
-        for drive in server.drive_counts:
-            print drive['count'], drive['model'], drive['capacity']
+
+    with myapp.app_context():
+        mac = '00:50:56:81:7b:ee'
+        print get_ip_from_mac(mac)
 
 if __name__ == '__main__':
     main()

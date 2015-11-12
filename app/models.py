@@ -48,6 +48,7 @@ class Servers(db.Model):
     # parameters
     id = db.Column(db.String(16), primary_key=True)
     host_name = db.Column(db.String(16))
+    make = db.Column(db.String(16))
     model = db.Column(db.String(16))
     cpu_count = db.Column(db.Integer)
     cpu_model = db.Column(db.String(16))

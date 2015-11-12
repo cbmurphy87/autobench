@@ -4,10 +4,11 @@ from wtforms import StringField, BooleanField, TextAreaField, PasswordField, \
     SelectField, IntegerField
 from wtforms.ext.sqlalchemy.fields import QuerySelectField
 from wtforms.validators import DataRequired, Length, Optional, NumberRange, \
-    required
+    required, IPAddress, MacAddress, EqualTo
 from wtforms.validators import ValidationError
 from sqlalchemy import collate
 from app import models
+
 
 # ================ Validators =======================
 def dynamic_job_form(build_steps):
@@ -24,48 +25,55 @@ def dynamic_job_form(build_steps):
     return F
 
 
-def MacAddress(separator=':'):
-    message = 'Must be in the format "ab{0}cd{0}ef{0}01{0}23{0}45"' \
-        .format(separator)
+class NotEqualTo(object):
+    """
+    Compares the values of two fields.
 
-    def _mac(form, field):
-        pattern = re.compile('^(?:[a-fA-F0-9]{2}[:\- ]?){5}(?:[a-fA-F0-9]{2})$')
-        if not pattern.match(field.data):
-            raise ValidationError(message)
+    :param fieldname:
+        The name of the other field to compare to.
+    :param message:
+        Error message to raise in case of a validation error. Can be
+        interpolated with `%(other_label)s` and `%(other_name)s` to provide a
+        more helpful error.
+    """
 
-    return _mac
+    def __init__(self, fieldname, message=None):
+        self.fieldname = fieldname
+        self.message = message
+
+    def __call__(self, form, field):
+        try:
+            other = form[self.fieldname]
+        except KeyError:
+            raise ValidationError(field.gettext("Invalid field name '%s'.")
+                                  .format(self.fieldname))
+        if field.data == other.data:
+            d = {
+                'other_label': hasattr(other, 'label') and other.label.text
+                               or self.fieldname,
+                'other_name': self.fieldname
+            }
+            message = self.message
+            if message is None:
+                message = field.gettext('Field must not be equal to '
+                                        '%(other_name)s.')
+
+            raise ValidationError(message % d)
 
 
-def IPAddress(separator='.'):
-    message = 'Must be in the format "xxx{0}xxx{0}xxx{0}xxx"' \
-        .format(separator)
+class MacOrIP(object):
+    def __init__(self, message=None):
+        self.message = message or 'Invalid Mac or IP address.'
 
-    def _ip(form, field):
-        pattern = re.compile('^(?:\d{1,3}\.?){3}(?:\d{1,3})$')
-        if not pattern.match(field.data):
-            raise ValidationError(message)
-
-    return _ip
-
-
-def NotCurrentPassword():
-    message = 'New password cannot be same as old password.'
-
-    def _new_password(form, field):
-        if field.data == form.password.data:
-            raise ValidationError(message)
-
-    return _new_password
-
-
-def MatchNewPassword():
-    message = 'Passwords do not match.'
-
-    def _check_password(form, field):
-        if field.data != form.new_password.data:
-            raise ValidationError(message)
-
-    return _check_password
+    def __call__(self, form, field):
+        try:
+            print 'trying mac'
+            try_mac = MacAddress(message=self.message)
+            try_mac(form, field)
+        except ValidationError:
+            print 'trying ip'
+            try_ip = IPAddress(message=self.message)
+            try_ip(form, field)
 
 
 # ================ Forms =======================
@@ -82,7 +90,6 @@ class CreateJobForm(Form):
 
 
 class DeployForm(Form):
-
     def make_name(self):
         return '{} {}'.format(getattr(self, 'flavor'), getattr(self, 'version'))
 
@@ -117,8 +124,8 @@ class LoginForm(Form):
 
 
 class AddInventoryForm(Form):
-    drac_ip = StringField('iDRAC/IPMI IP Address',
-                          validators=[DataRequired(), IPAddress()])
+    drac_address = StringField('iDRAC/IPMI Mac/IP Address',
+                               validators=[DataRequired(), MacOrIP()])
     rack = IntegerField('Rack', validators=[DataRequired(),
                                             NumberRange(min=1, max=15)])
     u = IntegerField('U', validators=[DataRequired(),
@@ -134,10 +141,12 @@ class EditInfoForm(Form):
                                              Length(8, 32, 'New password must '
                                                            'be at least 8 '
                                                            'characters'),
-                                             NotCurrentPassword()])
+                                             NotEqualTo('password')])
     verify_new_password = PasswordField('Verify New Password',
                                         validators=[Optional(),
-                                                    NotCurrentPassword(),
-                                                    MatchNewPassword()])
+                                                    EqualTo('new_password',
+                                                            message='Passwords '
+                                                                    'must '
+                                                                    'match')])
     password = PasswordField('Current Password',
                              validators=[DataRequired()])

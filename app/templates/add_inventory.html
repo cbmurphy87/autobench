@@ -4,7 +4,7 @@
     <form action="" method="POST" name="add_inventory">
         {{ form.hidden_tag() }}
         <div class="add_inventory">
-        {% for field in (form.drac_ip, form.rack, form.u) %}
+        {% for field in (form.drac_address, form.rack, form.u) %}
             <p>
                 {{ field.label.text }}:<br>
                 {{ field }}
