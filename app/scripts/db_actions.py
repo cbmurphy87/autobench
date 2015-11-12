@@ -50,7 +50,7 @@ def get_mac_from_ip(ip):
               r'(?P<mac>\w{2}:\w{2}:\w{2}:\w{2}:\w{2}:\w{2})'
 
     addresses = [m.groupdict() for m in re.finditer(sstring, leases)
-                 if m.groupdict().get('ip_address').lower() == ip.lower()]
+                 if m.groupdict().get('ip_address') == ip]
 
     if addresses:
         return addresses.pop().get('ip_address')
