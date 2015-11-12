@@ -83,6 +83,13 @@
         xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
         xhttp.send(JSON.stringify({id: id, next: next}));
     }
+
+    function filterTable() {
+        var inventoryTable = document.getElementById("aaetable");
+        for (var i = 2, row - 2; row = inventoryTable.rows[i]; i++) {
+            row.style.display='none';
+        }
+    }
 {% endblock %}
 
 {# =============================================================== #}
@@ -106,6 +113,22 @@
                     <th{{ class }}>
                         {{ k }}
                     </th>
+                {% endfor %}
+                </tr>
+                <tr>
+                {% for k, v in field_pairs %}
+                    {% if  v == None %}
+                    <th class="sorttable_nosort">&nbsp;</th>
+                    {% else %}
+                    <th class="sorttable_nosort">
+                        <select onchange="filterTable()">
+                            <option value="All">All</option>
+                            {% for server in servers %}
+                                <option value="{{ server[v] }}">{{ server[v] }}</option>
+                            {% endfor %}
+                        </select>
+                    </th>
+                    {% endif %}
                 {% endfor %}
                 </tr>
             </thead>
