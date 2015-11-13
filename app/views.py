@@ -372,7 +372,12 @@ def _delete_id():
     user = g.user
     print 'User {} is deleting server {}'.format(user, _id)
     server = Servers.query.filter_by(id=_id).first()
+    drives = server.drives
+    print drives.all()
     try:
+        for drive in drives:
+            db.session.delete(drive)
+        db.session.commit()
         db.session.delete(server)
         db.session.commit()
         print 'Server successfully delted.'

@@ -84,10 +84,14 @@
         xhttp.send(JSON.stringify({id: id, next: next}));
     }
 
-    function filterTable() {
+    function filterTable(field) {
         var inventoryTable = document.getElementById("aaetable");
-        for (var i = 2, row - 2; row = inventoryTable.rows[i]; i++) {
-            row.style.display='none';
+        var sv = field.options[field.selectedIndex].value;
+        for (var i = 2, row; row = inventoryTable.rows[i]; i++) {
+            var str = row.innerHTML;
+            if (str.indexOf(sv) <= 0) {
+                row.style.display='none';
+            }
         }
     }
 {% endblock %}
@@ -115,13 +119,14 @@
                     </th>
                 {% endfor %}
                 </tr>
+                <!-- add select fields
                 <tr>
                 {% for k, v in field_pairs %}
                     {% if  v == None %}
                     <th class="sorttable_nosort">&nbsp;</th>
                     {% else %}
                     <th class="sorttable_nosort">
-                        <select onchange="filterTable()">
+                        <select onchange="filterTable(this)">
                             <option value="All">All</option>
                             {% for server in servers %}
                                 <option value="{{ server[v] }}">{{ server[v] }}</option>
@@ -131,6 +136,7 @@
                     {% endif %}
                 {% endfor %}
                 </tr>
+                -->
             </thead>
             <tbody>
             {# loop over servers in inventory #}

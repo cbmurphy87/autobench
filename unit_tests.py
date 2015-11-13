@@ -13,7 +13,8 @@ cov.start()
 from config import basedir
 from app import myapp, db
 from app.models import Servers, Users, OS
-from app.scripts.db_actions import get_inventory
+from app.scripts.db_actions import get_inventory, get_ip_from_mac, \
+    get_mac_from_ip
 from werkzeug.security import generate_password_hash
 
 db.session.remove()
@@ -145,6 +146,14 @@ class TestCase(unittest.TestCase):
         assert type(all_servers) == list, type(all_servers)
         assert len(all_servers) == 1, len(all_servers)
         assert str(first_server) == '<Server id TESTID>'
+
+    def test_ipmac(self):
+
+        ip = '172.16.7.156'
+        mac = '0c:c4:7a:66:ac:87'
+
+        assert get_mac_from_ip(ip).lower() == mac.lower(), "mac doesn't match"
+        assert get_ip_from_mac(mac).lower() == ip.lower(), "ip doesn't match"
 
 
 if __name__ == '__main__':

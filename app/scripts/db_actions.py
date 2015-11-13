@@ -30,6 +30,7 @@ def get_ip_from_mac(mac):
 
     if addresses:
         return addresses.pop().get('ip_address')
+    raise Exception('Could not get ip address.')
 
 
 def get_mac_from_ip(ip):
@@ -54,6 +55,7 @@ def get_mac_from_ip(ip):
 
     if addresses:
         return addresses.pop().get('ip_address')
+    raise Exception('Could not get mac address.')
 
 
 def update_user_info(form, user):
@@ -119,10 +121,16 @@ def add_inventory(form, user):
     # get ip address either from field, or translate from mac address
     if len(form.drac_address.data) > 16:
         mac_address = form.drac_address.data
-        ip_address = get_ip_from_mac(mac_address)
+        try:
+            ip_address = get_ip_from_mac(mac_address)
+        except:
+            ip_address = 'unknown'
     else:
-        ip_address = form.drac_address
-        mac_address = get_mac_from_ip(ip_address)
+        ip_address = form.drac_address.data
+        try:
+            mac_address = get_mac_from_ip(ip_address)
+        except:
+            mac_address = 'unknown'
 
     nic_info = {'ip_address': ip_address,
                 'mac_address': mac_address}
@@ -207,7 +215,7 @@ def add_smc_info(nic_info, form, user):
 def add_dell_info(nic_info, form, user):
 
     ip_address = nic_info.get('ip_address')
-    mac_address = nic_info.get('mac_address')
+    print 'checking ip: {}'.format(ip_address)
 
     s = {
             'hostname': ip_address,
