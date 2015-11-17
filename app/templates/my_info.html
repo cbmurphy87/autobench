@@ -57,18 +57,31 @@
     <div style="padding-top:5px;">
         <a href="/my_info/edit">Edit My Info</a>
     </div>
+    <!-- My Servers -->
     <h2>My Servers</h2>
     {% if user.servers %}
     <div id="my_servers">
         <div class="pane-frame" style="width:100%;">
-            <table id="aaetable" class="sortable pane bigtable stripped">
+            <table id="aaetable" class="sortable pane bigtable stripped count">
                 <thead>
                     <tr class="header">
                     {# create header for inventory table #}
                         {% for k, v in server_fields %}
-                        <th>
-                            {{ k }}
-                        </th>
+                            {# set count types for columns #}
+                            {% if k in ['S', 'Release'] %}
+                                {% set units = 'none' %}
+                                {% set count_type = 'ignore' %}
+                                {% set class = " class=sorttable_nosort" %}
+                            {% elif k in ['Memory', 'Capacity'] %}
+                                {% set count_type = 'sum' %}
+                                {% set units = 'GB' %}
+                            {% else %}
+                                {% set units = 'none' %}
+                                {% set count_type = 'unique' %}
+                            {% endif %}
+                            <th{{ class }} unit="{{ units }}" count_type="{{ count_type }}">
+                                {{ k }}
+                            </th>
                         {% endfor %}
                     </tr>
                 </thead>

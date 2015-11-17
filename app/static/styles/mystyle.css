@@ -223,13 +223,17 @@ table.bigtable.pane > tbody > tr > td:last-child {
     border: none; /* Border will be provided by the pane-frame */
 }
 
-.bigtable thead, th {
+.bigtable thead > tr > th, tfoot > tr > th {
     font-weight: bold;
     border: none;
     background-color: #414042;
     color: white;
-    padding: 6px 4px;
+    padding: 4px 4px;
     white-space: nowrap;
+}
+
+.bigtable tfoot > tr > th {
+    padding: 0;
 }
 
 .sortable thead > tr > th {

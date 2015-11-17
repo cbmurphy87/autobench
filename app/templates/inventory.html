@@ -5,106 +5,12 @@
 {# =============================================================== #}
 
 {% set field_pairs = (('S', 'available'),('ID', 'id'),('Model','model'),
-('CPUs','cpu_count'),('Model','cpu_model'),('Memory','memory_capacity'),
+('CPUs','cpu_count'),('SKU','cpu_model'),('Memory','memory_capacity'),
 ('Drives','model'),('Capacity','capacity'),('Count','count'),('Update',None)) %}
 
 {% block links %}
     {{ super() }}
-    <script type="text/javascript" src={{ url_for('static', filename='javascript/countTable.js') }}></script>
-{% endblock %}
-
-{% block scripts %}
-    function checkout(id, next) {
-        var xhttp = new XMLHttpRequest();
-        xhttp.onreadystatechange = function () {
-            if (xhttp.readyState == 4 && xhttp.status == 200) {
-                var response = xhttp.responseText;
-                var jsonResponse = JSON.parse(response);
-                var row = document.getElementById(id);
-                var row_a = row.getElementsByTagName("A")[0];
-                var a_img = row_a.getElementsByTagName("IMG")[0];
-                // change row class if held by you
-                if (jsonResponse.i_am_holder == true) {
-                    // change class to highlight row
-                    row.className = 'heldserver';
-                    // change link to release
-                    row_a.setAttribute("onclick", "return release('" + id + "','')");
-                    // change button to green
-                    a_img.src = '/static/pictures/green.png';
-                } else {
-                    row.className = '';
-                    row_a.setAttribute("onclick", "return release('" + id + "','')");
-                    a_img.src = '/static/pictures/red.png';
-                }
-                // change title and button color
-                row_a.title = jsonResponse.title;
-            }
-        };
-        xhttp.open("POST", "/inventory/checkout", true);
-        xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
-        xhttp.send(JSON.stringify({id: id, next: next}));
-    }
-
-    function release(id, next) {
-        var xhttp = new XMLHttpRequest();
-        xhttp.onreadystatechange = function() {
-            if (xhttp.readyState == 4 && xhttp.status == 200) {
-                var response = xhttp.responseText;
-                var jsonResponse = JSON.parse(response);
-                var row = document.getElementById(id);
-                // change row class if held by you
-                if (jsonResponse.i_am_holder == false) {
-                    // change class to unhighlight row
-                    row.className = '';
-                    var row_a = row.getElementsByTagName("A")[0];
-                    // change link to checkout
-                    row_a.setAttribute("onclick", "return checkout('" + id + "','')");
-                    row_a.title = jsonResponse.title;
-                    // change image to blue circle
-                    var a_img = row_a.getElementsByTagName("IMG")[0];
-                    a_img.src = '/static/pictures/blue.png';
-
-                } else {
-                    row.className = '';
-                    var row_a = row.getElementsByTagName("A")[0];
-                    var row_img = row_a.getElementsByTagName("IMG")[0];
-                    row_img.src = '/static/pictures/red.png';
-                }
-            }
-        };
-        xhttp.open("POST", "/inventory/release", true);
-        xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
-        xhttp.send(JSON.stringify({id: id, next: next}));
-    }
-
-    function update(id, next) {
-        var xhttp = new XMLHttpRequest();
-        xhttp.onreadystatechange = function() {
-            if (xhttp.readyState == 4 && xhttp.status == 200) {
-                alert('Updating server. Wait 30 seconds, then reload page.');
-            }
-        };
-        xhttp.open("POST", "/inventory/update", true);
-        xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
-        xhttp.send(JSON.stringify({id: id, next: next}));
-    }
-
-    function filterTable(field) {
-        var inventoryTable = document.getElementById("aaetable");
-        var tbody = inventoryTable.getElementsByTagName("tbody")[0];
-        var sv = field.options[field.selectedIndex].value;
-        for (var i = 2, row; row = tbody.rows[i]; i++) {
-            var str = row.innerHTML;
-            // remove all hidden rows if "All" is selected
-            if (sv == 'All') {
-                row.style.display = null;
-            } else {
-                if (str.indexOf(sv) <= 0) {
-                    row.style.display='none';
-                }
-            }
-        }
-    }
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/inventory.js') }}></script>
 {% endblock %}
 
 {# =============================================================== #}
@@ -124,14 +30,20 @@
                 {% for k, v in field_pairs %}
                     {# set count types for columns #}
                     {% if k in ['S', 'Update'] %}
-                        {% set units = '' %}
                         {% set count_type = 'ignore' %}
+                        {% set units = 'none' %}
                     {% elif k in ['Memory','Capacity'] %}
                         {% set count_type = 'sum' %}
-                        {% set units = ' GB' %}
-                    {% else %}
-                        {% set units = '' %}
+                        {% set units = 'GB' %}
+                    {% elif k in ['Count'] %}
                         {% set count_type = 'sum' %}
+                        {% set units = 'none' %}
+                    {% elif k in ['Model', 'Drives', 'CPUs', 'SKU'] %}
+                        {% set count_type = 'unique' %}
+                        {% set units = 'none' %}
+                    {% else %}
+                        {% set count_type = 'count' %}
+                        {% set units = 'none' %}
                     {% endif %}
                     {% if  v == None %}
                         {% set class = " class=sorttable_nosort" %}
@@ -141,111 +53,84 @@
                     </th>
                 {% endfor %}
                 </tr>
-                <!-- add select fields
-                <tr>
-                {% for k, v in field_pairs %}
-                    {% if  v == None %}
-                    <th class="sorttable_nosort">&nbsp;</th>
-                    {% else %}
-                    <th class="sorttable_nosort">
-                        <select onchange="filterTable(this)">
-                            <option value="All">All</option>
-                            {% for server in servers %}
-                                <option value="{{ server[v] }}">{{ server[v] }}</option>
-                            {% endfor %}
-                        </select>
-                    </th>
-                    {% endif %}
-                {% endfor %}
-                </tr>
-                -->
             </thead>
             <tbody>
             {# loop over servers in inventory #}
             {% set col_counts = [] %}
-            {%- for server in servers -%}
+            {% for server in servers %}
                 {% if server.holder.id == user.id %}
                     {% set class = "heldserver" %}
                 {% else %}
                     {% set class = '' %}
                 {% endif %}
                 <tr id="{{ server.id }}" class="{{ class }}">
-                    {# loop over field values for each server #}
-                    {% set col_num = 0 %}
-                    {% for k, v in field_pairs %}
-                        {% set col_num = col_num + 1 %}
-                        <td>
-                        {% set count = 1 %}
-                        {# if field is not None, populate k:v #}
-                        {% if v!= None %}
-                            {% if k in ('Drives', 'Capacity', 'Count') %}
-                                {% set drive_count = [] %}
-                            {% for drive in server['drive_counts'] %}
-                                {% if k == 'Drives' %}
-                                    {% set _ = drive_count.append(1) %}
-                                {% elif k == 'Capacity' %}
-                                    {% set drive_cap = drive[v]|split(0)|int %}
-                                    {% set _ = drive_count.append(drive_cap) %}
-                                {% else %}
-                                    {% set _ = drive_count.append(drive[v]|int) %}
-                                {% endif %}
-                            <div>{{ drive[v] }}</div>
-                            {% endfor %}
-                                {% set count = drive_count|sum %}
-                            {% elif v == 'available' %}
-                                {% if server['available'] %}
-                                    {% set color = 'blue' %}
-                                    {% set onclick = "checkout('{}','')".format(server.id) %}
-                                    {% set hover_title = 'Check out this server' %}
-                                {% elif server['held_by'] == user.id %}
-                                    {% set color = 'green' %}
-                                    {% set onclick = "release('{}','')".format(server.id) %}
-                                    {% set hover_title = 'Release this server' %}
-                                {% else %}
-                                    {% set color = 'red' %}
-                                    {% set onclick = "alert(\"You cannot check out this server\")".format(server.id) %}
-                                    {% set hover_title = 'This server is held by {}'.format(server.holder) %}
-                                {% endif %}
-                                <a onclick="return {{ onclick }}" title="{{ hover_title }}">
-                                    <img src={{ url_for('static', filename='pictures/{}.png'.format(color)) }} style="width:16px;height:16px;">
-                                </a>
-                                <span style="display:none">{{ color }}</span>
-                            {% elif server[v] is not undefined %}
-                            {% if k == 'ID' %}
-                                <a href="/inventory/{{ server['id'] }}">
-                                    {{ server[v] }}
-                                </a>
+                {# loop over field values for each server #}
+                {% for k, v in field_pairs %}
+                    <td>
+                    {% set count = 1 %}
+                    {# if field is not None, populate k:v #}
+                    {% if v!= None %}
+                        {% if k in ('Drives', 'Capacity', 'Count') %}
+                        {% for drive in server['drive_counts'] %}
+                        <div>
+                            {{ drive[v] }}
+                            {% if k == 'Capacity' %}
+                            <span class="custom_count" style="display:none">{{ drive[v]|split(0)|int }}</span>
+                            {% elif k == 'Count' %}
+                            <span class="custom_count" style="display:none">{{ drive[v]|int }}</span>
                             {% else %}
-                                {% if k == 'Memory' %}
-                                    {% set count = server[v]|split(0)|int %}
-                                {% endif %}
-                                {{ server[v] }}
+                            <span class="custom_count" style="display:none">{{ drive[v] }}</span>
                             {% endif %}
+                        </div>
+                        {% endfor %}
+                        {% elif v == 'available' %}
+                            {% if server['available'] %}
+                                {% set color = 'blue' %}
+                                {% set onclick = "checkout('{}','')".format(server.id) %}
+                                {% set hover_title = 'Check out this server' %}
+                            {% elif server['held_by'] == user.id %}
+                                {% set color = 'green' %}
+                                {% set onclick = "release('{}','')".format(server.id) %}
+                                {% set hover_title = 'Release this server' %}
+                            {% else %}
+                                {% set color = 'red' %}
+                                {% set onclick = "alert(\"You cannot check out this server\")".format(server.id) %}
+                                {% set hover_title = 'This server is held by {}'.format(server.holder) %}
                             {% endif %}
-                        {# else (field is None), insert "update" button #}
+                            <a onclick="return {{ onclick }}" title="{{ hover_title }}">
+                                <img src={{ url_for('static', filename='pictures/{}.png'.format(color)) }} style="width:16px;height:16px;">
+                                <span class="custom_count" style="display:none">{{ color }}</span>
+                            </a>
+                        {% elif server[v] is not undefined %}
+                        {% if k == 'ID' %}
+                            <a href="/inventory/{{ server[v] }}">{{ server[v] }}</a>
+                            <span class="custom_count" style="display:none">{{ server[v] }}</span>
                         {% else %}
-                            {# if id > 8, server is Supermicro #}
-                            {% if server.make|lower == 'supermicro' %}
-                                &nbsp;
+                            {% if k == 'Memory' %}
+                                {% set count = server[v]|split(0)|int %}
+                            {% endif %}
+                            {{ server[v] }}
+                            {% if k in ['Model', 'CPUs', 'SKU'] %}
+                            <span class="custom_count" style="display:none">{{ server[v] }}</span>
                             {% else %}
-                            <button {{ disabled }}onclick="update('{{ server.id }}','')">
-                                Update
-                            </button>
+                            <span class="custom_count" style="display:none">{{ count }}</span>
                             {% endif %}
                         {% endif %}
-                        <span class="custom_count" style="display:none">{{ count }}</span>
-                        </td>
-                    {% endfor %}
+                        {% endif %}
+                    {# else (field is None), insert "update" button #}
+                    {% else %}
+                        {# if server is Supermicro #}
+                        {% if server.make|lower == 'supermicro' %}
+                            &nbsp;
+                        {% else %}
+                        <button {{ disabled }}onclick="update('{{ server.id }}','')">Update</button>
+                        {% endif %}
+                    {% endif %}
+                    </td>
+                {% endfor %}
                 </tr>
             {% endfor %}
             </tbody>
-            <tfoot>
-                <tr>
-                {% for k, v in field_pairs %}
-                    <th></th>
-                {% endfor %}
-                </tr>
-            </tfoot>
         </table>
     </div>
     {# add link to create inventory at bottom of inventory list #}

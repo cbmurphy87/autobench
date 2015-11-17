@@ -2,48 +2,132 @@ $(document).ready(function () {
     var count_tables = $('table.count');
     // loop over tables to count
     var total_count = [];
+    var count_type = '';
+    var unique_entries = [];
     for (var table_num = 0, table; table = count_tables[table_num]; table_num++) {
-        // get thead and set arrays
+        // insert tfoot if not present
+        var tfeet = table.getElementsByTagName('tfoot');
+        if (tfeet.length < 1) {
+            var footer = table.createTFoot();
+            var fr = footer.insertRow(0);
+        }
+        // insert row into tfoot if none present
+        var tf = tfeet[0];
+        if (tf.rows.length == 0) {
+            tf.insertRow();
+        }
+        var fr = tf.rows[0];
+        // insert blank cells if not present
+        for (var i = 0; i < table.rows[0].cells.length; i++) {
+            if (typeof fr.cells[i] == 'undefined') {
+                fr.appendChild(document.createElement('th'));
+            }
+        }
+        // get thead and set arrays for units and ignored columns
         var table_head = table.getElementsByTagName('thead')[0];
         var units = [];
-        var ignore_column = []
+        var ignore_column = [];
+        var count_types = [];
         // loop over thead to get units, count type, and ignore rows
         var thead_row = table_head.rows[0];
         for (var col_num = 0, col; col = thead_row.cells[col_num]; col_num++) {
-            units.push(col.getAttribute('unit'));
-            if (col.getAttribute('count_type') == 'ignore') {
+            var unit = col.getAttribute('unit');
+            units.push(unit);
+            count_type = col.getAttribute('count_type');
+            count_types.push(count_type);
+            if (count_types[col_num] == 'ignore') {
                 ignore_column.push(true);
             } else {
                 ignore_column.push(false);
             }
+            // add empty arrays for unique entries
+            unique_entries.push([]);
         }
         // get tbody
         var table_body = table.getElementsByTagName('tbody')[0];
-        var row_count = []
         // loop over rows in tbody
         for (var row_num = 0, row; row = table_body.rows[row_num]; row_num++) {
             // loop over columns in row
-            var col_count = 0;
             for (var col_num = 0, col; col = row.cells[col_num]; col_num++) {
-                // get elements in cell with custom_count tag
+                // initialize column in total_counts
+                var num_value = 0;
+                if (typeof total_count[col_num] === 'undefined') {
+                    total_count.push(0);
+                }
+                // get elements in cell with custom_count tag, else innerHTML
                 var counts = col.getElementsByClassName('custom_count');
-                // loop over children of cell to count
-                for (var count_num = 0, child_count; child_count = counts[count_num]; count_num++) {
-                    if (typeof total_count[col_num] === 'undefined') {
-                        total_count.push(0);
+                if (counts.length == 0) {
+                    counts = col.children;
+                }
+                if (counts.length >= 1) {
+                    // loop over children of cell to count
+                    var cell_count = 0;
+                    for (var count_num = 0, child_count; child_count = counts[count_num]; count_num++) {
+                        // if unit 'count', simply add one
+                        if (count_types[col_num] == 'count'
+                            || typeof count_types[col_num] == null
+                            || count_types[col_num] == null) {
+                            cell_count = cell_count + 1;
+                        } else if (count_types[col_num] == 'unique') {
+                            if (unique_entries[col_num].indexOf(child_count.innerHTML) < 0) {
+                                unique_entries[col_num].push(child_count.innerHTML);
+                            }
+                        } else if (count_types[col_num] == 'sum') {
+                            num_value = parseInt(child_count.innerHTML);
+                            cell_count = cell_count + num_value;
+                        }
                     }
-                    total_count[col_num] = total_count[col_num] + parseInt(child_count.innerHTML);
+                    total_count[col_num] = total_count[col_num] + cell_count;
                 }
             }
         }
         var table_footer = table.getElementsByTagName('tfoot')[0];
         var foot_row = table_footer.rows[0];
         for (var cell_num = 0, foot; foot = foot_row.cells[cell_num]; cell_num++) {
-            // do calculations on columns
+            // do add data to footer
             if (ignore_column[cell_num] == false) {
-                var cell_unit = foot.getAttribute('unit');
-                foot.innerHTML = total_count[cell_num] + " " + units[cell_num];
+                // get values and units
+                var value = total_count[cell_num];
+                var unit = units[cell_num];
+                if (unit == null) {
+                    unit = 'none'
+                }
+                // reduce byte units to largest unit
+                if (unit.toLowerCase() == 'mb') {
+                    if (value >= 1000) {
+                        value = value / 1000;
+                        unit = 'GB';
+                    }
+                }
+                if (unit.toLowerCase() == 'gb') {
+                    if (value >= 1000) {
+                        value = value / 1000;
+                        unit = 'TB';
+                    }
+                }
+                if (unit.toLowerCase() == 'tb') {
+                    if (value >= 1000) {
+                        value = value / 1000;
+                        unit = 'PB';
+                    }
+                }
+                // set values
+                if (count_types[cell_num] == 'unique') {
+                    foot.innerHTML = unique_entries[cell_num].length;
+                } else if (typeof value == 'undefined') {
+                    foot.innerHTML = '';
+                } else if (unit == 'none' || unit == null) {
+                    foot.innerHTML = value
+                } else {
+                    foot.innerHTML = value.toFixed(2) + " " + unit.toUpperCase();
+                }
             }
         }
     }
+    // display variables to check at end
+    console.log('Total counts: ', total_count);
+    console.log('Units: ', units);
+    console.log('Ignore columns: ', ignore_column);
+    console.log('Count types: ', count_types);
+    console.log('Unique entries: ', unique_entries);
 });
