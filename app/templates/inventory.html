@@ -8,6 +8,11 @@
 ('CPUs','cpu_count'),('Model','cpu_model'),('Memory','memory_capacity'),
 ('Drives','model'),('Capacity','capacity'),('Count','count'),('Update',None)) %}
 
+{% block links %}
+    {{ super() }}
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/countTable.js') }}></script>
+{% endblock %}
+
 {% block scripts %}
     function checkout(id, next) {
         var xhttp = new XMLHttpRequest();
@@ -106,15 +111,26 @@
         <h3>Machines available for testing:</h3>
     </div>
     <div class="pane-frame" style="width:100%;min-width:800px;">
-        <table id="aaetable" class="sortable pane bigtable stripped">
+        <table id="aaetable" class="sortable pane bigtable stripped count">
             <thead>
                 <tr class="header">
                 {# create header for inventory table #}
                 {% for k, v in field_pairs %}
+                    {# set count types for columns #}
+                    {% if k in ['S', 'Update'] %}
+                        {% set units = '' %}
+                        {% set count_type = 'ignore' %}
+                    {% elif k in ['Memory','Capacity'] %}
+                        {% set count_type = 'sum' %}
+                        {% set units = ' GB' %}
+                    {% else %}
+                        {% set units = '' %}
+                        {% set count_type = 'sum' %}
+                    {% endif %}
                     {% if  v == None %}
                         {% set class = " class=sorttable_nosort" %}
                     {% endif %}
-                    <th{{ class }}>
+                    <th{{ class }} unit="{{ units }}" count_type="{{ count_type }}">
                         {{ k }}
                     </th>
                 {% endfor %}
@@ -140,6 +156,7 @@
             </thead>
             <tbody>
             {# loop over servers in inventory #}
+            {% set col_counts = [] %}
             {%- for server in servers -%}
                 {% if server.holder.id == user.id %}
                     {% set class = "heldserver" %}
@@ -148,14 +165,27 @@
                 {% endif %}
                 <tr id="{{ server.id }}" class="{{ class }}">
                     {# loop over field values for each server #}
+                    {% set col_num = 0 %}
                     {% for k, v in field_pairs %}
+                        {% set col_num = col_num + 1 %}
                         <td>
+                        {% set count = 1 %}
                         {# if field is not None, populate k:v #}
                         {% if v!= None %}
                             {% if k in ('Drives', 'Capacity', 'Count') %}
+                                {% set drive_count = [] %}
                             {% for drive in server['drive_counts'] %}
-                            {{ drive[v] }}<br>
+                                {% if k == 'Drives' %}
+                                    {% set _ = drive_count.append(1) %}
+                                {% elif k == 'Capacity' %}
+                                    {% set drive_cap = drive[v]|split(0)|int %}
+                                    {% set _ = drive_count.append(drive_cap) %}
+                                {% else %}
+                                    {% set _ = drive_count.append(drive[v]|int) %}
+                                {% endif %}
+                            <div>{{ drive[v] }}</div>
                             {% endfor %}
+                                {% set count = drive_count|sum %}
                             {% elif v == 'available' %}
                                 {% if server['available'] %}
                                     {% set color = 'blue' %}
@@ -180,6 +210,9 @@
                                     {{ server[v] }}
                                 </a>
                             {% else %}
+                                {% if k == 'Memory' %}
+                                    {% set count = server[v]|split(0)|int %}
+                                {% endif %}
                                 {{ server[v] }}
                             {% endif %}
                             {% endif %}
@@ -194,11 +227,19 @@
                             </button>
                             {% endif %}
                         {% endif %}
+                        <span class="custom_count" style="display:none">{{ count }}</span>
                         </td>
                     {% endfor %}
                 </tr>
             {% endfor %}
             </tbody>
+            <tfoot>
+                <tr>
+                {% for k, v in field_pairs %}
+                    <th></th>
+                {% endfor %}
+                </tr>
+            </tfoot>
         </table>
     </div>
     {# add link to create inventory at bottom of inventory list #}

@@ -258,6 +258,8 @@ def _server_info():
 def _inventory():
     user = g.user
     servers = get_inventory()
+    # count server fields
+
     return render_template('inventory.html', title='Inventory',
                            date=_get_date_last_modified(),
                            user=user, servers=servers)

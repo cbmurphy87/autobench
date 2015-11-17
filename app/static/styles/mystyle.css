@@ -215,7 +215,7 @@ table.bigtable.pane > tbody > tr > td:last-child {
     border: none; /* Border will be provided by the pane-frame */
 }
 
-.bigtable th {
+.bigtable thead, th {
     font-weight: bold;
     border: none;
     background-color: #414042;
@@ -224,7 +224,7 @@ table.bigtable.pane > tbody > tr > td:last-child {
     white-space: nowrap;
 }
 
-.sortable th {
+.sortable thead > tr > th {
     cursor: pointer;
 }
 

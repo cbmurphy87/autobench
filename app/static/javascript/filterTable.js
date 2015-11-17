@@ -1,4 +1,4 @@
-sorttable = {
+filtertable = {
     init: function () {
         // quit if this function has already been called
         if (arguments.callee.done) return;
@@ -9,17 +9,16 @@ sorttable = {
 
         if (!document.createElement || !document.getElementsByTagName) return;
 
-        sorttable.DATE_RE = /^(\d\d?)[\/\.-](\d\d?)[\/\.-]((\d\d)?\d\d)$/;
+        filtertable.DATE_RE = /^(\d\d?)[\/\.-](\d\d?)[\/\.-]((\d\d)?\d\d)$/;
 
         forEach(document.getElementsByTagName('table'), function (table) {
-            if (table.className.search(/\bsortable\b/) != -1) {
-                sorttable.makeSortable(table);
+            if (table.className.search(/\bfilterable\b/) != -1) {
+                filtertable.makeFilterable(table);
             }
         });
-
     },
 
-    makeFiltered: function (table) {
+    makeFilterable: function (table) {
         if (table.getElementsByTagName('thead').length == 0) {
             // table doesn't have a tHead. Since it should have, create one and
             // put the first table row in it.
@@ -32,113 +31,94 @@ sorttable = {
 
         if (table.tHead.rows.length != 1) return; // can't cope with two header rows
 
-        // Sorttable v1 put rows with a class of "sortbottom" at the bottom (as
-        // "total" rows, for example). This is B&R, since what you're supposed
-        // to do is put them in a tfoot. So, if there are sortbottom rows,
-        // for backwards compatibility, move them to tfoot (creating it if needed).
-        sortbottomrows = [];
-        for (var i = 0; i < table.rows.length; i++) {
-            if (table.rows[i].className.search(/\bsortbottom\b/) != -1) {
-                sortbottomrows[sortbottomrows.length] = table.rows[i];
-            }
-        }
-        if (sortbottomrows) {
-            if (table.tFoot == null) {
-                // table doesn't have a tfoot. Create one.
-                tfo = document.createElement('tfoot');
-                table.appendChild(tfo);
-            }
-            for (var i = 0; i < sortbottomrows.length; i++) {
-                tfo.appendChild(sortbottomrows[i]);
-            }
-            delete sortbottomrows;
-        }
-
         // work through each column and calculate its type
-        headrow = table.tHead.rows[0].cells;
+        var headrow = table.tHead.rows[0].cells;
         for (var i = 0; i < headrow.length; i++) {
-            // manually override the type with a sorttable_type attribute
-            if (!headrow[i].className.match(/\bsorttable_nosort\b/)) { // skip this col
-                mtch = headrow[i].className.match(/\bsorttable_([a-z0-9]+)\b/);
+            // manually override the type with a filtertable_type attribute
+            if (!headrow[i].className.match(/\bunfilterable\b/)) { // skip this col
+                var mtch = headrow[i].className.match(/\bfiltered_by_([a-z0-9]+)\b/);
                 if (mtch) {
-                    override = mtch[1];
+                    var override = mtch[1];
                 }
-                if (mtch && typeof sorttable["sort_" + override] == 'function') {
-                    headrow[i].sorttable_sortfunction = sorttable["sort_" + override];
+                if (mtch && typeof filtertable["filter_" + override] == 'function') {
+                    headrow[i].filtertable_filterfunction = filtertable["filter_" + override];
                 } else {
-                    headrow[i].sorttable_sortfunction = sorttable.guessType(table, i);
+                    headrow[i].filtertable_filterfunction = filtertable.guessType(table, i);
                 }
-                // make it clickable to sort
-                headrow[i].sorttable_columnindex = i;
-                headrow[i].sorttable_tbody = table.tBodies[0];
-                dean_addEvent(headrow[i], "click", sorttable.innerSortFunction = function (e) {
+                // make it clickable to filter
+                headrow[i].filtertable_columnindex = i;
+                headrow[i].filtertable_tbody = table.tBodies[0];
 
-                    if (this.className.search(/\bsorttable_sorted\b/) != -1) {
-                        // if we're already sorted by this column, just
+                // find filter button and attach it to click event
+                var filter_button = document.getElementById('filter_button');
+                dean_addEvent(filter_button, "click", filtertable.innerfilterFunction = function (e) {
+
+                    if (this.className.search(/\bfiltertable_filtered\b/) != -1) {
+                        // if we're already filtered by this column, just
                         // reverse the table, which is quicker
-                        sorttable.reverse(this.sorttable_tbody);
-                        this.className = this.className.replace('sorttable_sorted',
-                            'sorttable_sorted_reverse');
-                        this.removeChild(document.getElementById('sorttable_sortfwdind'));
-                        sortrevind = document.createElement('span');
-                        sortrevind.id = "sorttable_sortrevind";
-                        sortrevind.innerHTML = stIsIE ? '&nbsp<font face="webdings">5</font>' : '&nbsp;&#x25B4;';
-                        this.appendChild(sortrevind);
+                        filtertable.reverse(this.filtertable_tbody);
+                        this.className = this.className.replace('filtertable_filtered',
+                            'filtertable_filtered_reverse');
+                        this.removeChild(document.getElementById('filtertable_filterfwdind'));
+                        filterrevind = document.createElement('span');
+                        filterrevind.id = "filtertable_filterrevind";
+                        filterrevind.innerHTML = stIsIE ? '&nbsp<font face="webdings">5</font>' : '&nbsp;&#x25B4;';
+                        this.appendChild(filterrevind);
                         return;
                     }
-                    if (this.className.search(/\bsorttable_sorted_reverse\b/) != -1) {
-                        // if we're already sorted by this column in reverse, just
+                    if (this.className.search(/\bfiltertable_filtered_reverse\b/) != -1) {
+                        // if we're already filtered by this column in reverse, just
                         // re-reverse the table, which is quicker
-                        sorttable.reverse(this.sorttable_tbody);
-                        this.className = this.className.replace('sorttable_sorted_reverse',
-                            'sorttable_sorted');
-                        this.removeChild(document.getElementById('sorttable_sortrevind'));
-                        sortfwdind = document.createElement('span');
-                        sortfwdind.id = "sorttable_sortfwdind";
-                        sortfwdind.innerHTML = stIsIE ? '&nbsp<font face="webdings">6</font>' : '&nbsp;&#x25BE;';
-                        this.appendChild(sortfwdind);
+                        filtertable.reverse(this.filtertable_tbody);
+                        this.className = this.className.replace('filtertable_filtered_reverse',
+                            'filtertable_filtered');
+                        this.removeChild(document.getElementById('filtertable_filterrevind'));
+                        filterfwdind = document.createElement('span');
+                        filterfwdind.id = "filtertable_filterfwdind";
+                        filterfwdind.innerHTML = stIsIE ? '&nbsp<font face="webdings">6</font>' : '&nbsp;&#x25BE;';
+                        this.appendChild(filterfwdind);
                         return;
                     }
 
-                    // remove sorttable_sorted classes
+                    // remove filtertable_filtered classes
                     theadrow = this.parentNode;
                     forEach(theadrow.childNodes, function (cell) {
                         if (cell.nodeType == 1) { // an element
-                            cell.className = cell.className.replace('sorttable_sorted_reverse', '');
-                            cell.className = cell.className.replace('sorttable_sorted', '');
+                            cell.className = cell.className.replace('filtertable_filtered_reverse', '');
+                            cell.className = cell.className.replace('filtertable_filtered', '');
                         }
                     });
-                    sortfwdind = document.getElementById('sorttable_sortfwdind');
-                    if (sortfwdind) {
-                        sortfwdind.parentNode.removeChild(sortfwdind);
+                    filterfwdind = document.getElementById('filtertable_filterfwdind');
+                    if (filterfwdind) {
+                        filterfwdind.parentNode.removeChild(filterfwdind);
                     }
-                    sortrevind = document.getElementById('sorttable_sortrevind');
-                    if (sortrevind) {
-                        sortrevind.parentNode.removeChild(sortrevind);
+                    filterrevind = document.getElementById('filtertable_filterrevind');
+                    if (filterrevind) {
+                        filterrevind.parentNode.removeChild(filterrevind);
                     }
 
-                    this.className += ' sorttable_sorted';
-                    sortfwdind = document.createElement('span');
-                    sortfwdind.id = "sorttable_sortfwdind";
-                    sortfwdind.innerHTML = stIsIE ? '&nbsp<font face="webdings">6</font>' : '&nbsp;&#x25BE;';
-                    this.appendChild(sortfwdind);
+                    this.className += ' filtertable_filtered';
+                    filterfwdind = document.createElement('span');
+                    filterfwdind.id = "filtertable_filterfwdind";
+                    filterfwdind.innerHTML = stIsIE ? '&nbsp<font face="webdings">6</font>' : '&nbsp;&#x25BE;';
+                    this.appendChild(filterfwdind);
 
-                    // build an array to sort. This is a Schwartzian transform thing,
-                    // i.e., we "decorate" each row with the actual sort key,
-                    // sort based on the sort keys, and then put the rows back in order
+                    // build an array to filter. This is a Schwartzian transform thing,
+                    // i.e., we "decorate" each row with the actual filter key,
+                    // filter based on the filter keys, and then put the rows back in order
                     // which is a lot faster because you only do getInnerText once per row
                     row_array = [];
-                    col = this.sorttable_columnindex;
-                    rows = this.sorttable_tbody.rows;
+                    col = this.filtertable_columnindex;
+                    rows = this.filtertable_tbody.rows;
                     for (var j = 0; j < rows.length; j++) {
-                        row_array[row_array.length] = [sorttable.getInnerText(rows[j].cells[col]), rows[j]];
+                        row_array[row_array.length] = [filtertable.getInnerText(rows[j].cells[col]), rows[j]];
                     }
-                    /* If you want a stable sort, uncomment the following line */
-                    sorttable.shaker_sort(row_array, this.sorttable_sortfunction);
+                    /* If you want a stable filter, uncomment the following line */
+                    filtertable.shaker_filter(row_array, this.filtertable_filterfunction);
                     /* and comment out this one */
-                    //row_array.sort(this.sorttable_sortfunction);
+                    //row_array.filter(this.filtertable_filterfunction);
 
-                    tb = this.sorttable_tbody;
+                    tb = this.filtertable_tbody;
                     for (var j = 0; j < row_array.length; j++) {
                         tb.appendChild(row_array[j][1]);
                     }
@@ -147,4 +127,31 @@ sorttable = {
                 });
             }
         }
-    },
+    }
+}
+
+function dean_addEvent(element, type, handler) {
+    if (element.addEventListener) {
+        element.addEventListener(type, handler, false);
+    } else {
+        // assign each event handler a unique ID
+        if (!handler.$$guid) handler.$$guid = dean_addEvent.guid++;
+        // create a hash table of event types for the element
+        if (!element.events) element.events = {};
+        // create a hash table of event handlers for each element/event pair
+        var handlers = element.events[type];
+        if (!handlers) {
+            handlers = element.events[type] = {};
+            // store the existing event handler (if there is one)
+            if (element["on" + type]) {
+                handlers[0] = element["on" + type];
+            }
+        }
+        // store the event handler in the hash table
+        handlers[handler.$$guid] = handler;
+        // assign a global event handler to do all the work
+        element["on" + type] = handleEvent;
+    }
+};
+// a counter used to create unique IDs
+dean_addEvent.guid = 1;

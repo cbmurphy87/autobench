@@ -4,6 +4,7 @@ from flask.ext.login import LoginManager
 from flask.ext.sqlalchemy import SQLAlchemy
 import logging
 from logging.handlers import RotatingFileHandler
+from app.jinja.custom_filters import _split
 
 
 # setup app
@@ -30,5 +31,6 @@ myapp.jinja_env.trim_blocks = True
 myapp.jinja_env.lstrip_blocks = True
 myapp.jinja_env.keep_trailing_newline = False
 myapp.permanent_session_lifetime = timedelta(seconds=10)
+myapp.jinja_env.filters['split'] = _split
 
 from app import views, models
