@@ -119,7 +119,7 @@ $(document).ready(function () {
                 } else if (unit == 'none' || unit == null) {
                     foot.innerHTML = value
                 } else {
-                    foot.innerHTML = value.toFixed(2) + " " + unit.toUpperCase();
+                    foot.innerHTML = value + " " + unit.toUpperCase();
                 }
             }
         }
