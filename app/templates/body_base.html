@@ -6,9 +6,9 @@
 {% endblock %}
 
 {% block body %}
-    <div class="top_header" style="background-color:white;z-index:1;">
-        <span style="display:inline-block;width:100%;min-width:1000px;margin-bottom:70px;">
-            <div style="position:fixed;">
+    <div class="top_header">
+        <span style="display:block;width:100%;min-width:1000px;margin-bottom:70px;">
+            <div style="display:inline-block;position:fixed;">
                 <img src={{ url_for('static', filename='pictures/micronlogos/high_res_micron_logo_black.png') }} class="top_image">
             </div>
             <div style="display:inline-block;position:fixed;z-index:1;right:0px;top:0px;width:500px;">
@@ -17,7 +17,7 @@
         </span>
         <h1 style="width:100%;">AutoBench</h1>
     </div>
-    <div style="min-width:450px;height:100%;margin-top:10px;">
+    <div class="content">
         {% with messages = get_flashed_messages() %}
             {% if messages %}
                 <div id="flashedmessages">
@@ -29,7 +29,7 @@
                 </div>
             {% endif %}
         {% endwith %}
-        <div style="margin: 0 20px;height:100%;">
+        <div style="margin: 0 20px;">
             {% block content %}{% endblock %}
         </div>
     </div>

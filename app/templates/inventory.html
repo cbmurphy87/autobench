@@ -91,11 +91,17 @@
 
     function filterTable(field) {
         var inventoryTable = document.getElementById("aaetable");
+        var tbody = inventoryTable.getElementsByTagName("tbody")[0];
         var sv = field.options[field.selectedIndex].value;
-        for (var i = 2, row; row = inventoryTable.rows[i]; i++) {
+        for (var i = 2, row; row = tbody.rows[i]; i++) {
             var str = row.innerHTML;
-            if (str.indexOf(sv) <= 0) {
-                row.style.display='none';
+            // remove all hidden rows if "All" is selected
+            if (sv == 'All') {
+                row.style.display = null;
+            } else {
+                if (str.indexOf(sv) <= 0) {
+                    row.style.display='none';
+                }
             }
         }
     }

@@ -3,10 +3,11 @@ $(document).ready(function () {
     // loop over tables to count
     var total_count = [];
     for (var table_num = 0, table; table = count_tables[table_num]; table_num++) {
-        // get thead to get count type and units
+        // get thead and set arrays
         var table_head = table.getElementsByTagName('thead')[0];
         var units = [];
         var ignore_column = []
+        // loop over thead to get units, count type, and ignore rows
         var thead_row = table_head.rows[0];
         for (var col_num = 0, col; col = thead_row.cells[col_num]; col_num++) {
             units.push(col.getAttribute('unit'));
@@ -16,17 +17,17 @@ $(document).ready(function () {
                 ignore_column.push(false);
             }
         }
-        /* ============= below this works =========== */
+        // get tbody
         var table_body = table.getElementsByTagName('tbody')[0];
-        // loop over rows in table
         var row_count = []
+        // loop over rows in tbody
         for (var row_num = 0, row; row = table_body.rows[row_num]; row_num++) {
             // loop over columns in row
             var col_count = 0;
             for (var col_num = 0, col; col = row.cells[col_num]; col_num++) {
                 // get elements in cell with custom_count tag
                 var counts = col.getElementsByClassName('custom_count');
-                // loop over children to count
+                // loop over children of cell to count
                 for (var count_num = 0, child_count; child_count = counts[count_num]; count_num++) {
                     if (typeof total_count[col_num] === 'undefined') {
                         total_count.push(0);
@@ -44,7 +45,5 @@ $(document).ready(function () {
                 foot.innerHTML = total_count[cell_num] + " " + units[cell_num];
             }
         }
-        console.log(units);
-        console.log(ignore_column);
     }
 });

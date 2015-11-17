@@ -47,6 +47,7 @@ class Servers(db.Model):
 
     # parameters
     id = db.Column(db.String(16), primary_key=True)
+    name = db.Column(db.String(16))
     host_name = db.Column(db.String(16))
     make = db.Column(db.String(16))
     model = db.Column(db.String(16))

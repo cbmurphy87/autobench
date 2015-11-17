@@ -7,9 +7,17 @@ body {
 }
 
 .top_header {
+    top: 0px;
+    display: block;
     width: 100%;
+    position: fixed;
     background-color: white;
-    padding-bottom: 30px;
+}
+
+.content {
+    min-width: 450px;
+    margin: 120px auto auto auto;
+    height: auto;
 }
 
 .top_image {
@@ -133,7 +141,7 @@ table.sortable span.sortarrow {
 .pane-frame {
     display: inline-block;
     white-space: nowrap;
-    border: solid 1px white;
+    border: 1px solid white;
 }
 
 #side-panel .pane-frame:hover, #side-panel .pane-frame.mouseover {
