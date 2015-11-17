@@ -74,7 +74,9 @@ $(document).ready(function () {
                             }
                         } else if (count_types[col_num] == 'sum') {
                             num_value = parseInt(child_count.innerHTML);
-                            cell_count = cell_count + num_value;
+                            if (! isNaN(num_value)) {
+                                cell_count = cell_count + num_value;
+                            }
                         }
                     }
                     total_count[col_num] = total_count[col_num] + cell_count;
