@@ -87,6 +87,7 @@ $(document).ready(function () {
         var foot_row = table_footer.rows[0];
         for (var cell_num = 0, foot; foot = foot_row.cells[cell_num]; cell_num++) {
             // do add data to footer
+            count_type = count_types[cell_num];
             if (ignore_column[cell_num] == false) {
                 // get values and units
                 var value = total_count[cell_num];
@@ -114,14 +115,21 @@ $(document).ready(function () {
                     }
                 }
                 // set values
-                if (count_types[cell_num] == 'unique') {
+                if (count_type == 'unique') {
                     foot.innerHTML = unique_entries[cell_num].length;
+                    foot.title = 'Number of unique values.';
                 } else if (typeof value == 'undefined') {
                     foot.innerHTML = '';
                 } else if (unit == 'none' || unit == null) {
-                    foot.innerHTML = value
+                    foot.innerHTML = value;
                 } else {
                     foot.innerHTML = value + " " + unit.toUpperCase();
+                }
+                if (count_type == 'sum') {
+                    console.log('sum');
+                    foot.title = 'Sum of values.';
+                } else if (count_type == 'count') {
+                    foot.title = 'Total count of rows.';
                 }
             }
         }
