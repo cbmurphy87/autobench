@@ -13,13 +13,15 @@
 {% if server is defined and server != None %}
     <div id="moreinfo" class="pane-frame">
         <table id="server_info" class="pane bigtable stripped">
+            <thead>
+                <tr class="header">
+                    {# create header for table #}
+                    <th colspan="2">
+                        Server Info
+                    </th>
+                </tr>
+            </thead>
             <tbody>
-            <tr class="header">
-                {# create header for table #}
-                <th colspan="2">
-                    Server Info
-                </th>
-            </tr>
             {# loop over field values for each parame #}
             {% for k, v in server_fields %}
                 <tr>
