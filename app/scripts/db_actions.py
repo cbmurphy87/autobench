@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-from app import myapp, db, models, forms
+from app import myapp, db, models
 from sqlalchemy.exc import IntegrityError, InvalidRequestError
 from aaebench.testautomation.syscontrol.racadm import RacadmManager
 from werkzeug.security import generate_password_hash
@@ -89,7 +89,6 @@ def update_user_info(form, user):
 def get_inventory():
 
     servers = models.Servers.query.all()
-
     for server in servers:
         drive_count = db.engine.execute("select server_id, count(model), "
                                         "model, capacity "
@@ -139,7 +138,7 @@ def add_inventory(form, user):
     try:
         return add_dell_info(nic_info=nic_info, form=form, user=user)
     except IOError:
-        # else it's supermicro, and do this
+        # else, it's supermicro, do this
         print 'not a dell server. try supermicro.'
         return add_smc_info(nic_info=nic_info, form=form, user=user)
 
@@ -313,6 +312,19 @@ def get_power_status(mac):
 
 def remove_inventory(_id):
 
+    server = models.Servers.query.filter_by(id=_id).first()
+    drives = server.drives
+    try:
+        for drive in drives:
+            db.session.delete(drive)
+        db.session.commit()
+        db.session.delete(server)
+        db.session.commit()
+        print 'Server successfully delted.'
+    except Exception as e:
+        print 'Error deleting server {}: {}'.format(_id, e)
+        db.session.rollback()
+
     try:
         s = models.Servers.query.get(_id)
         print s
@@ -321,7 +333,11 @@ def remove_inventory(_id):
         return e
 
 
-def update_inventory(mac):
+def update_dell_server(mac):
+    pass
+
+
+def update_dell_server(mac):
 
     # check that a server in inventory has that mac address and ip
     interface = models.NetworkDevices.query.filter_by(mac=mac).first()

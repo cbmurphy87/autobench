@@ -4,7 +4,7 @@ from wtforms import StringField, BooleanField, TextAreaField, PasswordField, \
     SelectField, IntegerField
 from wtforms.ext.sqlalchemy.fields import QuerySelectField
 from wtforms.validators import DataRequired, Length, Optional, NumberRange, \
-    required, IPAddress, MacAddress, EqualTo
+    required, IPAddress, EqualTo, Regexp
 from wtforms.validators import ValidationError
 from sqlalchemy import collate
 from app import models
@@ -59,6 +59,25 @@ class NotEqualTo(object):
                                         '%(other_name)s.')
 
             raise ValidationError(message % d)
+
+
+class MacAddress(Regexp):
+    """
+    Validates a MAC address.
+
+    :param message:
+        Error message to raise in case of a validation error.
+    """
+    def __init__(self, message=None):
+        pattern = r'^(?:[0-9a-fA-F]{2}[:-]?){5}[0-9a-fA-F]{2}$'
+        super(MacAddress, self).__init__(pattern, message=message)
+
+    def __call__(self, form, field):
+        message = self.message
+        if message is None:
+            message = field.gettext('Invalid Mac address.')
+
+        super(MacAddress, self).__call__(form, field, message)
 
 
 class MacOrIP(object):

@@ -67,20 +67,24 @@ def _deploy_server(form):
 
     # gather data
     server = form.target.data
+    server_type = server.make
     interfaces = server.interfaces
     interface = interfaces.filter_by(name='NIC.1').first()
     eth0 = interface.mac.lower().replace(':', '-')
-    drac_ip = interfaces.filter_by(name='DRAC').first().ip
-    print 'iDRAC ip address is: {}'.format(drac_ip)
+    ipmi_ip = interfaces.filter_by(name='DRAC').first().ip
+    if not ipmi_ip:
+        ipmi_ip = interfaces.filter_by(name='ipmi').first().ip
+
+    print 'IPMI ip address is: {}'.format(ipmi_ip)
 
     # send unique config file to pxe server
     sftp = SFTPManager('pxe.aae.lcl')
     client = sftp.create_sftp_client()
     filename = '/tftpboot/pxelinux.cfg/01-{}'.format(eth0)
-
+    # write file
     with client.open(filename, 'w') as f:
         f.write(pxe_file)
-
+    # delete salt key
     salt_master_manager = GenericManager(hostname='salt-gru.aae.lcl',
                                          username='salt',
                                          password='Not24Get',
@@ -88,11 +92,22 @@ def _deploy_server(form):
                                          ending='$')
     command = ['salt-key', '-d', server.id, '-y']
     salt_master_manager.connection.exec_command(command)
-    salt_master_manager.close()
 
     # reboot server to PXE
-    racadm = RacadmManager(drac_ip)
-    racadm.boot_once('PXE')
+    if server_type.lower == 'dell':
+        racadm = RacadmManager(ipmi_ip)
+        racadm.boot_once('PXE')
+    else:
+        command = ['salt-call', 'ipmi.set_bootdev',
+                   'api_host={}'.format(ipmi_ip), 'api_user=ADMIN',
+                   'api_pass=ADMIN', 'bootdev=network']
+        salt_master_manager.connection.exec_command(command)
+        command = ['salt-call', 'ipmi.set_power',
+                   'api_host={}'.format(ipmi_ip), 'api_user=ADMIN',
+                   'api_pass=ADMIN', 'state=reset']
+        salt_master_manager.connection.exec_command(command)
+
+    salt_master_manager.close()
 
     # make server unavailable
     try:
@@ -300,7 +315,11 @@ def _update_inventory():
         server = Servers.query.filter_by(id=_id).first()
         mac = server.interfaces.filter_by(type='oob').first().mac
         flash('Updating server. Wait 30 seconds, then refresh.')
-        p = Process(target=update_inventory, args=(mac,))
+        if server.make.lower() == 'dell':
+            target = update_dell_server
+        else:
+            target = update_supermicro_server
+        p = Process(target=target, args=(mac,))
         p.start()
     except Exception:
         print 'Could not update server {}.'.format(server.id)
