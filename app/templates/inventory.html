@@ -120,7 +120,7 @@
                     {# else (field is None), insert "update" button #}
                     {% else %}
                         {# if server is Supermicro #}
-                        {% if server.make|lower == 'supermicro' %}
+                        {% if server.make|lower == 'supermicron' %}
                             &nbsp;
                         {% else %}
                         <button {{ disabled }}onclick="update('{{ server.id }}','')">Update</button>

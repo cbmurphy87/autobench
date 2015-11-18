@@ -3,9 +3,26 @@
 from app import myapp, db, models
 from sqlalchemy.exc import IntegrityError, InvalidRequestError
 from aaebench.testautomation.syscontrol.racadm import RacadmManager
+from aaebench.testautomation.syscontrol.smcipmi import SMCIPMIManager
 from werkzeug.security import generate_password_hash
 from subprocess import Popen, PIPE
 import re
+
+
+def is_mac(check):
+
+    search_string = re.compile(r'(?is)'
+                               r'^(?:[0-9a-fA-F]{2}[:-]?){5}[0-9a-fA-F]{2}$')
+    return bool(search_string.search(check))
+
+
+def format_mac(mac):
+
+    mac = mac.replace(':', '')
+    mac = mac.replace('-', '')
+    mac = mac.lower()
+    assert len(mac) == 12 and mac.isalnum(), 'MAC is in invalid form.'
+    return ':'.join([mac[x:x+2] for x in range(0, len(mac), 2)])
 
 
 def get_ip_from_mac(mac):
@@ -118,14 +135,14 @@ def add_inventory(form, user):
     """
 
     # get ip address either from field, or translate from mac address
-    if len(form.drac_address.data) > 16:
-        mac_address = form.drac_address.data
+    if is_mac(form.network_address.data):
+        mac_address = format_mac(form.network_address.data)
         try:
             ip_address = get_ip_from_mac(mac_address)
         except:
             ip_address = 'unknown'
     else:
-        ip_address = form.drac_address.data
+        ip_address = form.network_address.data
         try:
             mac_address = get_mac_from_ip(ip_address)
         except:
@@ -301,13 +318,14 @@ def get_power_status(mac):
 
     s = {
             'hostname': ip,
-            'username': 'root',
-            'password': 'Not24Get',
             'verbose': True,
         }
 
-    racadm = RacadmManager(**s)
-    return racadm.get_power_status()
+    if server.make.lower() == 'dell':
+        racadm = RacadmManager(**s)
+        return racadm.get_power_status()
+    ipmi = SMCIPMIManager(**s)
+    return ipmi.get_power_status()
 
 
 def remove_inventory(_id):
@@ -320,7 +338,7 @@ def remove_inventory(_id):
         db.session.commit()
         db.session.delete(server)
         db.session.commit()
-        print 'Server successfully delted.'
+        print 'Server successfully deleted.'
     except Exception as e:
         print 'Error deleting server {}: {}'.format(_id, e)
         db.session.rollback()
@@ -333,8 +351,75 @@ def remove_inventory(_id):
         return e
 
 
-def update_dell_server(mac):
-    pass
+def update_smc_server(mac):
+
+    # check that a server in inventory has that mac address and ip
+    interface = models.NetworkDevices.query.filter_by(mac=mac).first()
+    if not interface:
+        print 'No server found with that mac address.'
+        return
+
+    # check that the mac address is associated with an ip address
+    ip = interface.ip
+    server = models.Servers.query.filter_by(id=interface.server_id).first()
+    if not ip:
+        print 'No ip address found for server {}.'\
+            .format()
+        return
+    print 'Updating server at {}'.format(ip)
+
+    s = {
+            'hostname': ip,
+            'verbose': True,
+        }
+
+    ipmi = SMCIPMIManager(**s)
+    new_info = ipmi.get_server_info()
+
+    # get new info
+    if not new_info:
+        print 'Could not fetch info for server.'
+        return
+
+    # delete all interfaces
+    interfaces = models.NetworkDevices.query \
+        .filter_by(server_id=server.id).all()
+    for interface in interfaces:
+        db.session.delete(interface)
+    try:
+        db.session.commit()
+    except IntegrityError as e:
+        print 'Error deleting interfaces: {}'.format(e)
+        db.session.rollback()
+
+    # add found interfaces
+    for interface in new_info['interfaces']:
+        _i = models.NetworkDevices()
+        for _k, _v in interface.items():
+            if hasattr(_i, _k):
+                setattr(_i, _k, _v)
+        server.interfaces.append(_i)
+
+    for _k, _v in new_info.items():
+        if _k != 'interfaces':
+            if hasattr(server, _k):
+                setattr(server, _k, _v)
+            else:
+                print 'key "{}" not in server:'.format(_k)
+                print '-> {}: {}'.format(_k, _v)
+
+    try:
+        db.session.add(server)
+        for interface in server.interfaces:
+            db.session.add(interface)
+        db.session.commit()
+    except InvalidRequestError:
+        print "Non-unique server entry. Rolling back."
+        db.session.rollback()
+    except IntegrityError as e:
+        print 'Server {} already there: {}'.format(server, e)
+        db.session.rollback()
+        return
 
 
 def update_dell_server(mac):

@@ -143,7 +143,7 @@ class LoginForm(Form):
 
 
 class AddInventoryForm(Form):
-    drac_address = StringField('iDRAC/IPMI Mac/IP Address',
+    network_address = StringField('iDRAC/IPMI Mac/IP Address',
                                validators=[DataRequired(), MacOrIP()])
     rack = IntegerField('Rack', validators=[DataRequired(),
                                             NumberRange(min=1, max=15)])

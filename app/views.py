@@ -318,11 +318,11 @@ def _update_inventory():
         if server.make.lower() == 'dell':
             target = update_dell_server
         else:
-            target = update_supermicro_server
+            target = update_smc_server
         p = Process(target=target, args=(mac,))
         p.start()
-    except Exception:
-        print 'Could not update server {}.'.format(server.id)
+    except Exception as e:
+        print 'Could not update server {}.: {}'.format(server.id, e)
     return redirect('inventory')
 
 
