@@ -103,6 +103,27 @@ def update_user_info(form, user):
     return 'Successfully updated your info.'
 
 
+def update_server_info(form, _id):
+
+    server = models.Servers.query.filter_by(id=_id).first()
+    if not server:
+        return 'Could not find server.'
+
+    for field, data in form.data.items():
+        if hasattr(server, field):
+            setattr(server, field, data)
+
+    try:
+        db.session.add(server)
+        db.session.commit()
+    except Exception as e:
+        print 'Error updating server info: {}'.format(e)
+        db.session.rollback()
+        return 'Could not update server info.'
+
+    return 'Successfully updated server info.'
+
+
 def get_inventory():
 
     servers = models.Servers.query.order_by('rack', 'u', 'make', 'model').all()

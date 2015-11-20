@@ -169,3 +169,9 @@ class EditInfoForm(Form):
                                                                     'match')])
     password = PasswordField('Current Password',
                              validators=[DataRequired()])
+
+
+class EditInventoryForm(Form):
+    rack = StringField('Rack', validators=[DataRequired()])
+    u = StringField('U', validators=[DataRequired()])
+    host_name = StringField('Host Name', validators=[DataRequired()])

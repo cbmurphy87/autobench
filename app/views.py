@@ -10,7 +10,7 @@ from sqlalchemy import sql, or_
 # ___________________________ App Imports ________________________
 from app import myapp, lm
 from app.forms import CreateJobForm, LoginForm, BuildStepForm, \
-    AddInventoryForm, DeployForm, EditInfoForm
+    AddInventoryForm, DeployForm, EditInfoForm, EditInventoryForm
 from models import Users, Servers
 
 # ___________________________ Standard Imports ________________________
@@ -302,6 +302,28 @@ def _inventory_id(_id):
     return render_template('inventory_id.html', title=_id, server=server,
                            date=_get_date_last_modified(), user=user,
                            user_holding=user_holding)
+
+
+@myapp.route('/inventory/edit/<_id>', methods=['GET', 'POST'])
+@login_required
+def _inventory_edit_id(_id):
+    user = g.user
+    server = Servers.query.get(_id)
+    form = EditInventoryForm()
+    if form.validate_on_submit():
+        message = update_server_info(form, _id)
+        flash(message)
+        print message
+        return redirect('/inventory/{}'.format(_id))
+    else:
+        flash('Invalid info. Try again.')
+    print form.errors
+    for attr in server.__dict__.keys():
+        if attr in form.data.keys():
+            field = getattr(form, attr)
+            field.data = getattr(server, attr)
+    return render_template('inventory_edit_id.html', title=_id, server=server,
+                           date=_get_date_last_modified(), user=user, form=form)
 
 
 @myapp.route('/inventory/update', methods=['GET', 'POST'])
