@@ -111,10 +111,11 @@
                 </tbody>
             </table>
         </div>
-        {% else %}
-            You have no servers checked out.
-        {% endif %}
     </div>
+    {% else %}
+        You have no servers checked out.
+    {% endif %}
+
     <h2>My Projects</h2>
     {% if user.projects %}
     <div class="pane-frame" style="width:100%;">

@@ -69,7 +69,7 @@ class Servers(db.Model):
                              backref='servers', lazy='dynamic')
     virtual_drives = db.relationship('VirtualStorageDevices', backref='server',
                                      lazy='dynamic', cascade='all, delete')
-    holder = db.relationship('Users', backref='server')
+    holder = db.relationship('Users', backref='servers')
 
     # magic methods
     def __repr__(self):
