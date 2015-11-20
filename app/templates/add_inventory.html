@@ -7,7 +7,11 @@
         {% for field in (form.network_address, form.rack, form.u) %}
             <p>
                 {{ field.label.text }}:<br>
+                {% if field.label.text.lower().endswith('address') %}
+                {{ field(autofocus=true) }}
+                {% else %}
                 {{ field }}
+                {% endif %}
                 {% for error in field.errors %}
                     <span style="color:red;">[{{ error }}]</span>
                 {% endfor %}
