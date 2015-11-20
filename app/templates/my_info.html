@@ -3,9 +3,9 @@
 {% set user_fields = (('First Name','first_name'),('Last Name','last_name'),
 ('E-mail','email'),('Username','user_name')) %}
 
-{% set server_fields = (('ID', 'id'),('Host Name','host_name'),
-('Model','model'),('CPU Count','cpu_count'),('CPU Model','cpu_model'),
-('Memory','memory_capacity'),('Release','release'))%}
+{% set server_fields = (('ID', 'id'),('Rack','rack'),('U','u'),
+('Host Name','host_name'),('Model','model'),('CPU Count','cpu_count'),
+('CPU Model','cpu_model'),('Memory','memory_capacity'),('Release','release'))%}
 
 {% block scripts %}
     function release(id, next) {
