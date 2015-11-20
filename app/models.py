@@ -61,15 +61,15 @@ class Servers(db.Model):
     held_by = db.Column(db.Integer, db.ForeignKey('users.id'))
 
     # relationships
-    interfaces = db.relationship('NetworkDevices', cascade='delete',
-                                 backref='servers', lazy='dynamic')
+    interfaces = db.relationship('NetworkDevices', cascade='all, delete',
+                                 backref='server', lazy='dynamic')
     unique_drives = db.relationship('StorageDevices',
                                     secondary="server_storage")
-    drives = db.relationship('ServerStorage', cascade='delete',
+    drives = db.relationship('ServerStorage', cascade='all, delete',
                              backref='servers', lazy='dynamic')
-    virtual_drives = db.relationship('VirtualStorageDevices', cascade='delete',
-                                     backref='servers', lazy='dynamic')
-    holder = db.relationship('Users', backref='servers')
+    virtual_drives = db.relationship('VirtualStorageDevices', backref='server',
+                                     lazy='dynamic', cascade='all, delete')
+    holder = db.relationship('Users', backref='server')
 
     # magic methods
     def __repr__(self):
@@ -146,6 +146,9 @@ class NetworkDevices(db.Model):
     slot = db.Column(db.Integer)
     type = db.Column(db.String(3),
                      db.CheckConstraint('type="ib" or type="oob"'))
+
+    def __repr__(self):
+        return '<NetworkDevice mac {}>'.format(self.mac)
 
 
 # =========================== OS Models ==========================

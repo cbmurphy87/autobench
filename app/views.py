@@ -25,6 +25,7 @@ from subprocess import Popen, PIPE
 # ___________________________ AAEBench Imports ________________________
 from aaebench.testautomation.syscontrol.file_transfer import SFTPManager
 from aaebench.testautomation.syscontrol.racadm import RacadmManager
+from aaebench.testautomation.syscontrol.smcipmi import SMCIPMIManager
 from aaebench.parents.managers import GenericManager
 
 # ___________________________ Flask Imports ________________________
@@ -69,11 +70,14 @@ def _deploy_server(form):
     server = form.target.data
     server_type = server.make
     interfaces = server.interfaces
-    interface = interfaces.filter_by(name='NIC.1').first()
-    eth0 = interface.mac.lower().replace(':', '-')
-    ipmi_ip = interfaces.filter_by(name='DRAC').first().ip
-    if not ipmi_ip:
-        ipmi_ip = interfaces.filter_by(name='ipmi').first().ip
+    eth0_interface = interfaces.filter_by(name='NIC.1').first()
+    eth0 = eth0_interface.mac.lower().replace(':', '-')
+    print 'eth0 mac: {}'.format(eth0)
+    ipmi_int = interfaces.filter_by(name='DRAC').first() or \
+               interfaces.filter_by(name='ipmi').first()
+    if not ipmi_int:
+        raise Exception('Could not find ipmi interface!')
+    ipmi_ip = ipmi_int.ip
 
     print 'IPMI ip address is: {}'.format(ipmi_ip)
 
@@ -85,29 +89,22 @@ def _deploy_server(form):
     with client.open(filename, 'w') as f:
         f.write(pxe_file)
     # delete salt key
+    print server.id
     salt_master_manager = GenericManager(hostname='salt-gru.aae.lcl',
                                          username='salt',
                                          password='Not24Get',
                                          local=False,
                                          ending='$')
-    command = ['salt-key', '-d', server.id, '-y']
-    salt_master_manager.connection.exec_command(command)
+    command = ['salt-key', '-d', str(server.id), '-y']
+    salt_master_manager.connection.exec_command(' '.join(command))
 
     # reboot server to PXE
     if server_type.lower == 'dell':
-        racadm = RacadmManager(ipmi_ip)
-        racadm.boot_once('PXE')
+        ipmi = RacadmManager(ipmi_ip)
     else:
-        command = ['salt-call', 'ipmi.set_bootdev',
-                   'api_host={}'.format(ipmi_ip), 'api_user=ADMIN',
-                   'api_pass=ADMIN', 'bootdev=network']
-        salt_master_manager.connection.exec_command(command)
-        command = ['salt-call', 'ipmi.set_power',
-                   'api_host={}'.format(ipmi_ip), 'api_user=ADMIN',
-                   'api_pass=ADMIN', 'state=reset']
-        salt_master_manager.connection.exec_command(command)
+        ipmi = SMCIPMIManager(ipmi_ip)
 
-    salt_master_manager.close()
+    ipmi.boot_once('PXE', reboot=True)
 
     # make server unavailable
     try:
@@ -313,7 +310,9 @@ def _update_inventory():
     _id = request.get_json().get('id')
     try:
         server = Servers.query.filter_by(id=_id).first()
+        print server.interfaces.all()
         mac = server.interfaces.filter_by(type='oob').first().mac
+        print mac
         flash('Updating server. Wait 30 seconds, then refresh.')
         if server.make.lower() == 'dell':
             target = update_dell_server

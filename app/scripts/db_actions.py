@@ -71,7 +71,7 @@ def get_mac_from_ip(ip):
                  if m.groupdict().get('ip_address') == ip]
 
     if addresses:
-        return addresses.pop().get('ip_address')
+        return addresses.pop().get('mac')
     raise Exception('Could not get mac address.')
 
 
@@ -163,62 +163,40 @@ def add_inventory(form, user):
 def add_smc_info(nic_info, form, user):
 
     ip_address = nic_info.get('ip_address')
-    mac_address = nic_info.get('mac_address')
 
-    command = ['/root/SMCIPMITool_2.11.0/SMCIPMITool', ip_address, 'ADMIN',
-               'ADMIN', 'ipmi', 'fru']
-    smcipmi = Popen(command, stdout=PIPE, stderr=PIPE)
-    system_info, errors = smcipmi.communicate()
+    # get server info here
+    ipmi = SMCIPMIManager(hostname=ip_address, verbose=True)
+    server_info = ipmi.get_server_info()
 
-    print 'info:\n{}'.format(system_info)
-    if errors:
-        print 'Errors:\n{}'.format(errors)
-
-    ss = re.compile(r'(?is)'
-                    r'Product\s+PartModel\s+Number\s+\(PPM\)\s+=\s+'
-                    r'(?P<model>.*?)\s+'
-                    r'Product\s+Version\s+\(PV\).+?'
-                    r'Product\s+Serial\s+Number\s+\(PS\)\s+=\s+'
-                    r'(?P<id>.+?)\s+')
-
-    info = ss.search(system_info)
-    if info:
-        server_info = info.groupdict()
-    else:
-        print 'Could not get server info.'
-        return
-
+    # add models objects for server and its interfaces
+    print 'Creating server and interface objects.'
     server = models.Servers(rack=form.rack.data, u=form.u.data)
     server.held_by = user.id
     server.make = 'Supermicro'
 
-    nic_info = {'name': 'ipmi',
-                'ip': ip_address,
-                'mac': mac_address,
-                'slot': 'Dedicated',
-                'type': 'oob',
-                'server_id': server_info.get('id')}
-
-    print 'Nic info: {}'.format(nic_info)
-
-    ipmi_interface = models.NetworkDevices(**nic_info)
-    server.interfaces.append(ipmi_interface)
-
-    if info:
-        print
-        for _k, _v in server_info.items():
+    for interface in server_info['interfaces']:
+        _i = models.NetworkDevices()
+        for _k, _v in interface.items():
+            if hasattr(_i, _k):
+                setattr(_i, _k, _v)
+        server.interfaces.append(_i)
+    print 'Updating server object.'
+    print server_info.items()
+    for _k, _v in server_info.items():
+        if _k != 'interfaces':
             if hasattr(server, _k):
                 setattr(server, _k, _v)
             else:
                 print 'key "{}" not in server:'.format(_k)
                 print '-> {}: {}'.format(_k, _v)
-    else:
-        print 'error getting info'
-        return
 
+    # add objects to database
+    print 'Adding objects to database'
+    print server.interfaces.all()
     try:
+        for interface in server.interfaces:
+            db.session.add(interface)
         db.session.add(server)
-        db.session.add(ipmi_interface)
         db.session.commit()
     except InvalidRequestError:
         db.session.rollback()
@@ -255,7 +233,7 @@ def add_dell_info(nic_info, form, user):
         print message
         return message
 
-    # add server and its interfaces to database
+    # add models objects for server and its interfaces
     server = models.Servers(rack=form.rack.data, u=form.u.data)
     for interface in server_info['interfaces']:
         _i = models.NetworkDevices()
@@ -276,9 +254,9 @@ def add_dell_info(nic_info, form, user):
     server.make = 'Dell'
 
     try:
-        db.session.add(server)
         for interface in server.interfaces:
             db.session.add(interface)
+        db.session.add(server)
         db.session.commit()
     except InvalidRequestError:
         db.session.rollback()
@@ -362,6 +340,8 @@ def update_smc_server(mac):
     # check that the mac address is associated with an ip address
     ip = interface.ip
     server = models.Servers.query.filter_by(id=interface.server_id).first()
+    print 'new: {}'.format(db.session.new)
+    print 'dirty: {}'.format(db.session.dirty)
     if not ip:
         print 'No ip address found for server {}.'\
             .format()
@@ -382,24 +362,39 @@ def update_smc_server(mac):
         return
 
     # delete all interfaces
+    print 'deleting interfaces'
     interfaces = models.NetworkDevices.query \
         .filter_by(server_id=server.id).all()
-    for interface in interfaces:
-        db.session.delete(interface)
-    try:
-        db.session.commit()
-    except IntegrityError as e:
-        print 'Error deleting interfaces: {}'.format(e)
-        db.session.rollback()
+    for _i in interfaces:
+        if _i.type != 'oob':
+            db.session.delete(_i)
+
+    print 'committing deletes'
+    db.session.commit()
+    print 'after commit'
 
     # add found interfaces
+    print 'adding interfaces'
     for interface in new_info['interfaces']:
-        _i = models.NetworkDevices()
+        # check if same interface already exists
+        exists = models.NetworkDevices.query\
+            .filter_by(mac=interface.get('mac')).first()
+        if exists:
+            print 'interface {} exists.'.format(exists)
+            new_interface = exists
+        else:
+            print 'interface {} does not exist; creating new interface.'\
+                .format(interface.get('mac'))
+            new_interface = models.NetworkDevices()
         for _k, _v in interface.items():
-            if hasattr(_i, _k):
-                setattr(_i, _k, _v)
-        server.interfaces.append(_i)
+            if hasattr(new_interface, _k):
+                setattr(new_interface, _k, _v)
+        if not exists:
+            print
+            print 'appending new interface'
+            server.interfaces.append(new_interface)
 
+    print 'adding server info'
     for _k, _v in new_info.items():
         if _k != 'interfaces':
             if hasattr(server, _k):
@@ -409,9 +404,12 @@ def update_smc_server(mac):
                 print '-> {}: {}'.format(_k, _v)
 
     try:
-        db.session.add(server)
+        print 'adding interfaces'
         for interface in server.interfaces:
             db.session.add(interface)
+        print 'adding server'
+        db.session.add(server)
+        print 'committing'
         db.session.commit()
     except InvalidRequestError:
         print "Non-unique server entry. Rolling back."
@@ -419,6 +417,9 @@ def update_smc_server(mac):
     except IntegrityError as e:
         print 'Server {} already there: {}'.format(server, e)
         db.session.rollback()
+        return
+    except Exception as e:
+        print 'Unknown exception: {}'.format(e)
         return
 
 
