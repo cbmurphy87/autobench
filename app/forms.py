@@ -174,4 +174,4 @@ class EditInfoForm(Form):
 class EditInventoryForm(Form):
     rack = StringField('Rack', validators=[DataRequired()])
     u = StringField('U', validators=[DataRequired()])
-    host_name = StringField('Host Name')
+    name = StringField('Name')

@@ -315,7 +315,7 @@ def _inventory_edit_id(_id):
         flash(message)
         print message
         return redirect('/inventory/{}'.format(_id))
-    else:
+    elif request.method == 'POST':
         flash('Invalid info. Try again.')
     print form.errors
     for attr in server.__dict__.keys():
