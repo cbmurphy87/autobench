@@ -105,7 +105,7 @@ def update_user_info(form, user):
 
 def get_inventory():
 
-    servers = models.Servers.query.order_by('make', 'model', 'id').all()
+    servers = models.Servers.query.order_by('rack', 'u', 'make', 'model').all()
     for server in servers:
         drive_count = db.engine.execute("select server_id, count(model), "
                                         "model, capacity "

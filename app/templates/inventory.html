@@ -4,9 +4,9 @@
 {# set variables #}
 {# =============================================================== #}
 
-{% set field_pairs = (('S', 'available'),('ID', 'id'),('Model','model'),
-('CPUs','cpu_count'),('SKU','cpu_model'),('Memory','memory_capacity'),
-('Drives','model'),('Capacity','capacity'),('Count','count'),('Update',None)) %}
+{% set field_pairs = (('S', 'available'),('Rack','rack'),('U','u'),('ID', 'id'),
+('Model','model'),('SKU','cpu_model'),('Memory','memory_capacity'),
+('Drives','model'),('Capacity','capacity'),('Count','count')) %}
 
 {% block links %}
     {{ super() }}
