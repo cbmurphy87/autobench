@@ -5,14 +5,14 @@ import jenkins
 from flask import render_template
 
 
-def make_butler():
+def make_jenkins_butler():
     jenkins_url = 'http://jenkins.aae.lcl:8080'
     butler = jenkins.Jenkins(jenkins_url)
     return butler
 
 
 def get_jenkins_job_names():
-    butler = make_butler()
+    butler = make_jenkins_butler()
     job_list = []
     for job in butler.get_jobs():
         this_job = butler.get_job_info(job.get('name'))
@@ -21,7 +21,7 @@ def get_jenkins_job_names():
 
 
 def get_jenkins_jobs_and_last_build():
-    butler = make_butler()
+    butler = make_jenkins_butler()
     jobs = butler.get_jobs()
     build_list = []
     if jobs:
@@ -40,12 +40,12 @@ def get_jenkins_jobs_and_last_build():
 
 
 def get_jenkins_job_by_name(name):
-    butler = make_butler()
+    butler = make_jenkins_butler()
     return butler.get_job_name(name)
 
 
 def get_jenkins_job_info(name):
-    butler = make_butler()
+    butler = make_jenkins_butler()
     try:
         info = butler.get_job_info(name)
     except jenkins.NotFoundException:
@@ -53,7 +53,7 @@ def get_jenkins_job_info(name):
     return info
 
 
-def get_all_info():
+def get_all_jenkins_info():
     jobs = get_jenkins_job_names()
     job_list = []
     for job in jobs:
@@ -61,8 +61,8 @@ def get_all_info():
     return job_list
 
 
-def get_last_result(job_name):
-    butler = make_butler()
+def get_last_jenkins_result(job_name):
+    butler = make_jenkins_butler()
     if not butler.get_job_name(job_name) == job_name:
         return 'None'
     job = butler.get_job_info(job_name)
@@ -74,8 +74,8 @@ def get_last_result(job_name):
         'result']
 
 
-def make_job(create_form):
-    butler = make_butler()
+def make_jenkins_job(create_form):
+    butler = make_jenkins_butler()
     config_file = render_template('configs/config.xml',
                                   builders=[create_form])
 
@@ -101,19 +101,19 @@ def make_job(create_form):
             return
         print "Running job {}.".format(create_form.job_name.data)
         print str(create_form.job_name.data)
-        build_job(create_form.job_name.data)
+        build_jenkins_job(create_form.job_name.data)
 
 
-def get_running_builds():
-    butler = make_butler()
+def get_running_jenkins_builds():
+    butler = make_jenkins_butler()
     try:
         return butler.get_running_builds()
     except:
-        print 'The function "get_running_builds()" is broken'
+        print 'The function "get_running_jenkins_builds()" is broken'
 
 
-def build_job(job_name):
-    butler = make_butler()
+def build_jenkins_job(job_name):
+    butler = make_jenkins_butler()
     if butler.job_exists(job_name):
         butler.build_job(job_name)
         return "Built job {}".format(job_name)
@@ -121,9 +121,9 @@ def build_job(job_name):
         return "No job by the name {}".format(job_name)
 
 
-def delete_job(job_name):
+def delete_jenkins_job(job_name):
 
-    butler = make_butler()
+    butler = make_jenkins_butler()
     try:
         butler.delete_job(job_name)
     except Exception as e:
@@ -131,7 +131,7 @@ def delete_job(job_name):
 
 
 def main():
-    delete_job("I'm Hungry.")
+    delete_jenkins_job("I'm Hungry.")
 
 
 if __name__ == '__main__':

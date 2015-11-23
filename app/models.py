@@ -47,8 +47,8 @@ class Servers(db.Model):
 
     # parameters
     id = db.Column(db.String(16), primary_key=True)
-    name = db.Column(db.String(16))
-    host_name = db.Column(db.String(16))
+    name = db.Column(db.String(16), default='')
+    host_name = db.Column(db.String(16), default='')
     make = db.Column(db.String(16))
     model = db.Column(db.String(16))
     cpu_count = db.Column(db.Integer)
@@ -173,3 +173,22 @@ class Projects(db.Model):
     id = db.Column(db.String(16), primary_key=True)
     owner_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     date_created = db.Column(db.String(32))
+
+
+# =========================== Jobs ==========================
+class Jobs(db.Model):
+
+    """
+    Job status:
+        0: unknown
+        1: started
+        2: pending
+        3: finished
+    """
+
+    id = db.Column(db.Integer, primary_key=True)
+    message = db.Column(db.Text)
+    owner_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    start_time = db.Column(db.String(32))
+    end_time = db.Column(db.String(32))
+    status = db.Column(db.Integer, default=0)

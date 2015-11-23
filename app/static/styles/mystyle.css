@@ -311,3 +311,7 @@ button:hover {
 input#verify_new_password:disabled {
     background-color: darkgrey;
 }
+
+#getFixed {
+  width: 100px;
+}

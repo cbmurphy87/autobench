@@ -522,62 +522,70 @@ def _deploy():
 
 
 # _______________________ JOBS ________________________
-@myapp.route('/build_job/<job_name>', methods=['POST', 'GET'])
+@myapp.route('/jobs')
 @login_required
-def _build_job(job_name):
+def _jobs():
+    user = g.user
+    return render_template('jobs.html', title='Jobs', user=user, jobs='')
+
+
+# ___________________ JENKINS JOBS ____________________
+@myapp.route('/build_jenkins_job/<job_name>', methods=['POST', 'GET'])
+@login_required
+def _build_jenkins_job(job_name):
     print 'Building job {}!'.format(job_name)
-    status = build_job(job_name)
+    status = build_jenkins_job(job_name)
     flash(status)
-    return redirect('/jobs')
+    return redirect('/jenkins_jobs')
 
 
-@myapp.route('/create_job', methods=['GET', 'POST'])
+@myapp.route('/create_jenkins_job', methods=['GET', 'POST'])
 @login_required
-def _create_job():
+def _create_jenkins_job():
     user = g.user
     form = CreateJobForm()
     build_form = BuildStepForm()
     servers = models.Servers.query
     if form.validate_on_submit():
-        make_job(form)
+        make_jenkins_job(form)
         flash('Created job {}'.format(form.job_name.data))
-        return redirect('/jobs')
+        return redirect('/jenkins_jobs')
     elif request.method == 'POST':
         flash("Invalid entries.")
-    return render_template('create_job.html', title='Create Job',
+    return render_template('create_jenkins_job.html', title='Create Job',
                            date=_get_date_last_modified(),
                            form=form,
                            build_form=build_form,
                            user=user, servers=servers)
 
 
-@myapp.route('/jobs', methods=['GET', 'POST'])
+@myapp.route('/jenkins_jobs', methods=['GET', 'POST'])
 @login_required
-def _jobs():
+def _jenkins_jobs():
     user = g.user
     try:
-        jobs = get_all_info()
+        jobs = get_all_jenkins_info()
     except JenkinsException:
         return render_template('500.html'), 500
-    return render_template('jobs.html', title='Jobs',
+    return render_template('jenkins_jobs.html', title='Jenkins Jobs',
                            date=_get_date_last_modified(),
-                           jobs=get_all_info(),
-                           result=lambda x: get_last_result(x),
+                           jobs=get_all_jenkins_info(),
+                           result=lambda x: get_last_jenkins_result(x),
                            user=user)
 
 
-@myapp.route('/jobs/<jobname>')
+@myapp.route('/jenkins_jobs/<jobname>')
 @login_required
-def _job_info(jobname):
+def _jenkins_job_info(jobname):
     user = g.user
     job_info = get_jenkins_job_info(jobname)
     if job_info:
-        return render_template('job_info.html',
+        return render_template('jenkins_job_info.html',
                                title='Job Info',
                                date=_get_date_last_modified(),
                                job_info=job_info,
                                user=user)
-    return redirect('/jobs')
+    return redirect('/jenkins_jobs')
 
 
 # ________________________ Debug __________________________

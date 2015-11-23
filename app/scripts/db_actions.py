@@ -1,12 +1,17 @@
 #!/usr/bin/python
 
-from app import myapp, db, models
+from datetime import datetime
+import re
+from subprocess import Popen, PIPE
+
 from sqlalchemy.exc import IntegrityError, InvalidRequestError
 from aaebench.testautomation.syscontrol.racadm import RacadmManager
 from aaebench.testautomation.syscontrol.smcipmi import SMCIPMIManager
 from werkzeug.security import generate_password_hash
-from subprocess import Popen, PIPE
-import re
+
+from app import myapp, db, models
+from autobench_exceptions import *
+import requests
 
 
 def is_mac(check):
@@ -171,14 +176,27 @@ def add_inventory(form, user):
 
     nic_info = {'ip_address': ip_address,
                 'mac_address': mac_address}
+    print nic_info
 
-    # if dell, do this
-    try:
+    # get vendor info
+    r = requests.get('http://api.macvendors.com/{}'.format(mac_address))
+    vendor = r.text
+    print 'vendor: {}'.format(vendor)
+    if 'dell' in vendor.lower():
+        print 'this server is a dell'
         return add_dell_info(nic_info=nic_info, form=form, user=user)
-    except IOError:
-        # else, it's supermicro, do this
-        print 'not a dell server. try supermicro.'
+    elif 'supermicro' in vendor.lower():
+        print 'this server is a smc'
         return add_smc_info(nic_info=nic_info, form=form, user=user)
+    else:
+        print 'Could not detect server type. Trying both.'
+
+        try:
+            return add_dell_info(nic_info=nic_info, form=form, user=user)
+        except IOError:
+            # else, it's supermicro, do this
+            print 'not a dell server. try supermicro.'
+            return add_smc_info(nic_info=nic_info, form=form, user=user)
 
 
 def add_smc_info(nic_info, form, user):
@@ -256,7 +274,7 @@ def add_dell_info(nic_info, form, user):
 
     # add models objects for server and its interfaces
     server = models.Servers(rack=form.rack.data, u=form.u.data)
-    for interface in server_info['interfaces']:
+    for interface in server_info.get('interfaces', tuple()):
         _i = models.NetworkDevices()
         for _k, _v in interface.items():
             if hasattr(_i, _k):
@@ -285,6 +303,22 @@ def add_dell_info(nic_info, form, user):
     except IntegrityError as e:
         print 'Server {} already there: {}'.format(server, e)
         return
+
+    # get virtual disks
+    drives = racadm.get_vdisks()
+    for _drive in drives:
+        new_vd = models.VirtualStorageDevices(server_id=server.id)
+        for k, v in _drive.items():
+            if hasattr(new_vd, k):
+                setattr(new_vd, k, v)
+        try:
+            db.session.add(new_vd)
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            print 'Could not add VD {}.'.format(new_vd)
+        except InvalidRequestError:
+            db.session.rollback()
 
     # get server drive info
     powered_on = racadm.get_power_status()
@@ -350,24 +384,42 @@ def remove_inventory(_id):
         return e
 
 
-def update_smc_server(mac):
-
-    # check that a server in inventory has that mac address and ip
-    interface = models.NetworkDevices.query.filter_by(mac=mac).first()
-    if not interface:
-        print 'No server found with that mac address.'
-        return
+def update_smc_server(mac, user):
 
     # check that the mac address is associated with an ip address
-    ip = interface.ip
+    interface = models.NetworkDevices.query.filter_by(mac=mac).first()
     server = models.Servers.query.filter_by(id=interface.server_id).first()
-    print 'new: {}'.format(db.session.new)
-    print 'dirty: {}'.format(db.session.dirty)
-    if not ip:
-        print 'No ip address found for server {}.'\
-            .format()
+
+    # create job
+    update_job = models.Jobs(message='Update server {}'.format(server),
+                             owner_id=user.id, start_time=datetime.now(),
+                             status=1)
+    try:
+        db.session.add(update_job)
+        db.session.commit()
+    except:
+        print 'Could not create job. Rolling back.'
+        db.session.rollback()
         return
-    print 'Updating server at {}'.format(ip)
+
+    ip = get_ip_from_mac(mac)
+    if not ip:
+        print 'Could not fetch ip address from mac {}'.format(mac)
+        ip = interface.ip
+
+    if not ip:
+        raise MissingEntry('Could not get an IP address for mac {}'.format(mac))
+
+    if ip != interface.ip:
+        interface.ip = ip
+        try:
+            db.session.add(interface)
+            db.session.commit()
+        except:
+            'Could not update interface. Rolling back.'
+            db.session.rollback()
+
+    print 'Updating server {} at {}'.format(server, ip)
 
     s = {
             'hostname': ip,
@@ -443,6 +495,15 @@ def update_smc_server(mac):
         print 'Unknown exception: {}'.format(e)
         return
 
+    update_job.status = 3
+
+    try:
+        db.session.add(update_job)
+        db.session.commit()
+    except:
+        print 'Could not create job. Rolling back.'
+        db.session.rollback()
+
 
 def update_dell_server(mac):
 
@@ -453,7 +514,13 @@ def update_dell_server(mac):
         return
 
     # check that the mac address is associated with an ip address
-    ip = interface.ip
+    ip = get_ip_from_mac(mac)
+    if not ip:
+        print 'Could not fetch ip address from mac {}'.format(mac)
+        ip = interface.ip
+    if not ip:
+        raise MissingEntry('Could not get an IP address for mac {}'.format(mac))
+
     server = models.Servers.query.filter_by(id=interface.server_id).first()
     if not ip:
         print 'No ip address found for server {}.'\

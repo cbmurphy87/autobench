@@ -1,65 +1,39 @@
 {% extends "base.html" %}
 
 {# =============================================================== #}
-{# set head data #}
-{# =============================================================== #}
-
-{% block scripts %}
-    {{ super() }}
-    <script>
-    {{ super() }}
-    function python(link) {
-        var form = document.createElement('form');
-        form.setAttribute('method', 'post');
-        form.setAttribute('value', link);
-        form.style.display = 'hidden';
-        document.body.appendChild(form);
-        form.submit();
-    }
-    </script>
-{% endblock %}
-
-{# =============================================================== #}
 {# set body data #}
 {# =============================================================== #}
 
+{% set field_pairs = (('Job ID','id'),('Message','message'),
+('Creator','owner_id'),('Start','start_time'),('End','end_time'),
+('Status','status')) %}
+
 {% block content %}
     <h2>Jobs</h2>
-    <div class="pane-frame"  style="min-width: 300px; width:50%;">
-        <table id="aaetable" class="sortable pane bigtable stripped">
-            <tbody>
+    <table id="aaetable" class="sortable pane bigtable stripped count">
+        <thead>
             <tr class="header">
-            {% for field in ('S', 'Name', 'Last Build', '') %}
-                {% if field == '' %}
-                        {% set class = " class='sorttable_nosort'" %}
-                    {% endif %}
-                <th{{ class }}>{{ field }}</th>
+            {# create header for inventory table #}
+            {% for k, v in field_pairs %}
+                {# set count types for columns #}
+                {% if k.lower() in ['start_time', 'end_time'] %}
+                    {% set count_type = 'ignore' %}
+                    {% set units = 'none' %}
+                {% elif k.lower() in ['message'] %}
+                    {% set count_type = 'unique' %}
+                    {% set units = 'none' %}
+                {% else %}
+                    {% set count_type = 'count' %}
+                    {% set units = 'none' %}
+                {% endif %}
+                {% if  v == None %}
+                    {% set class = " class=sorttable_nosort" %}
+                {% endif %}
+                <th{{ class }} unit="{{ units }}" count_type="{{ count_type }}">
+                    {{ k }}
+                </th>
             {% endfor %}
             </tr>
-            {% for job in jobs %}
-                {% if job['color'].endswith('anime') %}
-                    {% set ext = 'gif' %}
-                {% else %}
-                    {% set ext = 'png' %}
-                {% endif %}
-                <tr>
-                    <td>
-                        <img src={{ url_for('static', filename='pictures/{}.{}'.format(job['color'], ext)) }} style="width:16px;height:16px;">
-                    </td>
-                    <td>
-                        <a href='/jobs/{{ job['displayName'] }}'>
-                            {{ job['displayName'] }}
-                        </a>
-                    </td>
-                    <td>{{ result(job['displayName']) }}</td>
-                    <td>
-                        <a href='/build_job/{{ job['displayName'] }}'>
-                            <img src={{ url_for('static', filename='pictures/clock.png') }}>
-                        </a>
-                    </td>
-                </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-    </div>
+        </thead>
+    </table>
 {% endblock %}
