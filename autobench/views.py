@@ -325,10 +325,15 @@ def _update_inventory():
         mac = server.interfaces.filter_by(type='oob').first().mac
         flash('Updating server. Wait 30 seconds, then refresh.')
         logger.info('Updating server {}.'.format(server.id))
-        if server.make.lower() == 'dell':
+        make = server.make or 'unknown'
+        if make.lower() == 'dell':
             target = update_dell_server
-        else:
+        elif 'super' in make.lower():
             target = update_smc_server
+        else:
+            message = 'Could not get server make'
+            logger.error(message)
+            raise Exception(message)
         p = Process(target=target, args=(mac, user))
         p.start()
     except Exception as e:
