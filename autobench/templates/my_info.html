@@ -4,7 +4,7 @@
 ('E-mail','email'),('Username','user_name')) %}
 
 {% set server_fields = (('ID', 'id'),('Rack','rack'),('U','u'),
-('Host Name','host_name'),('Model','model'),('CPU Count','cpu_count'),
+('Name','get_name'),('Model','model'),('CPU Count','cpu_count'),
 ('CPU Model','cpu_model'),('Memory','memory_capacity'),('Release','release'))%}
 
 {% block scripts %}
@@ -101,7 +101,11 @@
                                 Release
                             </button>
                         {% else %}
+                            {% if v == 'get_name' %}
+                            {{ server.get_name() }}
+                            {% else %}
                             {{ server[v] }}
+                            {% endif %}
                             <span class="custom_count" style="display:none">{{ server[v] }}</span>
                         {% endif %}
                         </td>

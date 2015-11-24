@@ -1,4 +1,4 @@
-from app import db
+from autobench import db
 from werkzeug.security import check_password_hash
 
 # ================ Users for Flask Login ==================
@@ -79,6 +79,9 @@ class Servers(db.Model):
     def __repr__(self):
         return '<Server id {}>'.format(self.id)
 
+    def get_name(self):
+        return self.name or self.host_name
+
 
 class StorageDevices(db.Model):
 
@@ -104,7 +107,7 @@ class VirtualStorageDevices(db.Model):
 
     def __repr__(self):
         return '<VirtualStorageDevice {}.{}>'.format(self.server_id,
-                                                     self.name)
+                                                     self.number)
 
 
 class CommunicationDevices(db.Model):
@@ -199,7 +202,8 @@ class Jobs(db.Model):
     status = db.Column(db.Integer, default=0)
 
     details = db.relationship('JobDetails', backref='job', lazy='dynamic',
-                              cascade='all, delete, delete-orphan')
+                              cascade='all, delete, delete-orphan',
+                              order_by=lambda: JobDetails.id.desc())
 
     def __repr__(self):
         return '<Jobs id {}>'.format(self.id)

@@ -11,9 +11,9 @@ cov = coverage(branch=True, omit=['/opt/*',
 cov.start()
 
 from config import basedir
-from app import myapp, db
-from app.models import Servers, Users, OS
-from app.scripts.db_actions import get_inventory, get_ip_from_mac, \
+from autobench import myapp, db
+from autobench.models import Servers, Users, OS
+from autobench.scripts.db_actions import get_inventory, get_ip_from_mac, \
     get_mac_from_ip
 from werkzeug.security import generate_password_hash
 

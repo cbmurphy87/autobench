@@ -8,6 +8,7 @@
 
 {% block content %}
     <h2>Job {{ job.id }} Details</h2>
+    <p>Details are shown newest to oldest.</p>
     {% set details = job.details.all() %}
     {% if details %}
     <table id="aaetable" class="sortable pane bigtable stripped">

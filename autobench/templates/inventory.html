@@ -5,7 +5,7 @@
 {# =============================================================== #}
 
 {% set field_pairs = (('S', 'available'),('Rack','rack'),('U','u'),('ID', 'id'),
-('Name','name'),('Model','model'),('Memory','memory_capacity'),
+('Name','get_name'),('Model','model'),('Memory','memory_capacity'),
 ('Drives','model'),('Capacity','capacity'),('Count','count')) %}
 
 {% block links %}
@@ -102,14 +102,18 @@
                                 <span class="custom_count" style="display:none">{{ color }}</span>
                             </a>
                         {% elif server[v] is not undefined %}
-                        {% if k == 'ID' %}
+                            {% if k == 'ID' %}
                             <a href="/inventory/{{ server[v] }}">{{ server[v] }}</a>
                             <span class="custom_count" style="display:none">{{ server[v] }}</span>
-                        {% else %}
+                            {% else %}
                             {% if k == 'Memory' %}
-                                {% set count = server[v]|split(0)|int %}
+                            {% set count = server[v]|split(0)|int %}
                             {% endif %}
+                            {% if v == 'get_name' %}
+                            {{ server.get_name() }}
+                            {% else %}
                             {{ server[v] }}
+                            {% endif %}
                             {% if k in ['Model', 'CPUs', 'SKU'] %}
                             <span class="custom_count" style="display:none">{{ server[v] }}</span>
                             {% else %}

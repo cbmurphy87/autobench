@@ -10,7 +10,7 @@ def make_butler():
 
 def make_job(build):
   butler = make_butler()
-  with open('/root/aaetest/app/configs/testsaltconfig.xml', 'r') as f:
+  with open('/root/aaetest/autobench/configs/testsaltconfig.xml', 'r') as f:
     d = {'target':target}
     config_file = f.read()
     config_file = config_file.format(**d)

@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-from app import db, models
+from autobench import db, models
 from sqlalchemy.orm import subqueryload
 from sqlalchemy import func
 

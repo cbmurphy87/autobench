@@ -10,7 +10,7 @@ from aaebench.testautomation.syscontrol.racadm import RacadmManager
 from aaebench.testautomation.syscontrol.smcipmi import SMCIPMIManager
 from werkzeug.security import generate_password_hash
 
-from app import myapp, db, models
+from autobench import myapp, db, models
 from autobench_exceptions import *
 import requests
 
@@ -190,7 +190,7 @@ def add_inventory(form, user):
     if 'dell' in vendor.lower():
         logger.info('This server is a dell')
         return add_dell_info(nic_info=nic_info, form=form, user=user)
-    elif 'supermicro' in vendor.lower():
+    elif 'super' in vendor.lower():
         logger.info('This server is a Supermicro')
         return add_smc_info(nic_info=nic_info, form=form, user=user)
     else:
@@ -208,9 +208,17 @@ def add_smc_info(nic_info, form, user):
 
     ip_address = nic_info.get('ip_address')
 
+    job = create_job(user, message='Add server at IP {}'.format(ip_address))
+
     # get server info here
     ipmi = SMCIPMIManager(hostname=ip_address, verbose=True)
     server_info = ipmi.get_server_info()
+
+    if server_info:
+        message = 'Got server info.'
+    else:
+        message = 'Failed to fetch server info.'
+    add_job_detail(job, message=message)
 
     # add models objects for server and its interfaces
     logger.info('Creating server and interface objects.')
@@ -233,6 +241,7 @@ def add_smc_info(nic_info, form, user):
             else:
                 logger.debug('key "{}" not in server:'.format(_k))
                 logger.debug('-> {}: {}'.format(_k, _v))
+    add_job_detail(job, message='Created interface objects.')
 
     # add objects to database
     logger.info('Adding objects to database')
@@ -242,12 +251,69 @@ def add_smc_info(nic_info, form, user):
             db.session.add(interface)
         db.session.add(server)
         db.session.commit()
-    except InvalidRequestError:
+        add_job_detail(job, message='Added interface objects to database.')
+    except InvalidRequestError as e:
         db.session.rollback()
         logger.debug("Non-unique server entry. Rolling back.")
+        fail_job(job, message='Failed to add interface '
+                              'objects to database: {}'.format(e))
+        return
     except IntegrityError as e:
         logger.debug('Server {} already there: {}'.format(server, e))
+        fail_job(job, message='Failed to add interface '
+                              'objects to database: {}'.format(e))
         return
+
+    # get server drive info
+    powered_on = ipmi.get_power_status()
+
+    drives = ipmi.get_drive_info()
+    if drives:
+        message = 'Got drive info.'
+        check_or_add_drives(server, drives)
+    else:
+        message = 'Could not get drive info.'
+    add_job_detail(job, message=message)
+
+    # get server virtual drive info
+    try:
+        old_drives = models.VirtualStorageDevices.query \
+            .filter_by(server_id=server.id).all()
+        for _drive in old_drives:
+            db.session.delete(_drive)
+        db.session.commit()
+        add_job_detail(job, message='Deleted all existing VDs.')
+    except Exception as e:
+        message = 'Error deleting VDs: {}'.format(e)
+        logger.error(message)
+        db.session.rollback()
+        fail_job(job, message=message)
+
+    # get virtual drive info
+    drives = ipmi.get_vdisks()
+    for _drive in drives:
+        new_vd = models.VirtualStorageDevices(server_id=server.id)
+        for k, v in _drive.items():
+            if hasattr(new_vd, k):
+                setattr(new_vd, k, v)
+        try:
+            db.session.add(new_vd)
+            db.session.commit()
+            message = 'Added {}'.format(new_vd)
+            logger.info(message)
+            add_job_detail(job, message=message)
+        except IntegrityError:
+            message = 'Could not add {}.'.format(new_vd)
+            logger.error(message)
+            db.session.rollback()
+            fail_job(job, message=message)
+            return
+        except InvalidRequestError as e:
+            db.session.rollback()
+            fail_job(job, message=e.message)
+            return
+
+    finish_job(job)
 
 
 def add_dell_info(nic_info, form, user):
@@ -413,8 +479,10 @@ def update_smc_server(mac, user):
         try:
             db.session.add(interface)
             db.session.commit()
+            add_job_detail(job, 'Changed interface {} ip to {}.'
+                           .format(interface, ip))
         except Exception as e:
-            message = 'Could not update interface.'
+            message = 'Could not update interface {}.'.format(interface)
             db.session.rollback()
             fail_job(job, message=message)
 
@@ -447,9 +515,11 @@ def update_smc_server(mac, user):
     try:
         logger.debug('Committing interface deletes')
         db.session.commit()
+        add_job_detail(job, "Deleted all existing ib interfaces.")
     except Exception as e:
-        fail_job(job, message=e.message)
-        logger.warning('Could not delete interfaces. Rolling back.')
+        message = 'Could not delete interfaces. Rolling back: {}'.format(e)
+        fail_job(job, message=message)
+        logger.warning(message)
         db.session.rollback()
 
     # add found interfaces
@@ -484,7 +554,13 @@ def update_smc_server(mac, user):
         if not exists:
             logger.debug('Appending new interface')
             server.interfaces.append(new_interface)
-        db.session.commit()
+        try:
+            db.session.commit()
+            add_job_detail(job, 'Added {}.'.format(new_interface))
+        except Exception as e:
+            message = 'Could not add {}: {}'.format(new_interface, e)
+            logger.error(message)
+            add_job_detail(job, message)
 
     logger.info('Adding server info')
     for _k, _v in new_info.items():
@@ -506,6 +582,7 @@ def update_smc_server(mac, user):
         db.session.add(server)
         logger.debug('Committing server')
         db.session.commit()
+        add_job_detail(job, 'Added new server info to database.')
     except InvalidRequestError as e:
         message = "Non-unique server entry. Rolling back."
         logger.error(message)
@@ -524,6 +601,49 @@ def update_smc_server(mac, user):
         db.session.rollback()
         fail_job(job, message=message)
         return
+
+    # get server drive info
+    powered_on = ipmi.get_power_status()
+
+    if powered_on:
+        drives = ipmi.get_drive_info()
+        check_or_add_drives(server, drives)
+    else:
+        logger.warning('Server is not powered on. Cannot get drive info.')
+
+    # get server virtual drive info
+    try:
+        old_drives = models.VirtualStorageDevices.query \
+            .filter_by(server_id=server.id).all()
+        for _drive in old_drives:
+            db.session.delete(_drive)
+        db.session.commit()
+    except Exception as e:
+        message = 'Error deleting VDs: {}'.format(e)
+        logger.error(message)
+        db.session.rollback()
+        fail_job(job, message=message)
+
+    # get virtual drive info
+    drives = ipmi.get_vdisks()
+    for _drive in drives:
+        new_vd = models.VirtualStorageDevices(server_id=server.id)
+        for k, v in _drive.items():
+            if hasattr(new_vd, k):
+                setattr(new_vd, k, v)
+        try:
+            db.session.add(new_vd)
+            db.session.commit()
+        except IntegrityError:
+            message = 'Could not add VD {}.'.format(new_vd)
+            logger.error(message)
+            db.session.rollback()
+            fail_job(job, message=message)
+            return
+        except InvalidRequestError as e:
+            db.session.rollback()
+            fail_job(job, message=e.message)
+            return
 
     # set job as finished
     finish_job(job)
@@ -640,6 +760,7 @@ def update_dell_server(mac, user):
         db.session.rollback()
         fail_job(job, message=message)
 
+    # get virtual drive info
     drives = racadm.get_vdisks()
     for _drive in drives:
         new_vd = models.VirtualStorageDevices(server_id=server.id)
@@ -836,7 +957,7 @@ def fail_job(job, message=''):
 
 def get_all_jobs():
 
-    all_jobs = models.Jobs.query.order_by('id').all()
+    all_jobs = models.Jobs.query.order_by(models.Jobs.id.desc()).all()
     if all_jobs:
         return all_jobs
     return []

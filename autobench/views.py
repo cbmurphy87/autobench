@@ -8,8 +8,8 @@ from flask.ext.login import login_user, logout_user, current_user, \
 from sqlalchemy import sql, or_
 
 # ___________________________ App Imports ________________________
-from app import myapp, lm
-from app.forms import CreateJobForm, LoginForm, BuildStepForm, \
+from autobench import myapp, lm
+from autobench.forms import CreateJobForm, LoginForm, BuildStepForm, \
     AddInventoryForm, DeployForm, EditInfoForm, EditInventoryForm
 from models import Users, Servers
 
@@ -23,6 +23,7 @@ import os
 from subprocess import Popen, PIPE
 
 # ___________________________ AAEBench Imports ________________________
+from aaebench import customlogger
 from aaebench.testautomation.syscontrol.file_transfer import SFTPManager
 from aaebench.testautomation.syscontrol.racadm import RacadmManager
 from aaebench.testautomation.syscontrol.smcipmi import SMCIPMIManager
@@ -59,7 +60,7 @@ def _deploy_server(form):
                                                          form.os.data.version,
                                                          form.target.data.id,
                                                          form.os.data.append)
-    print message
+    logger.info(message)
 
     pxe_file = render_template('pxeboot',
                                kernel=form.os.data.kernel,
@@ -72,14 +73,14 @@ def _deploy_server(form):
     interfaces = server.interfaces
     eth0_interface = interfaces.filter_by(name='NIC.1').first()
     eth0 = eth0_interface.mac.lower().replace(':', '-')
-    print 'eth0 mac: {}'.format(eth0)
+    logger.debug('eth0 mac: {}'.format(eth0))
     ipmi_int = interfaces.filter_by(name='DRAC').first() or \
                interfaces.filter_by(name='ipmi').first()
     if not ipmi_int:
         raise Exception('Could not find ipmi interface!')
     ipmi_ip = ipmi_int.ip
 
-    print 'IPMI ip address is: {}'.format(ipmi_ip)
+    logger.debug('IPMI ip address is: {}'.format(ipmi_ip))
 
     # send unique config file to pxe server
     sftp = SFTPManager('pxe.aae.lcl')
@@ -89,7 +90,7 @@ def _deploy_server(form):
     with client.open(filename, 'w') as f:
         f.write(pxe_file)
     # delete salt key
-    print server.id
+    logger.debug(server.id)
     salt_master_manager = GenericManager(hostname='salt-gru.aae.lcl',
                                          username='salt',
                                          password='Not24Get',
@@ -113,9 +114,9 @@ def _deploy_server(form):
         server.available = False
         server.held_by = user.id
         db.session.commit()
-        print 'Server {} now unavailable.'.format(server)
+        logger.info('Server {} now unavailable.'.format(server))
     except Exception as e:
-        print 'Error making server unavailable: {}'.format(e)
+        logger.error('Error making server unavailable: {}'.format(e))
         db.session.rollback()
 
 
@@ -162,7 +163,7 @@ def _login():
             # get user from db
             user = Users.query.filter_by(email=str(form.email.data)).first()
         except Exception as e:
-            print 'Error fetching user: {}'.format(e)
+            logger.error('Error fetching user: {}'.format(e))
         # if valid user
         if user:
             # check password
@@ -207,16 +208,6 @@ def _root():
                            user=user)
 
 
-@myapp.route('/script')
-@login_required
-def _script():
-    print 'HI!'
-    print 'args:'
-    for k, v in request.args.items():
-        print '  ->{}: {}'.format(k, v)
-    return 'Hello'
-
-
 @myapp.route('/my_info')
 @login_required
 def _my_info():
@@ -236,11 +227,10 @@ def _edit_my_info():
         if user.check_password(str(form.password.data)):
             message = update_user_info(form, user)
             flash(message)
-            print message
+            logger.debug(message)
             return redirect(url_for('_my_info'))
         else:
             flash('Invalid password. Try again.')
-    print form.errors
 
     for attr in user.__dict__.keys():
         if attr in form.data.keys():
@@ -313,11 +303,10 @@ def _inventory_edit_id(_id):
     if form.validate_on_submit():
         message = update_server_info(form, _id)
         flash(message)
-        print message
+        logger.debug(message)
         return redirect('/inventory/{}'.format(_id))
     elif request.method == 'POST':
         flash('Invalid info. Try again.')
-    print form.errors
     for attr in server.__dict__.keys():
         if attr in form.data.keys():
             field = getattr(form, attr)
@@ -333,10 +322,9 @@ def _update_inventory():
     _id = request.get_json().get('id')
     try:
         server = Servers.query.filter_by(id=_id).first()
-        print server.interfaces.all()
         mac = server.interfaces.filter_by(type='oob').first().mac
-        print mac
         flash('Updating server. Wait 30 seconds, then refresh.')
+        logger.info('Updating server {}.'.format(server.id))
         if server.make.lower() == 'dell':
             target = update_dell_server
         else:
@@ -344,7 +332,7 @@ def _update_inventory():
         p = Process(target=target, args=(mac, user))
         p.start()
     except Exception as e:
-        print 'Could not update server {}.: {}'.format(server.id, e)
+        logger.error('Could not update server {}.: {}'.format(server.id, e))
     return redirect('inventory')
 
 
@@ -368,7 +356,7 @@ def _checkout_id():
     _id = request.get_json().get('id')
     _next = request.get_json().get('next')
     user = g.user
-    print 'User {} checking out {}'.format(user, _id)
+    logger.info('User {} checking out {}'.format(user, _id))
     server = Servers.query.filter_by(id=_id).first()
     if server.available and not server.holder:
         try:
@@ -399,7 +387,7 @@ def _checkout_id():
                                             'color': color})
         return server_json
     except Exception as e:
-        print "Couldn't encode server: {}".format(e)
+        logger.error("Couldn't encode server: {}".format(e))
     return JSONEncoder().encode({'available': False,
                                  'i_am_holder': False,
                                  'held_by': 'unknown',
@@ -413,19 +401,18 @@ def _delete_id():
     _id = request.get_json().get('id')
     _next = request.get_json().get('next')
     user = g.user
-    print 'User {} is deleting server {}'.format(user, _id)
+    logger.info('User {} is deleting server {}'.format(user, _id))
     server = Servers.query.filter_by(id=_id).first()
     drives = server.drives
-    print drives.all()
     try:
         for drive in drives:
             db.session.delete(drive)
         db.session.commit()
         db.session.delete(server)
         db.session.commit()
-        print 'Server successfully delted.'
+        logger.info('Server successfully deleted.')
     except Exception as e:
-        print 'Error deleting server {}: {}'.format(_id, e)
+        logger.error('Error deleting server {}: {}'.format(_id, e))
         db.session.rollback()
 
     i_am_holder = (server.held_by == user.id)
@@ -448,7 +435,7 @@ def _release():
     _id = request.get_json().get('id')
     _next = request.get_json().get('next')
     user = g.user
-    print 'User {} releasing {}'.format(user, _id)
+    logger.info('User {} releasing {}'.format(user, _id))
     server = Servers.query.filter_by(id=_id).first()
     user_holding = server.holder
     try:
@@ -475,10 +462,10 @@ def _release():
                                             'color': color})
         return server_json
     except:
-        print 'Could not get user holding server.'
+        logger.error('Could not get user holding server.')
     if _next:
         return redirect(_next)
-    print 'Error releasing server. Server may be in unknown state.'
+    logger.error('Error releasing server. Server may be in unknown state.')
     return JSONEncoder().encode({'available': server.available,
                                  'i_am_holder': False,
                                  'title': 'Error getting status'})
@@ -558,7 +545,7 @@ def _jobs_delete():
 @myapp.route('/build_jenkins_job/<job_name>', methods=['POST', 'GET'])
 @login_required
 def _build_jenkins_job(job_name):
-    print 'Building job {}!'.format(job_name)
+    logger.info('Building job {}!'.format(job_name))
     status = build_jenkins_job(job_name)
     flash(status)
     return redirect('/jenkins_jobs')
@@ -668,3 +655,11 @@ def internal_error(error):
     user = g.user
     db.session.rollback()
     return render_template('500.html', user=user), 500
+
+if __name__ == '__main__':
+    print 'creating logger with name: {}'.format(__name__)
+    logger = customlogger.create_logger('views')
+    main()
+else:
+    print 'getting logger with name: {}'.format(__name__)
+    logger = customlogger.get_logger(__name__)

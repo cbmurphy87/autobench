@@ -1,5 +1,5 @@
 #!/usr/bin/python
-from app import myapp
+from autobench import myapp
 
 from aaebench import customlogger
 

@@ -1,5 +1,5 @@
 #!/usr/bin/python
-from app import db as _db, models
+from autobench import db as _db, models
 
 
 def load_oses(db):

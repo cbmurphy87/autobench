@@ -4,12 +4,10 @@ from flask.ext.login import LoginManager
 from flask.ext.sqlalchemy import SQLAlchemy
 import logging
 from logging.handlers import RotatingFileHandler
-from app.jinja.custom_filters import _split
-
-from aaebench import customlogger
+from autobench.jinja.custom_filters import _split
 
 
-# setup app
+# setup autobench
 myapp = Flask(__name__)
 myapp.config.from_object('config')
 db = SQLAlchemy(myapp)
@@ -35,10 +33,4 @@ myapp.jinja_env.keep_trailing_newline = False
 myapp.permanent_session_lifetime = timedelta(seconds=10)
 myapp.jinja_env.filters['split'] = _split
 
-from app import views, models
-
-if __name__ == '__main__':
-    logger = customlogger.create_logger(__name__)
-else:
-    print 'getting logger with name: {}'.format(__name__)
-    logger = customlogger.get_logger(__name__)
+from autobench import views, models

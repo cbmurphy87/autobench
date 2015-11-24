@@ -7,7 +7,7 @@ from wtforms.validators import DataRequired, Length, Optional, NumberRange, \
     required, IPAddress, EqualTo, Regexp
 from wtforms.validators import ValidationError
 from sqlalchemy import collate
-from app import models
+from autobench import models
 
 
 # ================ Validators =======================
