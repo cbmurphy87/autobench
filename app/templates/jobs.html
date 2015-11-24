@@ -1,25 +1,49 @@
 {% extends "base.html" %}
 
 {# =============================================================== #}
+{# set head data #}
+{# =============================================================== #}
+
+{% block links %}
+    {{ super() }}
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/inventory.js') }}></script>
+{% endblock %}
+
+{% block scripts %}
+function deleteAllJobs(id, next) {
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+            if (xhttp.readyState == 4 && xhttp.status == 200) {
+                alert(xhttp.responseText);
+                location.reload();
+            }
+        };
+        xhttp.open("GET", "/jobs/delete", true);
+        xhttp.send();
+    }
+{% endblock %}
+
+{# =============================================================== #}
 {# set body data #}
 {# =============================================================== #}
 
 {% set field_pairs = (('Job ID','id'),('Message','message'),
-('Creator','owner_id'),('Start','start_time'),('End','end_time'),
+('Creator','creator'),('Start','start_time'),('End','end_time'),
 ('Status','status')) %}
 
 {% block content %}
     <h2>Jobs</h2>
+    {% if jobs %}
     <table id="aaetable" class="sortable pane bigtable stripped count">
         <thead>
             <tr class="header">
             {# create header for inventory table #}
             {% for k, v in field_pairs %}
                 {# set count types for columns #}
-                {% if k.lower() in ['start_time', 'end_time'] %}
+                {% if k.lower() in ['start', 'end'] %}
                     {% set count_type = 'ignore' %}
                     {% set units = 'none' %}
-                {% elif k.lower() in ['message'] %}
+                {% elif k.lower() in ['message', 'creator'] %}
                     {% set count_type = 'unique' %}
                     {% set units = 'none' %}
                 {% else %}
@@ -35,5 +59,32 @@
             {% endfor %}
             </tr>
         </thead>
+        <tbody>
+        {% for job in jobs %}
+            <tr>
+            {% for k, v in field_pairs %}
+                <td>
+                {% if v == 'status'%}
+                    <a href="/job/{{ job.id }}">{{ job.get_status() }}</a>
+                {% else %}
+                    {{ job[v] }}
+                {% endif %}
+                <span class="custom_count" style="display:none">{{ job[v] }}}</span>
+                </td>
+            {% endfor %}
+            </tr>
+        {% endfor %}
+        </tbody>
     </table>
+    {% if user.admin %}
+    <p>
+        <button onclick="deleteAllJobs()">
+        Delete all jobs
+        </button>
+    </p>
+    {% endif %}
+    {% else %}
+        No jobs yet.
+    {% endif %}
+
 {% endblock %}

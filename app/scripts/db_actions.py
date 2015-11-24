@@ -4,6 +4,7 @@ from datetime import datetime
 import re
 from subprocess import Popen, PIPE
 
+from sqlalchemy import func, and_
 from sqlalchemy.exc import IntegrityError, InvalidRequestError
 from aaebench.testautomation.syscontrol.racadm import RacadmManager
 from aaebench.testautomation.syscontrol.smcipmi import SMCIPMIManager
@@ -13,7 +14,39 @@ from app import myapp, db, models
 from autobench_exceptions import *
 import requests
 
+from aaebench import customlogger
 
+
+# ============== User METHODS ======================
+def update_user_info(form, user):
+
+    user = models.Users.query.filter_by(id=user.id).first()
+    if not user:
+        return 'Could not update info.'
+
+    for field, data in form.data.items():
+        if hasattr(user, field) and field != 'password':
+            setattr(user, field, data)
+    if form.new_password.data:
+        if form.new_password.data == form.verify_new_password.data:
+            new_password = generate_password_hash(form.new_password.data)
+            if new_password:
+                user.password = new_password
+        else:
+            return 'Passwords did not match.'
+
+    try:
+        db.session.add(user)
+        db.session.commit()
+    except Exception as e:
+        logger.error('Error updating user info: {}'.format(e))
+        db.session.rollback()
+        return 'Could not update info.'
+
+    return 'Successfully updated your info.'
+
+
+# ============== Server METHODS ===================
 def is_mac(check):
 
     search_string = re.compile(r'(?is)'
@@ -38,7 +71,7 @@ def get_ip_from_mac(mac):
     leases, errors = p.communicate()
 
     if errors and not leases:
-        print "errors:\n{}".format(errors)
+        logger.error("errors:\n{}".format(errors))
         raise IOError("Could not read dhcpd leases file: {}".format(errors))
 
     sstring = r'(?is)' \
@@ -63,7 +96,7 @@ def get_mac_from_ip(ip):
     leases, errors = p.communicate()
 
     if errors and not leases:
-        print "errors:\n{}".format(errors)
+        logger.error("errors:\n{}".format(errors))
         raise IOError("Could not read dhcpd leases file: {}".format(errors))
 
     sstring = r'(?is)' \
@@ -80,34 +113,6 @@ def get_mac_from_ip(ip):
     raise Exception('Could not get mac address.')
 
 
-def update_user_info(form, user):
-
-    user = models.Users.query.filter_by(id=user.id).first()
-    if not user:
-        return 'Could not update info.'
-
-    for field, data in form.data.items():
-        if hasattr(user, field) and field != 'password':
-            setattr(user, field, data)
-    if form.new_password.data:
-        if form.new_password.data == form.verify_new_password.data:
-            new_password = generate_password_hash(form.new_password.data)
-            if new_password:
-                user.password = new_password
-        else:
-            return 'Passwords did not match.'
-
-    try:
-        db.session.add(user)
-        db.session.commit()
-    except Exception as e:
-        print 'Error updating user info: {}'.format(e)
-        db.session.rollback()
-        return 'Could not update info.'
-
-    return 'Successfully updated your info.'
-
-
 def update_server_info(form, _id):
 
     server = models.Servers.query.filter_by(id=_id).first()
@@ -122,13 +127,14 @@ def update_server_info(form, _id):
         db.session.add(server)
         db.session.commit()
     except Exception as e:
-        print 'Error updating server info: {}'.format(e)
+        logger.error('Error updating server info: {}'.format(e))
         db.session.rollback()
         return 'Could not update server info.'
 
     return 'Successfully updated server info.'
 
 
+# ============== Inventory METHODS =================
 def get_inventory():
 
     servers = models.Servers.query.order_by('rack', 'u', 'make', 'model').all()
@@ -176,26 +182,25 @@ def add_inventory(form, user):
 
     nic_info = {'ip_address': ip_address,
                 'mac_address': mac_address}
-    print nic_info
 
     # get vendor info
     r = requests.get('http://api.macvendors.com/{}'.format(mac_address))
     vendor = r.text
-    print 'vendor: {}'.format(vendor)
+    logger.debug('Detected server vendor: {}'.format(vendor))
     if 'dell' in vendor.lower():
-        print 'this server is a dell'
+        logger.info('This server is a dell')
         return add_dell_info(nic_info=nic_info, form=form, user=user)
     elif 'supermicro' in vendor.lower():
-        print 'this server is a smc'
+        logger.info('This server is a Supermicro')
         return add_smc_info(nic_info=nic_info, form=form, user=user)
     else:
-        print 'Could not detect server type. Trying both.'
+        logger.warning('Could not detect server type. Trying both.')
 
         try:
             return add_dell_info(nic_info=nic_info, form=form, user=user)
         except IOError:
             # else, it's supermicro, do this
-            print 'not a dell server. try supermicro.'
+            logger.debug('Not a dell server. try supermicro.')
             return add_smc_info(nic_info=nic_info, form=form, user=user)
 
 
@@ -208,7 +213,7 @@ def add_smc_info(nic_info, form, user):
     server_info = ipmi.get_server_info()
 
     # add models objects for server and its interfaces
-    print 'Creating server and interface objects.'
+    logger.info('Creating server and interface objects.')
     server = models.Servers(rack=form.rack.data, u=form.u.data)
     server.held_by = user.id
     server.make = 'Supermicro'
@@ -219,19 +224,19 @@ def add_smc_info(nic_info, form, user):
             if hasattr(_i, _k):
                 setattr(_i, _k, _v)
         server.interfaces.append(_i)
-    print 'Updating server object.'
-    print server_info.items()
+    logger.info('Updating server object.')
+    logger.debug(server_info.items())
     for _k, _v in server_info.items():
         if _k != 'interfaces':
             if hasattr(server, _k):
                 setattr(server, _k, _v)
             else:
-                print 'key "{}" not in server:'.format(_k)
-                print '-> {}: {}'.format(_k, _v)
+                logger.debug('key "{}" not in server:'.format(_k))
+                logger.debug('-> {}: {}'.format(_k, _v))
 
     # add objects to database
-    print 'Adding objects to database'
-    print server.interfaces.all()
+    logger.info('Adding objects to database')
+    logger.debug(server.interfaces.all())
     try:
         for interface in server.interfaces:
             db.session.add(interface)
@@ -239,16 +244,16 @@ def add_smc_info(nic_info, form, user):
         db.session.commit()
     except InvalidRequestError:
         db.session.rollback()
-        print "Non-unique server entry. Rolling back."
+        logger.debug("Non-unique server entry. Rolling back.")
     except IntegrityError as e:
-        print 'Server {} already there: {}'.format(server, e)
+        logger.debug('Server {} already there: {}'.format(server, e))
         return
 
 
 def add_dell_info(nic_info, form, user):
 
     ip_address = nic_info.get('ip_address')
-    print 'checking ip: {}'.format(ip_address)
+    logger.info('Checking ip: {}'.format(ip_address))
 
     s = {
             'hostname': ip_address,
@@ -262,14 +267,14 @@ def add_dell_info(nic_info, form, user):
     server_info = racadm.get_server_info()
     if not server_info:
         message = 'Error fetching data. Make sure server is connected.'
-        print message
+        logger.error(message)
         raise IOError(message)
     else:
-        print server_info
+        logger.debug(server_info)
 
     if 'drac' not in [x['name'].lower() for x in server_info.get('interfaces')]:
         message = 'Error getting server drac info.'
-        print message
+        logger.error(message)
         return message
 
     # add models objects for server and its interfaces
@@ -286,8 +291,8 @@ def add_dell_info(nic_info, form, user):
             if hasattr(server, _k):
                 setattr(server, _k, _v)
             else:
-                print 'key "{}" not in server:'.format(_k)
-                print '-> {}: {}'.format(_k, _v)
+                logger.debug('key "{}" not in server:'.format(_k))
+                logger.debug('-> {}: {}'.format(_k, _v))
 
     server.held_by = user.id
     server.make = 'Dell'
@@ -299,9 +304,9 @@ def add_dell_info(nic_info, form, user):
         db.session.commit()
     except InvalidRequestError:
         db.session.rollback()
-        print "Non-unique server entry. Rolling back."
+        logger.warning("Non-unique server entry. Rolling back.")
     except IntegrityError as e:
-        print 'Server {} already there: {}'.format(server, e)
+        logger.debug('Server {} already there: {}'.format(server, e))
         return
 
     # get virtual disks
@@ -316,7 +321,7 @@ def add_dell_info(nic_info, form, user):
             db.session.commit()
         except IntegrityError:
             db.session.rollback()
-            print 'Could not add VD {}.'.format(new_vd)
+            logger.error('Could not add VD {}.'.format(new_vd))
         except InvalidRequestError:
             db.session.rollback()
 
@@ -328,7 +333,7 @@ def add_dell_info(nic_info, form, user):
         check_or_add_drives(server, drives)
     else:
         message = 'Server is not powered on. Cannot get drive info.'
-        print message
+        logger.error(message)
         return message
 
 
@@ -337,17 +342,16 @@ def get_power_status(mac):
     # check that a server in inventory has that mac address and ip
     interface = models.NetworkDevices.query.filter_by(mac=mac).first()
     if not interface:
-        print 'No server found with that mac address.'
+        logger.warning('No server found with that mac address.')
         return
 
     # check that the mac address is associated with an ip address
     ip = interface.ip
     server = models.Servers.query.filter_by(id=interface.server_id).first()
     if not ip:
-        print 'No ip address found for server {}.'\
-            .format()
+        logger.warning('No ip address found for server {}.'.format(server))
         return
-    print 'Getting power status for server at {}'.format(ip)
+    logger.info('Getting power status for server at {}'.format(ip))
 
     s = {
             'hostname': ip,
@@ -371,16 +375,16 @@ def remove_inventory(_id):
         db.session.commit()
         db.session.delete(server)
         db.session.commit()
-        print 'Server successfully deleted.'
+        logger.info('Server successfully deleted.')
     except Exception as e:
-        print 'Error deleting server {}: {}'.format(_id, e)
+        logger.error('Error deleting server {}: {}'.format(_id, e))
         db.session.rollback()
 
     try:
         s = models.Servers.query.get(_id)
-        print s
+        logger.debug(s)
     except IntegrityError as e:
-        print 'Could not remove hardware: {}'.format(e)
+        logger.error('Could not remove hardware: {}'.format(e))
         return e
 
 
@@ -391,35 +395,31 @@ def update_smc_server(mac, user):
     server = models.Servers.query.filter_by(id=interface.server_id).first()
 
     # create job
-    update_job = models.Jobs(message='Update server {}'.format(server),
-                             owner_id=user.id, start_time=datetime.now(),
-                             status=1)
-    try:
-        db.session.add(update_job)
-        db.session.commit()
-    except:
-        print 'Could not create job. Rolling back.'
-        db.session.rollback()
-        return
+    job = create_job(user, message='Update server {}'.format(server.id))
 
     ip = get_ip_from_mac(mac)
     if not ip:
-        print 'Could not fetch ip address from mac {}'.format(mac)
+        logger.warning('Could not fetch ip address from mac {}'.format(mac))
         ip = interface.ip
 
     if not ip:
-        raise MissingEntry('Could not get an IP address for mac {}'.format(mac))
+        message = 'Could not get an IP address for mac {}'.format(mac)
+        logger.error(message)
+        fail_job(job, message=message)
+        raise MissingEntry(message)
 
     if ip != interface.ip:
         interface.ip = ip
         try:
             db.session.add(interface)
             db.session.commit()
-        except:
-            'Could not update interface. Rolling back.'
+        except Exception as e:
+            message = 'Could not update interface.'
             db.session.rollback()
+            fail_job(job, message=message)
 
-    print 'Updating server {} at {}'.format(server, ip)
+    pending_job(job)
+    logger.info('Updating server {} at {}'.format(server, ip))
 
     s = {
             'hostname': ip,
@@ -431,102 +431,134 @@ def update_smc_server(mac, user):
 
     # get new info
     if not new_info:
-        print 'Could not fetch info for server.'
+        message = 'Could not fetch info for server.'
+        logger.error(message)
+        fail_job(job, message=message)
         return
 
     # delete all interfaces
-    print 'deleting interfaces'
+    logger.info('Deleting interfaces')
     interfaces = models.NetworkDevices.query \
         .filter_by(server_id=server.id).all()
     for _i in interfaces:
         if _i.type != 'oob':
             db.session.delete(_i)
 
-    print 'committing deletes'
-    db.session.commit()
-    print 'after commit'
+    try:
+        logger.debug('Committing interface deletes')
+        db.session.commit()
+    except Exception as e:
+        fail_job(job, message=e.message)
+        logger.warning('Could not delete interfaces. Rolling back.')
+        db.session.rollback()
 
     # add found interfaces
-    print 'adding interfaces'
+    logger.info('Adding interfaces')
     for interface in new_info['interfaces']:
         # check if same interface already exists
-        exists = models.NetworkDevices.query\
-            .filter_by(mac=interface.get('mac')).first()
+        try:
+            mac = interface.get('mac').lower()
+            exists = models.NetworkDevices.query \
+                .filter(and_(func.lower(models.NetworkDevices.mac) == mac,
+                             models.NetworkDevices.server_id == server.id)) \
+                .first()
+        except IntegrityError as e:
+            logger.debug('Skipping interface {}: {}'
+                         .format(interface.get('mac'), e))
+            continue
         if exists:
-            print 'interface {} exists.'.format(exists)
+            logger.debug('Interface {} exists.'.format(exists))
             new_interface = exists
         else:
-            print 'interface {} does not exist; creating new interface.'\
-                .format(interface.get('mac'))
+            logger.debug('Interface {} does not exist; creating new interface.'\
+                .format(interface.get('mac')))
             new_interface = models.NetworkDevices()
+        logger.debug('Setting attrs for interface {}.'.format(new_interface))
         for _k, _v in interface.items():
             if hasattr(new_interface, _k):
+                logger.debug('Current {}: {}'.format(_k, getattr(new_interface,
+                                                                 _k)))
                 setattr(new_interface, _k, _v)
+                logger.debug('New {}: {}'.format(_k, getattr(new_interface,
+                                                             _k)))
         if not exists:
-            print
-            print 'appending new interface'
+            logger.debug('Appending new interface')
             server.interfaces.append(new_interface)
+        db.session.commit()
 
-    print 'adding server info'
+    logger.info('Adding server info')
     for _k, _v in new_info.items():
         if _k != 'interfaces':
             if hasattr(server, _k):
-                setattr(server, _k, _v)
+                if getattr(server, _k) != _v:
+                    logger.debug("key '{}' hasn't changed:".format(_k))
+                    logger.debug('-> {}: {}'.format(_k, _v))
+                else:
+                    logger.debug("key '{}' has changed:".format(_k))
+                    logger.debug('-> {}: {}'.format(_k, _v))
+                    setattr(server, _k, _v)
             else:
-                print 'key "{}" not in server:'.format(_k)
-                print '-> {}: {}'.format(_k, _v)
+                logger.debug('key "{}" not in server:'.format(_k))
+                logger.debug('-> {}: {}'.format(_k, _v))
 
     try:
-        print 'adding interfaces'
-        for interface in server.interfaces:
-            db.session.add(interface)
-        print 'adding server'
+        logger.info('Adding server to database.')
         db.session.add(server)
-        print 'committing'
+        logger.debug('Committing server')
         db.session.commit()
-    except InvalidRequestError:
-        print "Non-unique server entry. Rolling back."
+    except InvalidRequestError as e:
+        message = "Non-unique server entry. Rolling back."
+        logger.error(message)
         db.session.rollback()
+        fail_job(job, message=message)
+        return
     except IntegrityError as e:
-        print 'Server {} already there: {}'.format(server, e)
+        message = 'Server {} already there: {}'.format(server, e)
+        logger.error(message)
         db.session.rollback()
+        fail_job(job, message=message)
         return
     except Exception as e:
-        print 'Unknown exception: {}'.format(e)
+        message = 'Unknown exception: {}'.format(e)
+        logger.error(message)
+        db.session.rollback()
+        fail_job(job, message=message)
         return
 
-    update_job.status = 3
-
-    try:
-        db.session.add(update_job)
-        db.session.commit()
-    except:
-        print 'Could not create job. Rolling back.'
-        db.session.rollback()
+    # set job as finished
+    finish_job(job)
 
 
-def update_dell_server(mac):
+def update_dell_server(mac, user):
 
     # check that a server in inventory has that mac address and ip
     interface = models.NetworkDevices.query.filter_by(mac=mac).first()
     if not interface:
-        print 'No server found with that mac address.'
+        logger.warning('No server found with that mac address.')
         return
 
     # check that the mac address is associated with an ip address
     ip = get_ip_from_mac(mac)
     if not ip:
-        print 'Could not fetch ip address from mac {}'.format(mac)
+        logger.warning('Could not fetch ip address from mac {}'.format(mac))
         ip = interface.ip
     if not ip:
+        logger.error('Could not get ip address from interface.')
         raise MissingEntry('Could not get an IP address for mac {}'.format(mac))
 
     server = models.Servers.query.filter_by(id=interface.server_id).first()
+
+    # create job
+    job = create_job(user, message='Update server {}'.format(server.id))
+
     if not ip:
-        print 'No ip address found for server {}.'\
-            .format()
+        logger.error('No ip address found for server {}.'.format(server))
         return
-    print 'Updating server at {}'.format(ip)
+
+    # set job as pending
+    pending_job(job)
+
+    logger.info('Updating server at {}'.format(ip))
 
     s = {
             'hostname': ip,
@@ -540,7 +572,7 @@ def update_dell_server(mac):
 
     # get new info
     if not new_info:
-        print 'Could not fetch info for server.'
+        logger.error('Could not fetch info for server.')
         return
 
     # delete all interfaces
@@ -551,7 +583,7 @@ def update_dell_server(mac):
     try:
         db.session.commit()
     except IntegrityError as e:
-        print 'Error deleting interfaces: {}'.format(e)
+        logger.error('Error deleting interfaces: {}'.format(e))
         db.session.rollback()
 
     for interface in new_info['interfaces']:
@@ -566,8 +598,8 @@ def update_dell_server(mac):
             if hasattr(server, _k):
                 setattr(server, _k, _v)
             else:
-                print 'key "{}" not in server:'.format(_k)
-                print '-> {}: {}'.format(_k, _v)
+                logger.debug('key "{}" not in server:'.format(_k))
+                logger.debug('-> {}: {}'.format(_k, _v))
 
     try:
         db.session.add(server)
@@ -575,11 +607,15 @@ def update_dell_server(mac):
             db.session.add(interface)
         db.session.commit()
     except InvalidRequestError:
-        print "Non-unique server entry. Rolling back."
+        message = "Non-unique server entry. Rolling back."
+        logger.error(message)
         db.session.rollback()
+        fail_job(job, message=message)
     except IntegrityError as e:
-        print 'Server {} already there: {}'.format(server, e)
+        message = 'Server {} already there: {}'.format(server, e)
+        logger.error(message)
         db.session.rollback()
+        fail_job(job, message=message)
         return
 
     # get server drive info
@@ -589,7 +625,7 @@ def update_dell_server(mac):
         drives = racadm.get_drive_info()
         check_or_add_drives(server, drives)
     else:
-        print 'Server is not powered on. Cannot get drive info.'
+        logger.warning('Server is not powered on. Cannot get drive info.')
 
     # get server virtual drive info
     try:
@@ -599,7 +635,10 @@ def update_dell_server(mac):
             db.session.delete(_drive)
         db.session.commit()
     except Exception as e:
-        print 'Error deleting VDs: {}'.format(e)
+        message = 'Error deleting VDs: {}'.format(e)
+        logger.error(message)
+        db.session.rollback()
+        fail_job(job, message=message)
 
     drives = racadm.get_vdisks()
     for _drive in drives:
@@ -611,12 +650,20 @@ def update_dell_server(mac):
             db.session.add(new_vd)
             db.session.commit()
         except IntegrityError:
+            message = 'Could not add VD {}.'.format(new_vd)
+            logger.error(message)
             db.session.rollback()
-            print 'Could not add VD {}.'.format(new_vd)
-        except InvalidRequestError:
+            fail_job(job, message=message)
+            return
+        except InvalidRequestError as e:
             db.session.rollback()
+            fail_job(job, message=e.message)
+            return
 
-    print 'Success'
+    # set job as finished
+    finish_job(job)
+
+    logger.info('Success')
 
 
 def check_or_add_drives(server, drives):
@@ -631,31 +678,32 @@ def check_or_add_drives(server, drives):
 
     # delete old entries to allow for new updated ones
     try:
-        print 'Deleting all drives for server {}.'.format(server.id)
+        logger.info('Deleting all drives for server {}.'.format(server.id))
         old_entries = models.ServerStorage.query\
             .filter_by(server_id=server.id).all()
         for entry in old_entries:
             db.session.delete(entry)
         db.session.commit()
     except Exception as e:
-        print 'Failed to delete drives for server {}: {}.'.format(server.id, e)
+        logger.error('Failed to delete drives for server {}: {}.'
+                     .format(server.id, e))
 
     for drive in drives:
-        print drive
-
+        logger.debug(drive)
         # check if drive MODEL is already in database
         drive_model, capacity = drive.get('model'), drive.get('capacity')
         try:
-            print 'Checking if {} {} in database already.'\
-                .format(capacity, drive_model)
+            logger.info('Checking if {} {} in database already.'
+                        .format(capacity, drive_model))
             check = models.StorageDevices.query.filter_by(model=drive_model,
                                                           capacity=capacity) \
                 .first()
 
             if not check:
-                print 'Adding new drive {} to database.'.format(drive_model)
+                logger.info('Adding new drive {} to database.'
+                            .format(drive_model))
                 new_drive = models.StorageDevices()
-                print drive.items()
+                logger.debug(drive.items())
                 for k, v in drive.items():
                     if hasattr(new_drive, k):
                         setattr(new_drive, k, v)
@@ -663,12 +711,13 @@ def check_or_add_drives(server, drives):
                     db.session.add(new_drive)
                     db.session.commit()
                 except (IntegrityError, InvalidRequestError):
-                    print 'Drive {} already in database.'.format(new_drive)
+                    logger.debug('Drive {} already in database.'
+                                .format(new_drive))
             else:
-                print 'Drive {} already in database.'.format(drive_model)
+                logger.debug('Drive {} already in database.'.format(drive_model))
 
         except InvalidRequestError:
-            print 'Error filtering query. Rolling back.'
+            logger.error('Error filtering query. Rolling back.')
             db.session.rollback()
 
         # add UNIQUE devices (with serial number) to server_storage table
@@ -677,7 +726,7 @@ def check_or_add_drives(server, drives):
                 if not _sn:
                     message = 'No serial number found for drive in slot {}. ' \
                               'Check that server is powered on.'.format(slot)
-                    print message
+                    logger.warning(message)
                 device_id = models.StorageDevices.query.\
                     filter_by(model=drive['model'], capacity=drive['capacity'])\
                     .first()
@@ -685,17 +734,18 @@ def check_or_add_drives(server, drives):
                     message = 'No info found for drive in slot {}. ' \
                               'Not adding drive to inventory.'\
                         .format(drive.get('slot'))
-                    print message
+                    logger.error(message)
                     continue
                 existing_drive = models.ServerStorage.query\
                     .filter_by(id=_sn).first()
                 if existing_drive:
-                    print 'Drive {} already in database.'.format(_sn)
+                    logger.debug('Drive {} already in database.'.format(_sn))
                     db.session.delete(existing_drive)
                     try:
                         db.session.commit()
                     except:
-                        print 'Error deleting existing drive. Rolling back.'
+                        logger.error('Error deleting existing drive. '
+                                     'Rolling back.')
                         db.session.rollback()
                         continue
                 add_drive = models.ServerStorage(device_id=device_id.id,
@@ -709,8 +759,107 @@ def check_or_add_drives(server, drives):
             except InvalidRequestError:
                 db.session.rollback()
             except IntegrityError as e:
-                print 'Could not add drive {} to server_storage: {}'\
-                    .format(_sn, e)
+                logger.error('Could not add drive {} to server_storage: {}'
+                             .format(_sn, e))
+
+
+# ============== JOB METHODS ======================
+def create_job(user, message=''):
+
+    # create job
+    now = datetime.now().strftime('%y/%m/%d %H:%M:%S')
+    update_job = models.Jobs(message=message,
+                             owner_id=user.id, start_time=now,
+                             status=1)
+    try:
+        db.session.add(update_job)
+        db.session.commit()
+    except:
+        logger.error('Could not create job. Rolling back.')
+        db.session.rollback()
+        raise AutobenchException('Job creation failed')
+
+    return update_job
+
+
+def finish_job(job):
+
+    # set job as finished
+    job.status = 3
+    job.end_time = datetime.now().strftime('%y/%m/%d %H:%M:%S')
+    try:
+        db.session.add(job)
+        db.session.commit()
+    except:
+        logger.error('Could not finish job. Rolling back.')
+        db.session.rollback()
+
+
+def pending_job(job):
+
+    # set job as finished
+    job.status = 2
+    try:
+        db.session.add(job)
+        db.session.commit()
+    except Exception as e:
+        logger.error('Could not set job to pending. Rolling back: {}'.format(e))
+        db.session.rollback()
+
+
+def add_job_detail(job, message):
+
+    detail = models.JobDetails()
+    detail.time = datetime.now().strftime('%y/%m/%d %H:%M:%S')
+    detail.message = message
+    job.details.append(detail)
+    try:
+        db.session.commit()
+    except Exception as e:
+        logger.error('Could not add detail to {}: {}'.format(job, e))
+        db.session.rollback()
+
+
+def fail_job(job, message=''):
+
+    # set job as failed
+    job.status = 4
+    job.end_time = datetime.now().strftime('%y/%m/%d %H:%M:%S')
+    add_job_detail(job, message)
+    try:
+        db.session.add(job)
+        db.session.commit()
+    except Exception as e:
+        logger.error('Could not fail job. Rolling back: {}'.format(e))
+        db.session.rollback()
+
+
+def get_all_jobs():
+
+    all_jobs = models.Jobs.query.order_by('id').all()
+    if all_jobs:
+        return all_jobs
+    return []
+
+
+def get_job(_id):
+
+    job = models.Jobs.query.filter_by(id=_id).first()
+    return job
+
+
+def delete_all_jobs():
+
+    all_jobs = models.Jobs.query.all()
+    for job in all_jobs:
+        db.session.delete(job)
+    try:
+        db.session.commit()
+        logger.info('Successfully deleted all jobs.')
+    except Exception as e:
+        logger.error('Could not delete all jobs. Rolling back: {}'.format(e))
+        db.session.rollback()
+        raise Exception('Could not delete jobs.')
 
 
 def main():
@@ -720,4 +869,8 @@ def main():
         print get_ip_from_mac(mac)
 
 if __name__ == '__main__':
+    logger = customlogger.create_logger(__name__)
     main()
+else:
+    print 'getting logger with name: {}'.format(__name__)
+    logger = customlogger.get_logger(__name__)

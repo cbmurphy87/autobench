@@ -6,6 +6,8 @@ import logging
 from logging.handlers import RotatingFileHandler
 from app.jinja.custom_filters import _split
 
+from aaebench import customlogger
+
 
 # setup app
 myapp = Flask(__name__)
@@ -34,3 +36,9 @@ myapp.permanent_session_lifetime = timedelta(seconds=10)
 myapp.jinja_env.filters['split'] = _split
 
 from app import views, models
+
+if __name__ == '__main__':
+    logger = customlogger.create_logger(__name__)
+else:
+    print 'getting logger with name: {}'.format(__name__)
+    logger = customlogger.get_logger(__name__)

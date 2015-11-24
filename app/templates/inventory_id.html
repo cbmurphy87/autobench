@@ -53,7 +53,7 @@
         var xhttp = new XMLHttpRequest();
         xhttp.onreadystatechange = function() {
             if (xhttp.readyState == 4 && xhttp.status == 200) {
-                alert('Updating server ' + id);
+                alert('You can view the status of the update in the "Jobs" tab.');
             }
         };
         xhttp.open("POST", '/inventory/update', true);
@@ -154,12 +154,10 @@
             <br>
             <a href="/inventory/edit/{{ server.id }}">Edit Server Info</a>
         </div>
-        {% if server.held_by == user.id %}
         <div style="float:right;padding:0 10px;background-color:#d3d5d8;text-align:center;border: 1px solid #414042;">
             <p>Has the server info changed? Update it!</p>
             <p><button onclick="updateServer('{{ server.id }}','')">Update</button></p>
         </div>
-        {% endif %}
     </div>
     <!-- Drive info -->
     <h2 style="padding-bottom: 10px;">Drive Info</h2>

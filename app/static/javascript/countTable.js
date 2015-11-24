@@ -5,7 +5,14 @@ $(document).ready(function () {
     var count_type = '';
     var unique_entries = [];
     for (var table_num = 0, table; table = count_tables[table_num]; table_num++) {
-        // insert tfoot if not present
+        // get tbody
+        var table_body = table.getElementsByTagName('tbody')[0];
+        // if no body, return
+        if (table_body.length < 1) {
+            console.log('Cannot count empty body.');
+            return;
+        }
+        // insert tfoot if not present and there is a body
         var tfeet = table.getElementsByTagName('tfoot');
         if (tfeet.length < 1) {
             var footer = table.createTFoot();
@@ -43,8 +50,7 @@ $(document).ready(function () {
             // add empty arrays for unique entries
             unique_entries.push([]);
         }
-        // get tbody
-        var table_body = table.getElementsByTagName('tbody')[0];
+
         // loop over rows in tbody
         for (var row_num = 0, row; row = table_body.rows[row_num]; row_num++) {
             // loop over columns in row

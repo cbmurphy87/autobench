@@ -329,6 +329,7 @@ def _inventory_edit_id(_id):
 @myapp.route('/inventory/update', methods=['GET', 'POST'])
 @login_required
 def _update_inventory():
+    user = g.user
     _id = request.get_json().get('id')
     try:
         server = Servers.query.filter_by(id=_id).first()
@@ -340,7 +341,7 @@ def _update_inventory():
             target = update_dell_server
         else:
             target = update_smc_server
-        p = Process(target=target, args=(mac,))
+        p = Process(target=target, args=(mac, user))
         p.start()
     except Exception as e:
         print 'Could not update server {}.: {}'.format(server.id, e)
@@ -526,7 +527,31 @@ def _deploy():
 @login_required
 def _jobs():
     user = g.user
-    return render_template('jobs.html', title='Jobs', user=user, jobs='')
+    jobs = get_all_jobs()
+    return render_template('jobs.html', title='Jobs', user=user, jobs=jobs)
+
+
+@myapp.route('/job/<_id>')
+@login_required
+def _job_id(_id):
+    user = g.user
+    job = get_job(_id)
+    if not job:
+        return redirect(url_for('_jobs'))
+    return render_template('job_id.html', title='Jobs', user=user, job=job)
+
+
+@myapp.route('/jobs/delete')
+@login_required
+def _jobs_delete():
+    user = g.user
+    if not user.admin:
+        return 'You must be admin to delete jobs!'
+    try:
+        delete_all_jobs()
+        return 'Successfully deleted all jobs.'
+    except Exception as e:
+        return e.message
 
 
 # ___________________ JENKINS JOBS ____________________

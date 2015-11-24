@@ -15,6 +15,10 @@ class Users(db.Model):
     authenticated = db.Column(db.Boolean, default=False)
     admin = db.Column(db.Boolean, default=False)
 
+    # relationships
+    jobs = db.relationship('Jobs', backref='creator', lazy='dynamic')
+
+    # methods
     def is_authenticated(self):
         return self.authenticated
 
@@ -184,6 +188,7 @@ class Jobs(db.Model):
         1: started
         2: pending
         3: finished
+        4: failed
     """
 
     id = db.Column(db.Integer, primary_key=True)
@@ -192,3 +197,29 @@ class Jobs(db.Model):
     start_time = db.Column(db.String(32))
     end_time = db.Column(db.String(32))
     status = db.Column(db.Integer, default=0)
+
+    details = db.relationship('JobDetails', backref='job', lazy='dynamic',
+                              cascade='all, delete, delete-orphan')
+
+    def __repr__(self):
+        return '<Jobs id {}>'.format(self.id)
+
+    def __str__(self):
+        return "JID {}".format(self.id)
+
+    def get_status(self):
+        mapping = {0: 'Unknown',
+                   1: 'Started',
+                   2: 'Pending',
+                   3: 'Completed',
+                   4: 'Failed'}
+
+        return mapping[self.status]
+
+
+class JobDetails(db.Model):
+
+    id = db.Column(db.Integer, primary_key=True)
+    job_id = db.Column(db.Integer, db.ForeignKey('jobs.id'))
+    time = db.Column(db.String(32))
+    message = db.Column(db.Text)
