@@ -587,14 +587,12 @@ def update_smc_server(mac, user):
         return
 
     # get server drive info
-    powered_on = ipmi.get_power_status()
-
-    if powered_on:
+    try:
         drives = ipmi.get_drive_info()
         logger.debug('Found drives: {}'.format(drives))
         check_or_add_drives(server, drives)
-    else:
-        logger.warning('Server is not powered on. Cannot get drive info.')
+    except Exception as e:
+        logger.warning('Cannot get drive info: {}'.format(e))
 
     # get server virtual drive info
     try:
