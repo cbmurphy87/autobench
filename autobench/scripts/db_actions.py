@@ -210,23 +210,34 @@ def add_interface(form, server_id, user):
     Add interface to server. Used to add oob interface for management.
     """
 
+    # get server object
+    server = models.Servers.query.filter_by(id=server_id).first()
+
+    # create job
+    job = create_job(user, message='Add oob interface to {}'.format(server))
+
+    # set job as pending
+    pending_job(job)
+
     # get ip address either from field, or translate from mac address
     if is_mac(form.network_address.data):
         mac_address = format_mac(form.network_address.data)
         try:
             ip_address = get_ip_from_mac(mac_address)
+            add_job_detail(job, message='Got ip address {}'.format(ip_address))
         except:
             ip_address = None
+            message = 'Could not get ip address for mac {}'.format(mac_address)
+            logger.warning(message)
+            add_job_detail(job, message=message)
     else:
         ip_address = form.network_address.data
         try:
             mac_address = get_mac_from_ip(ip_address)
         except:
-            mac_address = 'unknown'
-
-    server = models.Servers.query.filter_by(id=server_id).first()
-
-    job = create_job(user, 'Add oob interface to {}'.format(server))
+            message = 'Could not get mac address for ip {}'.format(ip_address)
+            logger.error(message)
+            fail_job(job, message=message)
 
     server_make = server.make
 
@@ -243,6 +254,7 @@ def add_interface(form, server_id, user):
     try:
         db.session.add(new_interface)
         db.session.commit()
+        add_job_detail(job, 'Added {}'.format(new_interface))
     except Exception as e:
         message = 'Error adding {}: {}'.format(new_interface, e)
         logger.error(message)
@@ -645,9 +657,6 @@ def update_dell_server(mac, user):
         ip = interface.ip
         fail_job(job, message=message)
         return
-
-    # create job
-    job = create_job(user, message='Update server {}'.format(server.id))
 
     if not ip:
         logger.error('No ip address found for server {}.'.format(server))
