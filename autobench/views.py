@@ -9,8 +9,7 @@ from sqlalchemy import sql, or_
 
 # ___________________________ App Imports ________________________
 from autobench import myapp, lm
-from autobench.forms import CreateJobForm, LoginForm, BuildStepForm, \
-    AddInventoryForm, DeployForm, EditInfoForm, EditInventoryForm
+from autobench.forms import *
 from models import Users, Servers
 
 # ___________________________ Standard Imports ________________________
@@ -278,7 +277,7 @@ def _add_inventory():
         p.start()
         return redirect('/inventory')
 
-    return render_template('add_inventory.html', title='Add Inventory',
+    return render_template('inventory_add.html', title='Add Inventory',
                            date=_get_date_last_modified(), user=user,
                            form=form)
 
@@ -294,6 +293,19 @@ def _inventory_id(_id):
                            user_holding=user_holding)
 
 
+@myapp.route('/inventory/<_id>/add_oob', methods=['GET', 'POST'])
+@login_required
+def _inventory_id_add_oob(_id):
+    user = g.user
+    form = AddInterfaceForm()
+    if form.validate_on_submit():
+        add_interface(form, _id, user)
+        return redirect('/inventory/{}'.format(_id))
+    return render_template('inventory_add_oob.html',
+                           title='Add Out of Band Interface', form=form,
+                           date=_get_date_last_modified(), user=user)
+
+
 @myapp.route('/inventory/edit/<_id>', methods=['GET', 'POST'])
 @login_required
 def _inventory_edit_id(_id):
@@ -301,7 +313,7 @@ def _inventory_edit_id(_id):
     server = Servers.query.get(_id)
     form = EditInventoryForm()
     if form.validate_on_submit():
-        message = update_server_info(form, _id)
+        message = edit_server_info(form, _id)
         flash(message)
         logger.debug(message)
         return redirect('/inventory/{}'.format(_id))

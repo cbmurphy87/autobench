@@ -144,7 +144,7 @@ class LoginForm(Form):
 
 class AddInventoryForm(Form):
     network_address = StringField('iDRAC/IPMI Mac/IP Address',
-                               validators=[DataRequired(), MacOrIP()])
+                                  validators=[DataRequired(), MacOrIP()])
     rack = IntegerField('Rack', validators=[DataRequired(),
                                             NumberRange(min=1, max=15)])
     u = IntegerField('U', validators=[DataRequired(),
@@ -175,3 +175,8 @@ class EditInventoryForm(Form):
     rack = StringField('Rack', validators=[DataRequired()])
     u = StringField('U', validators=[DataRequired()])
     name = StringField('Name')
+
+
+class AddInterfaceForm(Form):
+    network_address = StringField('Out of Band Mac/IP Address',
+                                  validators=[DataRequired(), MacOrIP()])

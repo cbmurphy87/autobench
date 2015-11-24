@@ -85,7 +85,7 @@ def get_ip_from_mac(mac):
 
     if addresses:
         return addresses.pop().get('ip_address')
-    raise Exception('Could not get ip address.')
+    raise Exception('No IP for MAC {} in DHCP leases file.'.format(mac))
 
 
 def get_mac_from_ip(ip):
@@ -113,7 +113,7 @@ def get_mac_from_ip(ip):
     raise Exception('Could not get mac address.')
 
 
-def update_server_info(form, _id):
+def edit_server_info(form, _id):
 
     server = models.Servers.query.filter_by(id=_id).first()
     if not server:
@@ -202,6 +202,53 @@ def add_inventory(form, user):
             # else, it's supermicro, do this
             logger.debug('Not a dell server. try supermicro.')
             return add_smc_info(nic_info=nic_info, form=form, user=user)
+
+
+def add_interface(form, server_id, user):
+
+    """
+    Add interface to server. Used to add oob interface for management.
+    """
+
+    # get ip address either from field, or translate from mac address
+    if is_mac(form.network_address.data):
+        mac_address = format_mac(form.network_address.data)
+        try:
+            ip_address = get_ip_from_mac(mac_address)
+        except:
+            ip_address = None
+    else:
+        ip_address = form.network_address.data
+        try:
+            mac_address = get_mac_from_ip(ip_address)
+        except:
+            mac_address = 'unknown'
+
+    server = models.Servers.query.filter_by(id=server_id).first()
+
+    job = create_job(user, 'Add oob interface to {}'.format(server))
+
+    server_make = server.make
+
+    new_interface = models.NetworkDevices(server_id=server_id)
+    new_interface.mac = mac_address
+    new_interface.ip = ip_address
+    if server_make.lower == 'dell':
+        new_interface.name = 'DRAC'
+    else:
+        new_interface.name = 'ipmi'
+    new_interface.slot = 'Dedicated'
+    new_interface.type = 'oob'
+
+    try:
+        db.session.add(new_interface)
+        db.session.commit()
+    except Exception as e:
+        message = 'Error adding {}: {}'.format(new_interface, e)
+        logger.error(message)
+        fail_job(job, message=message)
+
+    finish_job(job)
 
 
 def add_smc_info(nic_info, form, user):
@@ -463,16 +510,13 @@ def update_smc_server(mac, user):
     # create job
     job = create_job(user, message='Update server {}'.format(server.id))
 
-    ip = get_ip_from_mac(mac)
-    if not ip:
-        logger.warning('Could not fetch ip address from mac {}'.format(mac))
+    try:
+        ip = get_ip_from_mac(mac)
+    except Exception as e:
+        message = 'Could not get an IP address: {}'.format(e)
+        logger.warning(message)
         ip = interface.ip
-
-    if not ip:
-        message = 'Could not get an IP address for mac {}'.format(mac)
-        logger.error(message)
         fail_job(job, message=message)
-        raise MissingEntry(message)
 
     if ip != interface.ip:
         interface.ip = ip
@@ -482,7 +526,7 @@ def update_smc_server(mac, user):
             add_job_detail(job, 'Changed interface {} ip to {}.'
                            .format(interface, ip))
         except Exception as e:
-            message = 'Could not update interface {}.'.format(interface)
+            message = 'Could not update interface {}: {}.'.format(interface, e)
             db.session.rollback()
             fail_job(job, message=message)
 
@@ -521,6 +565,179 @@ def update_smc_server(mac, user):
         fail_job(job, message=message)
         logger.warning(message)
         db.session.rollback()
+
+    try:
+        update_server_info(server, new_info, job)
+    except:
+        message = 'Error updating server info.'
+        logger.error(message)
+        fail_job(job, message=message)
+        return
+
+    # get server drive info
+    powered_on = ipmi.get_power_status()
+
+    if powered_on:
+        drives = ipmi.get_drive_info()
+        logger.debug('Found drives: {}'.format(drives))
+        check_or_add_drives(server, drives)
+    else:
+        logger.warning('Server is not powered on. Cannot get drive info.')
+
+    # get server virtual drive info
+    try:
+        old_drives = models.VirtualStorageDevices.query \
+            .filter_by(server_id=server.id).all()
+        for _drive in old_drives:
+            db.session.delete(_drive)
+        db.session.commit()
+    except Exception as e:
+        message = 'Error deleting VDs: {}'.format(e)
+        logger.error(message)
+        db.session.rollback()
+        fail_job(job, message=message)
+
+    # get virtual drive info
+    logger.info('Adding VDs.')
+    drives = ipmi.get_vdisks()
+    for _drive in drives:
+        new_vd = models.VirtualStorageDevices(server_id=server.id)
+        for k, v in _drive.items():
+            if hasattr(new_vd, k):
+                setattr(new_vd, k, v)
+        try:
+            db.session.add(new_vd)
+            db.session.commit()
+        except IntegrityError:
+            message = 'Could not add VD {}.'.format(new_vd)
+            logger.error(message)
+            db.session.rollback()
+            fail_job(job, message=message)
+            return
+        except InvalidRequestError as e:
+            db.session.rollback()
+            fail_job(job, message=e.message)
+            return
+
+    # set job as finished
+    finish_job(job)
+
+
+def update_dell_server(mac, user):
+
+    # check that a server in inventory has that mac address and ip
+    interface = models.NetworkDevices.query.filter_by(mac=mac).first()
+    if not interface:
+        logger.warning('No server found with that mac address.')
+        return
+
+    server = models.Servers.query.filter_by(id=interface.server_id).first()
+
+    # create job
+    job = create_job(user, message='Update server {}'.format(server.id))
+
+    # check that the mac address is associated with an ip address
+    try:
+        ip = get_ip_from_mac(mac)
+    except Exception as e:
+        message = 'Could not get an IP address: {}'.format(e)
+        logger.warning(message)
+        ip = interface.ip
+        fail_job(job, message=message)
+        return
+
+    # create job
+    job = create_job(user, message='Update server {}'.format(server.id))
+
+    if not ip:
+        logger.error('No ip address found for server {}.'.format(server))
+        return
+
+    # set job as pending
+    pending_job(job)
+
+    logger.info('Updating server at {}'.format(ip))
+
+    s = {
+            'hostname': ip,
+            'username': 'root',
+            'password': 'Not24Get',
+            'verbose': True,
+        }
+
+    racadm = RacadmManager(**s)
+    new_info = racadm.get_server_info()
+
+    # get new info
+    if not new_info:
+        message = 'Could not fetch info for server.'
+        logger.error(message)
+        fail_job(job, message=message)
+        return
+
+    try:
+        delete_all_interfaces(server.id, job)
+    except Exception as e:
+        fail_job(job, message='Failed to delete interfaces: {}'.format(e))
+
+    try:
+        update_server_info(server, new_info, job)
+    except Exception:
+        message = 'Error updating server info.'
+        logger.error(message)
+        fail_job(job, message=message)
+        return
+
+    # get server drive info
+    powered_on = racadm.get_power_status()
+
+    if powered_on:
+        drives = racadm.get_drive_info()
+        check_or_add_drives(server, drives)
+    else:
+        logger.warning('Server is not powered on. Cannot get drive info.')
+
+    # get server virtual drive info
+    try:
+        old_drives = models.VirtualStorageDevices.query \
+            .filter_by(server_id=server.id).all()
+        for _drive in old_drives:
+            db.session.delete(_drive)
+        db.session.commit()
+    except Exception as e:
+        message = 'Error deleting VDs: {}'.format(e)
+        logger.error(message)
+        db.session.rollback()
+        fail_job(job, message=message)
+
+    # get virtual drive info
+    drives = racadm.get_vdisks()
+    for _drive in drives:
+        new_vd = models.VirtualStorageDevices(server_id=server.id)
+        for k, v in _drive.items():
+            if hasattr(new_vd, k):
+                setattr(new_vd, k, v)
+        try:
+            db.session.add(new_vd)
+            db.session.commit()
+        except IntegrityError:
+            message = 'Could not add VD {}.'.format(new_vd)
+            logger.error(message)
+            db.session.rollback()
+            fail_job(job, message=message)
+            return
+        except InvalidRequestError as e:
+            db.session.rollback()
+            fail_job(job, message=e.message)
+            return
+
+    # set job as finished
+    finish_job(job)
+
+    logger.info('Success')
+
+
+def update_server_info(server, new_info, job):
 
     # add found interfaces
     logger.info('Adding interfaces')
@@ -588,203 +805,37 @@ def update_smc_server(mac, user):
         logger.error(message)
         db.session.rollback()
         fail_job(job, message=message)
-        return
+        raise e
     except IntegrityError as e:
         message = 'Server {} already there: {}'.format(server, e)
         logger.error(message)
         db.session.rollback()
         fail_job(job, message=message)
-        return
+        raise e
     except Exception as e:
         message = 'Unknown exception: {}'.format(e)
         logger.error(message)
         db.session.rollback()
         fail_job(job, message=message)
-        return
-
-    # get server drive info
-    powered_on = ipmi.get_power_status()
-
-    if powered_on:
-        drives = ipmi.get_drive_info()
-        check_or_add_drives(server, drives)
-    else:
-        logger.warning('Server is not powered on. Cannot get drive info.')
-
-    # get server virtual drive info
-    try:
-        old_drives = models.VirtualStorageDevices.query \
-            .filter_by(server_id=server.id).all()
-        for _drive in old_drives:
-            db.session.delete(_drive)
-        db.session.commit()
-    except Exception as e:
-        message = 'Error deleting VDs: {}'.format(e)
-        logger.error(message)
-        db.session.rollback()
-        fail_job(job, message=message)
-
-    # get virtual drive info
-    drives = ipmi.get_vdisks()
-    for _drive in drives:
-        new_vd = models.VirtualStorageDevices(server_id=server.id)
-        for k, v in _drive.items():
-            if hasattr(new_vd, k):
-                setattr(new_vd, k, v)
-        try:
-            db.session.add(new_vd)
-            db.session.commit()
-        except IntegrityError:
-            message = 'Could not add VD {}.'.format(new_vd)
-            logger.error(message)
-            db.session.rollback()
-            fail_job(job, message=message)
-            return
-        except InvalidRequestError as e:
-            db.session.rollback()
-            fail_job(job, message=e.message)
-            return
-
-    # set job as finished
-    finish_job(job)
+        raise e
 
 
-def update_dell_server(mac, user):
-
-    # check that a server in inventory has that mac address and ip
-    interface = models.NetworkDevices.query.filter_by(mac=mac).first()
-    if not interface:
-        logger.warning('No server found with that mac address.')
-        return
-
-    # check that the mac address is associated with an ip address
-    ip = get_ip_from_mac(mac)
-    if not ip:
-        logger.warning('Could not fetch ip address from mac {}'.format(mac))
-        ip = interface.ip
-    if not ip:
-        logger.error('Could not get ip address from interface.')
-        raise MissingEntry('Could not get an IP address for mac {}'.format(mac))
-
-    server = models.Servers.query.filter_by(id=interface.server_id).first()
-
-    # create job
-    job = create_job(user, message='Update server {}'.format(server.id))
-
-    if not ip:
-        logger.error('No ip address found for server {}.'.format(server))
-        return
-
-    # set job as pending
-    pending_job(job)
-
-    logger.info('Updating server at {}'.format(ip))
-
-    s = {
-            'hostname': ip,
-            'username': 'root',
-            'password': 'Not24Get',
-            'verbose': True,
-        }
-
-    racadm = RacadmManager(**s)
-    new_info = racadm.get_server_info()
-
-    # get new info
-    if not new_info:
-        logger.error('Could not fetch info for server.')
-        return
+def delete_all_interfaces(_id, job):
 
     # delete all interfaces
     interfaces = models.NetworkDevices.query \
-        .filter_by(server_id=server.id).all()
+        .filter_by(server_id=_id).all()
     for interface in interfaces:
-        db.session.delete(interface)
+        if interface.type != 'oob':
+            db.session.delete(interface)
     try:
         db.session.commit()
+        add_job_detail(job, message='Deleted all interfaces.')
     except IntegrityError as e:
-        logger.error('Error deleting interfaces: {}'.format(e))
-        db.session.rollback()
-
-    for interface in new_info['interfaces']:
-        _i = models.NetworkDevices()
-        for _k, _v in interface.items():
-            if hasattr(_i, _k):
-                setattr(_i, _k, _v)
-        server.interfaces.append(_i)
-
-    for _k, _v in new_info.items():
-        if _k != 'interfaces':
-            if hasattr(server, _k):
-                setattr(server, _k, _v)
-            else:
-                logger.debug('key "{}" not in server:'.format(_k))
-                logger.debug('-> {}: {}'.format(_k, _v))
-
-    try:
-        db.session.add(server)
-        for interface in server.interfaces:
-            db.session.add(interface)
-        db.session.commit()
-    except InvalidRequestError:
-        message = "Non-unique server entry. Rolling back."
+        message = 'Error deleting interfaces: {}'.format(e)
         logger.error(message)
+        add_job_detail(job, message=message)
         db.session.rollback()
-        fail_job(job, message=message)
-    except IntegrityError as e:
-        message = 'Server {} already there: {}'.format(server, e)
-        logger.error(message)
-        db.session.rollback()
-        fail_job(job, message=message)
-        return
-
-    # get server drive info
-    powered_on = racadm.get_power_status()
-
-    if powered_on:
-        drives = racadm.get_drive_info()
-        check_or_add_drives(server, drives)
-    else:
-        logger.warning('Server is not powered on. Cannot get drive info.')
-
-    # get server virtual drive info
-    try:
-        old_drives = models.VirtualStorageDevices.query \
-            .filter_by(server_id=server.id).all()
-        for _drive in old_drives:
-            db.session.delete(_drive)
-        db.session.commit()
-    except Exception as e:
-        message = 'Error deleting VDs: {}'.format(e)
-        logger.error(message)
-        db.session.rollback()
-        fail_job(job, message=message)
-
-    # get virtual drive info
-    drives = racadm.get_vdisks()
-    for _drive in drives:
-        new_vd = models.VirtualStorageDevices(server_id=server.id)
-        for k, v in _drive.items():
-            if hasattr(new_vd, k):
-                setattr(new_vd, k, v)
-        try:
-            db.session.add(new_vd)
-            db.session.commit()
-        except IntegrityError:
-            message = 'Could not add VD {}.'.format(new_vd)
-            logger.error(message)
-            db.session.rollback()
-            fail_job(job, message=message)
-            return
-        except InvalidRequestError as e:
-            db.session.rollback()
-            fail_job(job, message=e.message)
-            return
-
-    # set job as finished
-    finish_job(job)
-
-    logger.info('Success')
 
 
 def check_or_add_drives(server, drives):
@@ -971,7 +1022,8 @@ def get_job(_id):
 
 def delete_all_jobs():
 
-    all_jobs = models.Jobs.query.all()
+    all_jobs = models.Jobs.query\
+        .filter(models.Jobs.status != 2).all()
     for job in all_jobs:
         db.session.delete(job)
     try:

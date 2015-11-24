@@ -5,7 +5,7 @@ from aaebench import customlogger
 
 
 def main():
-    myapp.run(host='0.0.0.0', port=8080, threaded=True, debug=False)
+    myapp.run(host='0.0.0.0', port=80, threaded=True, debug=False)
 
 if __name__ == '__main__':
     print 'creating logger with name: {}'.format(__name__)

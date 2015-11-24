@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block scripts %}
+    {{ super() }}
+    $(document).ready(function () {
+        $("#network_address").on('change paste input', function(){
+            var mac = this.value;
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function() {
+                var vi = document.getElementById("vendor_info");
+                if (xhttp.readyState == 4 && xhttp.status == 200) {
+                    vi.innerHTML = xhttp.responseText;
+                    vi.style.background = '#d3d5d8';
+                } else if (xhttp.readyState == 4) {
+                    vi.style.background = null;
+                    vi.innerHTML = '';
+                }
+            }
+            xhttp.open("GET", 'http://api.macvendors.com/' + mac, true);
+            xhttp.send();
+        });
+    });
+{% endblock %}
+
+{% block content %}
+    <h2>Add hardware</h2>
+    <div style="display:inline-block;width:100%;">
+        <div style="float:left;">
+            <form action="" method="POST" name="add_inventory">
+                {{ form.hidden_tag() }}
+                <div class="add_inventory">
+                {% set field = form.network_address %}
+                    <p>
+                        {{ field.label.text }}:<br>
+                        {% if field.label.text.lower().endswith('address') %}
+                        {{ field(autofocus=true) }}
+                        {% else %}
+                        {{ field }}
+                        {% endif %}
+                        {% for error in field.errors %}
+                            <span style="color:red;">[{{ error }}]</span>
+                        {% endfor %}
+                    </p>
+                </div>
+                <input type="submit" value="submit">
+            </form>
+        </div>
+        <div id="vendor_info" style="float:right;padding:20px;"></div>
+    </div>
+{% endblock %}

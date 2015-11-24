@@ -258,7 +258,8 @@
         </table>
     </div>
     {% else %}
-        No network interfaces found.
+        <p>No network interfaces found.</p>
+        <p><a href="/inventory/{{ server.id }}/add_oob">Add Out of Band Interface</a></p>
     {% endif %}
     <div style="padding-top: 10px;">
         <a href="/inventory">Back</a>
