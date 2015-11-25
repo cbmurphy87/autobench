@@ -5,7 +5,7 @@
 {# =============================================================== #}
 
 {% block links %}
-    {{ super() }}
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/filterTable.js') }}></script>
     <script type="text/javascript" src={{ url_for('static', filename='javascript/inventory.js') }}></script>
 {% endblock %}
 
@@ -21,6 +21,13 @@ function deleteAllJobs(id, next) {
         xhttp.open("GET", "/jobs/delete", true);
         xhttp.send();
     }
+    $(document).ready(function () {
+        $("#searchInput").keyup(
+            function () {
+                counttable();
+            }
+        )
+    });
 {% endblock %}
 
 {# =============================================================== #}
@@ -35,6 +42,7 @@ function deleteAllJobs(id, next) {
     <h2>Jobs</h2>
     <p>Jobs are shown newest to oldest.</p>
     {% if jobs %}
+    <p><input id="searchInput" placeholder="Filter"></p>
     <table id="aaetable" class="sortable pane bigtable stripped count">
         <thead>
             <tr class="header">
@@ -60,7 +68,7 @@ function deleteAllJobs(id, next) {
             {% endfor %}
             </tr>
         </thead>
-        <tbody>
+        <tbody id="fbody">
         {% for job in jobs %}
             <tr>
             {% for k, v in field_pairs %}

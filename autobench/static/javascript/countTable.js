@@ -1,4 +1,6 @@
-$(document).ready(function () {
+$(document).ready(function () {counttable()});
+
+function counttable() {
     var count_tables = $('table.count');
     // loop over tables to count
     var total_count = [];
@@ -53,7 +55,10 @@ $(document).ready(function () {
 
         // loop over rows in tbody
         for (var row_num = 0, row; row = table_body.rows[row_num]; row_num++) {
-            // loop over columns in row
+            // loop over non-hidden columns in row
+            if ($(row).css('display') == 'none') {
+                continue;
+            }
             for (var col_num = 0, col; col = row.cells[col_num]; col_num++) {
                 // initialize column in total_counts
                 var num_value = 0;
@@ -80,7 +85,7 @@ $(document).ready(function () {
                             }
                         } else if (count_types[col_num] == 'sum') {
                             num_value = parseInt(child_count.innerHTML);
-                            if (! isNaN(num_value)) {
+                            if (!isNaN(num_value)) {
                                 cell_count = cell_count + num_value;
                             }
                         }
@@ -132,7 +137,6 @@ $(document).ready(function () {
                     foot.innerHTML = value + " " + unit.toUpperCase();
                 }
                 if (count_type == 'sum') {
-                    console.log('sum');
                     foot.title = 'Sum of values.';
                 } else if (count_type == 'count') {
                     foot.title = 'Total count of rows.';
@@ -140,10 +144,4 @@ $(document).ready(function () {
             }
         }
     }
-    // display variables to check at end
-    console.log('Total counts: ', total_count);
-    console.log('Units: ', units);
-    console.log('Ignore columns: ', ignore_column);
-    console.log('Count types: ', count_types);
-    console.log('Unique entries: ', unique_entries);
-});
+}

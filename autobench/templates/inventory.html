@@ -9,8 +9,18 @@
 ('Drives','model'),('Capacity','capacity'),('Count','count')) %}
 
 {% block links %}
-    {{ super() }}
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/filterTable.js') }}></script>
     <script type="text/javascript" src={{ url_for('static', filename='javascript/inventory.js') }}></script>
+{% endblock %}
+
+{% block scripts %}
+    $(document).ready(function () {
+        $("#searchInput").keyup(
+            function () {
+                counttable();
+            }
+        )
+    });
 {% endblock %}
 
 {# =============================================================== #}
@@ -19,9 +29,10 @@
 
 {% block content %}
     <h2 id="testelement">Inventory</h2>
-    <div style="padding-bottom: 10px;">
+    <div>
         <h3>Machines available for testing:</h3>
     </div>
+    <p><input id="searchInput" placeholder="Filter"></p>
     <div class="pane-frame" style="width:100%;min-width:800px;">
         <table id="aaetable" class="sortable pane bigtable stripped count">
             <thead>
@@ -38,7 +49,7 @@
                     {% elif k in ['Count'] %}
                         {% set count_type = 'sum' %}
                         {% set units = 'none' %}
-                    {% elif k in ['ID', 'Model', 'Drives', 'CPUs', 'SKU'] %}
+                    {% elif k in ['ID', 'Model', 'Drives', 'CPUs', 'SKU', 'Rack'] %}
                         {% set count_type = 'unique' %}
                         {% set units = 'none' %}
                     {% else %}
@@ -54,7 +65,7 @@
                 {% endfor %}
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="fbody">
             {# loop over servers in inventory #}
             {% set col_counts = [] %}
             {% for server in servers %}

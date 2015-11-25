@@ -18,26 +18,23 @@
     <link href="https://fonts.googleapis.com/css?family=Droid+Serif" rel="stylesheet" type="text/css">
     <link href="https://fonts.googleapis.com/css?family=Droid+Sans" rel="stylesheet" type="text/css">
     <link href="https://fonts.googleapis.com/css?family=Nobile" rel="stylesheet" type="text/css">
-
     {% block links %}
-        <!-- No additional links -->
+    <!-- No additional links -->
     {% endblock %}
     <script>
     {% block scripts %}
-        <!-- No additional scripts -->
+    <!-- No additional scripts -->
     {% endblock %}
     </script>
     {# include all links to styles #}
     <style>
     {% block styles %}
-        <!-- No additional styles -->
+    <!-- No additional styles -->
     {% endblock %}
     </style>
     {% if title %}
-        <title>{{ title }} - AutoBench</title>
+    <title>{{ title }} - AutoBench</title>
     {% else %}
-        <title>AutoBench</title>
+    <title>AutoBench</title>
     {% endif %}
-
-
 {% endblock %}
