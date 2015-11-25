@@ -193,6 +193,14 @@ table.stripped tr:nth-child(even) {
     background: #d3d5d8;
 }
 
+table.stripped tr.odd {
+    background: #eceef0;
+}
+
+table.stripped tr.even {
+    background: #d3d5d8;
+}
+
 div.pane-header {
     font-weight: bold;
     padding-right: 24px;
@@ -288,12 +296,20 @@ img#bench {
     color: white;
 }
 
+#aaetable tr.heldserver {
+    background-color: #63A5FF;
+}
+
 #aaetable tr.heldserver:nth-child(odd) {
     background-color: #7cbeFF;
 }
 
-#aaetable tr.heldserver:nth-child(even) {
+#aaetable tr.heldserver.even {
     background-color: #63A5FF;
+}
+
+#aaetable tr.heldserver.odd {
+    background-color: #7cbeFF;
 }
 
 button {
