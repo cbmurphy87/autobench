@@ -339,7 +339,7 @@ def add_smc_info(nic_info, form, user, job):
     drives = ipmi.get_drive_info()
     if drives:
         message = 'Got drive info.'
-        check_or_add_drives(server, drives)
+        check_or_add_drives(server, drives, job)
     else:
         message = 'Could not get drive info.'
     add_job_detail(job, message=message)
@@ -623,7 +623,7 @@ def update_smc_server(mac, user):
     try:
         drives = ipmi.get_drive_info()
         logger.debug('Found drives: {}'.format(drives))
-        check_or_add_drives(server, drives)
+        check_or_add_drives(server, drives, job)
     except Exception as e:
         logger.warning('Cannot get drive info: {}'.format(e))
 
@@ -733,7 +733,7 @@ def update_dell_server(mac, user):
 
     if powered_on:
         drives = racadm.get_drive_info()
-        check_or_add_drives(server, drives)
+        check_or_add_drives(server, drives, job)
     else:
         logger.warning('Server is not powered on. Cannot get drive info.')
 
