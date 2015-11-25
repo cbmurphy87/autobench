@@ -183,19 +183,23 @@ def add_inventory(form, user):
     nic_info = {'ip_address': ip_address,
                 'mac_address': mac_address}
 
+    job = create_job(user, message='Adding server at {}'.format(ip_address))
+
     # get vendor info
     r = requests.get('http://api.macvendors.com/{}'.format(mac_address))
     vendor = r.text
     logger.debug('Detected server vendor: {}'.format(vendor))
     if 'dell' in vendor.lower():
-        logger.info('This server is a dell')
+        message = 'Detected server as Dell.'
+        logger.info(message)
         return add_dell_info(nic_info=nic_info, form=form, user=user)
     elif 'super' in vendor.lower():
-        logger.info('This server is a Supermicro')
+        message = 'Detected server as Supermicro.'
+        logger.info(message)
         return add_smc_info(nic_info=nic_info, form=form, user=user)
     else:
-        logger.warning('Could not detect server type. Trying both.')
-
+        message = 'Could not explicitly detect server type.'
+        logger.warning(message)
         try:
             return add_dell_info(nic_info=nic_info, form=form, user=user)
         except IOError:
@@ -263,11 +267,9 @@ def add_interface(form, server_id, user):
     finish_job(job)
 
 
-def add_smc_info(nic_info, form, user):
+def add_smc_info(nic_info, form, user, job):
 
     ip_address = nic_info.get('ip_address')
-
-    job = create_job(user, message='Add server at IP {}'.format(ip_address))
 
     # get server info here
     ipmi = SMCIPMIManager(hostname=ip_address, verbose=True)
@@ -275,9 +277,13 @@ def add_smc_info(nic_info, form, user):
 
     if server_info:
         message = 'Got server info.'
+        logger.debug(message)
+        add_job_detail(job, message=message)
     else:
-        message = 'Failed to fetch server info.'
-    add_job_detail(job, message=message)
+        message = 'Failed to get server info.'
+        logger.error(message)
+        fail_job(job, message=message)
+        raise IOError(message)
 
     # add models objects for server and its interfaces
     logger.info('Creating server and interface objects.')
@@ -318,6 +324,7 @@ def add_smc_info(nic_info, form, user):
                               'objects to database: {}'.format(e))
         return
     except IntegrityError as e:
+        db.session.rollback()
         logger.debug('Server {} already there: {}'.format(server, e))
         fail_job(job, message='Failed to add interface '
                               'objects to database: {}'.format(e))
@@ -325,6 +332,9 @@ def add_smc_info(nic_info, form, user):
 
     # get server drive info
     powered_on = ipmi.get_power_status()
+    message = 'Server is{} powered on'.format('' if powered_on else ' not')
+    add_job_detail(job, message=message)
+    logger.debug(message)
 
     drives = ipmi.get_drive_info()
     if drives:
@@ -334,18 +344,18 @@ def add_smc_info(nic_info, form, user):
         message = 'Could not get drive info.'
     add_job_detail(job, message=message)
 
-    # get server virtual drive info
+    # delete server virtual drive info
     try:
         old_drives = models.VirtualStorageDevices.query \
             .filter_by(server_id=server.id).all()
         for _drive in old_drives:
             db.session.delete(_drive)
         db.session.commit()
-        add_job_detail(job, message='Deleted all existing VDs.')
+        add_job_detail(job, message='Deleted all old VD entries.')
     except Exception as e:
+        db.session.rollback()
         message = 'Error deleting VDs: {}'.format(e)
         logger.error(message)
-        db.session.rollback()
         fail_job(job, message=message)
 
     # get virtual drive info
@@ -362,9 +372,9 @@ def add_smc_info(nic_info, form, user):
             logger.info(message)
             add_job_detail(job, message=message)
         except IntegrityError:
+            db.session.rollback()
             message = 'Could not add {}.'.format(new_vd)
             logger.error(message)
-            db.session.rollback()
             fail_job(job, message=message)
             return
         except InvalidRequestError as e:
@@ -375,7 +385,7 @@ def add_smc_info(nic_info, form, user):
     finish_job(job)
 
 
-def add_dell_info(nic_info, form, user):
+def add_dell_info(nic_info, form, user, job):
 
     ip_address = nic_info.get('ip_address')
     logger.info('Checking ip: {}'.format(ip_address))
@@ -390,16 +400,21 @@ def add_dell_info(nic_info, form, user):
     # get server info
     racadm = RacadmManager(**s)
     server_info = racadm.get_server_info()
-    if not server_info:
-        message = 'Error fetching data. Make sure server is connected.'
-        logger.error(message)
-        raise IOError(message)
+
+    if server_info:
+        message = 'Got server info.'
+        logger.debug(message)
+        add_job_detail(job, message=message)
     else:
-        logger.debug(server_info)
+        message = 'Failed to get server info.'
+        logger.error(message)
+        fail_job(job, message=message)
+        raise IOError(message)
 
     if 'drac' not in [x['name'].lower() for x in server_info.get('interfaces')]:
         message = 'Error getting server drac info.'
         logger.error(message)
+        fail_job(job, message)
         return message
 
     # add models objects for server and its interfaces
@@ -427,11 +442,18 @@ def add_dell_info(nic_info, form, user):
             db.session.add(interface)
         db.session.add(server)
         db.session.commit()
+        for interface in server.interfaces:
+            add_job_detail(job, message='Added {}'.format(interface))
     except InvalidRequestError:
         db.session.rollback()
-        logger.warning("Non-unique server entry. Rolling back.")
+        message = "Non-unique server entry. Rolling back."
+        fail_job(job, message=message)
+        logger.warning(message)
     except IntegrityError as e:
-        logger.debug('Server {} already there: {}'.format(server, e))
+        db.session.rollback()
+        message = 'Server {} already there: {}'.format(server, e)
+        logger.debug(message)
+        add_job_detail(job, message=message)
         return
 
     # get virtual disks
@@ -444,22 +466,33 @@ def add_dell_info(nic_info, form, user):
         try:
             db.session.add(new_vd)
             db.session.commit()
-        except IntegrityError:
+        except IntegrityError as e:
             db.session.rollback()
-            logger.error('Could not add VD {}.'.format(new_vd))
-        except InvalidRequestError:
+            message = 'Could not add VD {}: {}'.format(new_vd, e)
+            logger.error(message)
+            add_job_detail(job, message=message)
+        except InvalidRequestError as e:
             db.session.rollback()
+            message = 'Could not add VD {}: {}'.format(new_vd, e)
+            logger.error(message)
+            add_job_detail(job, message=message)
 
     # get server drive info
     powered_on = racadm.get_power_status()
+    message = 'Server is{} powered on'.format('' if powered_on else ' not')
+    add_job_detail(job, message=message)
+    logger.debug(message)
 
     if powered_on:
         drives = racadm.get_drive_info()
-        check_or_add_drives(server, drives)
+        check_or_add_drives(server, drives, job)
     else:
-        message = 'Server is not powered on. Cannot get drive info.'
+        message = 'Cannot get drive info.'
         logger.error(message)
+        add_job_detail(job, message=message)
+        finish_job(job)
         return message
+    finish_job(job)
 
 
 def get_power_status(mac):
@@ -845,7 +878,7 @@ def delete_all_interfaces(_id, job):
         db.session.rollback()
 
 
-def check_or_add_drives(server, drives):
+def check_or_add_drives(server, drives, job):
 
     """
     Check if drives are in database, else add them, since they are foreign
@@ -863,12 +896,13 @@ def check_or_add_drives(server, drives):
         for entry in old_entries:
             db.session.delete(entry)
         db.session.commit()
+        add_job_detail(job, message='Deleted all drive info.')
     except Exception as e:
         logger.error('Failed to delete drives for server {}: {}.'
                      .format(server.id, e))
+        add_job_detail(job, message='Failed to delete drive info.')
 
     for drive in drives:
-        logger.debug(drive)
         # check if drive MODEL is already in database
         drive_model, capacity = drive.get('model'), drive.get('capacity')
         try:
@@ -879,8 +913,8 @@ def check_or_add_drives(server, drives):
                 .first()
 
             if not check:
-                logger.info('Adding new drive {} to database.'
-                            .format(drive_model))
+                logger.info('Adding new drive {} {} to database.'
+                            .format(capacity, drive_model))
                 new_drive = models.StorageDevices()
                 logger.debug(drive.items())
                 for k, v in drive.items():
@@ -889,17 +923,21 @@ def check_or_add_drives(server, drives):
                 try:
                     db.session.add(new_drive)
                     db.session.commit()
-                except (IntegrityError, InvalidRequestError):
-                    logger.debug('Drive {} already in database.'
-                                .format(new_drive))
+                    add_job_detail(job, message='Added new {} {} to database.'
+                                   .format(capacity, drive_model))
+                except (IntegrityError, InvalidRequestError) as e:
+                    logger.debug('Drive {} already in database: {}'
+                                 .format(new_drive, e))
             else:
                 logger.debug('Drive {} already in database.'.format(drive_model))
 
-        except InvalidRequestError:
-            logger.error('Error filtering query. Rolling back.')
+        except InvalidRequestError as e:
             db.session.rollback()
+            message = 'Error adding {}: {}'.format(drive, e)
+            logger.error(message)
+            add_job_detail(job, message=message)
 
-        # add UNIQUE devices (with serial number) to server_storage table
+        # add devices (with serial number) to server_storage table
         for slot, _sn in drive['sns'].items():
             try:
                 if not _sn:
@@ -930,16 +968,20 @@ def check_or_add_drives(server, drives):
                 add_drive = models.ServerStorage(device_id=device_id.id,
                                                  server_id=server.id,
                                                  slot=slot)
-                # add serial number, if found
+                # add serial number, if found, else keep as None (NULL)
                 if _sn:
                     add_drive.serial_number = _sn
                 db.session.add(add_drive)
                 db.session.commit()
-            except InvalidRequestError:
+                add_job_detail(job, message='Added {}'.format(drive))
+            except (InvalidRequestError, IntegrityError) as e:
                 db.session.rollback()
-            except IntegrityError as e:
-                logger.error('Could not add drive {} to server_storage: {}'
-                             .format(_sn, e))
+                message = 'Could not add {} to server_storage: {}'\
+                    .format(drive, e)
+                logger.warning(message)
+                add_job_detail(job, message=message)
+
+    finish_job(job)
 
 
 # ============== JOB METHODS ======================

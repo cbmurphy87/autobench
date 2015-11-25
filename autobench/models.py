@@ -130,7 +130,9 @@ class ServerStorage(db.Model):
     info = db.relationship('StorageDevices')
 
     def __repr__(self):
-        return '<ServerStorage id {}>'.format(self.id)
+        return '<ServerStorage {}>'.format(self.serial_number
+                                           if self.serial_number
+                                           else 'id {}'.format(self.id))
 
 
 class ServerCommunication(db.Model):
