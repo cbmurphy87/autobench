@@ -296,7 +296,7 @@ img#bench {
     color: white;
 }
 
-#aaetable tr.heldserver {
+#aaetable tr.heldserver:nth-child(even) {
     background-color: #63A5FF;
 }
 

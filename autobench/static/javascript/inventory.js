@@ -10,13 +10,13 @@ function checkout(id, next) {
             // change row class if held by you
             if (jsonResponse.i_am_holder == true) {
                 // change class to highlight row
-                row.className = 'heldserver';
+                row.classList.add('heldserver');
                 // change link to release
                 row_a.setAttribute("onclick", "return release('" + id + "','')");
                 // change button to green
                 a_img.src = '/static/pictures/green.png';
             } else {
-                row.className = '';
+                row.classList.remove('heldserver');
                 row_a.setAttribute("onclick", "return release('" + id + "','')");
                 a_img.src = '/static/pictures/red.png';
             }
@@ -39,7 +39,7 @@ function release(id, next) {
             // change row class if held by you
             if (jsonResponse.i_am_holder == false) {
                 // change class to unhighlight row
-                row.className = '';
+                row.classList.remove('heldserver');
                 var row_a = row.getElementsByTagName("A")[0];
                 // change link to checkout
                 row_a.setAttribute("onclick", "return checkout('" + id + "','')");
@@ -49,7 +49,7 @@ function release(id, next) {
                 a_img.src = '/static/pictures/blue.png';
 
             } else {
-                row.className = '';
+                row.classList.remove('heldserver');
                 var row_a = row.getElementsByTagName("A")[0];
                 var row_img = row_a.getElementsByTagName("IMG")[0];
                 row_img.src = '/static/pictures/red.png';
