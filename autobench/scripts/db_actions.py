@@ -60,7 +60,7 @@ def format_mac(mac):
     mac = mac.replace('-', '')
     mac = mac.lower()
     assert len(mac) == 12 and mac.isalnum(), 'MAC is in invalid form.'
-    return ':'.join([mac[x:x+2] for x in range(0, len(mac), 2)])
+    return ':'.join([mac[x:x+2].upper() for x in range(0, len(mac), 2)])
 
 
 def get_ip_from_mac(mac):
@@ -246,9 +246,9 @@ def add_interface(form, server_id, user):
     server_make = server.make
 
     new_interface = models.NetworkDevices(server_id=server_id)
-    new_interface.mac = mac_address
+    new_interface.mac = format_mac(mac_address)
     new_interface.ip = ip_address
-    if server_make.lower == 'dell':
+    if server_make.lower() == 'dell':
         new_interface.name = 'DRAC'
     else:
         new_interface.name = 'ipmi'

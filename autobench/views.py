@@ -99,7 +99,7 @@ def _deploy_server(form):
     salt_master_manager.connection.exec_command(' '.join(command))
 
     # reboot server to PXE
-    if server_type.lower == 'dell':
+    if server_type.lower() == 'dell':
         ipmi = RacadmManager(ipmi_ip)
     else:
         ipmi = SMCIPMIManager(ipmi_ip)
