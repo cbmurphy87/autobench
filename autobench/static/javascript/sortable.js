@@ -164,6 +164,14 @@ sorttable = {
                     }
 
                     delete row_array;
+
+                    // update row striping, if present
+                    if (typeof updateStriping == 'function') {
+                        console.log('calling updateStriping now!');
+                        updateStriping();
+                    } else {
+                        console.log('no striping')
+                    }
                 });
             }
         }

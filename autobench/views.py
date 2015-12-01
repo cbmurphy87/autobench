@@ -100,8 +100,10 @@ def _deploy_server(form):
 
     # reboot server to PXE
     if server_type.lower() == 'dell':
+        logger.debug('Detected server is a Dell. Using RACADM.')
         ipmi = RacadmManager(ipmi_ip)
     else:
+        logger.debug('Detected server is not a Dell. Using IPMI.')
         ipmi = SMCIPMIManager(ipmi_ip)
 
     ipmi.boot_once('PXE', reboot=True)

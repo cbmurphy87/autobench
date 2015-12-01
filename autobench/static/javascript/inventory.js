@@ -73,28 +73,10 @@ function update(id, next) {
     xhttp.send(JSON.stringify({id: id, next: next}));
 }
 
-function _filterTable(field) {
-    var inventoryTable = document.getElementById("aaetable");
-    var tbody = inventoryTable.getElementsByTagName("tbody")[0];
-    var sv = field.options[field.selectedIndex].value;
-    for (var i = 2, row; row = tbody.rows[i]; i++) {
-        var str = row.innerHTML;
-        // remove all hidden rows if "All" is selected
-        if (sv == 'All') {
-            row.style.display = null;
-        } else {
-            if (str.indexOf(sv) <= 0) {
-                row.style.display='none';
-            }
-        }
-    }
-}
-
 function updateStriping() {
     var tables = document.getElementsByTagName("tbody");
     for (var i = 0, table; table = tables[i]; i++) {
          var k = 0;
-        console.log('Updating striping');
         for (var j = 0, row; row = table.rows[j]; j++) {
             if (!(row.style.display === "none")) {
                 if (k % 2) {
