@@ -134,7 +134,7 @@ function counttable() {
                 } else if (unit == 'none' || unit == null) {
                     foot.innerHTML = value;
                 } else {
-                    foot.innerHTML = value + " " + unit.toUpperCase();
+                    foot.innerHTML = Math.round(value * 100) / 100 + " " + unit.toUpperCase();
                 }
                 if (count_type == 'sum') {
                     foot.title = 'Sum of values.';

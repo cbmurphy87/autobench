@@ -92,7 +92,7 @@
                         <div>
                             {{ drive[v] }}
                             {% if k == 'Capacity' %}
-                            <span class="custom_count" style="display:none">{{ drive[v]|split(0)|int }}</span>
+                            <span class="custom_count" style="display:none">{{ drive['capacity']|split(0)|int * drive['count']|int }}</span>
                             {% elif k == 'Count' %}
                             <span class="custom_count" style="display:none">{{ drive[v]|int }}</span>
                             {% else %}

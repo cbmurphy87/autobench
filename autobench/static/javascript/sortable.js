@@ -16,6 +16,8 @@
  */
 
 
+
+
 var stIsIE = /*@cc_on!@*/false;
 
 sorttable = {
@@ -169,8 +171,6 @@ sorttable = {
                     if (typeof updateStriping == 'function') {
                         console.log('calling updateStriping now!');
                         updateStriping();
-                    } else {
-                        console.log('no striping')
                     }
                 });
             }
@@ -182,8 +182,15 @@ sorttable = {
         sortfn = sorttable.sort_alpha;
         for (var i = 0; i < table.tBodies[0].rows.length; i++) {
             text = sorttable.getInnerText(table.tBodies[0].rows[i].cells[column]);
-            if (text != '') {
+            if (text != '' && text != 'None') {
+                // check for currency
                 if (text.match(/^-?[£$¤]?[\d,.]+%?$/)) {
+                    console.log('numeric');
+                    return sorttable.sort_numeric;
+                }
+                // check for numbers
+                if (!isNaN(text)) {
+                    console.log('NaN!');
                     return sorttable.sort_numeric;
                 }
                 // check for a date: dd/mm/yyyy or dd/mm/yy
@@ -192,6 +199,7 @@ sorttable = {
                 possdate = text.match(sorttable.DATE_RE)
                 if (possdate) {
                     // looks like a date
+                    console.log('date');
                     first = parseInt(possdate[1]);
                     second = parseInt(possdate[2]);
                     if (first > 12) {
@@ -207,6 +215,7 @@ sorttable = {
                 }
             }
         }
+        console.log(table + '.' + column + ': ' + text.trim());
         return sortfn;
     },
 
@@ -237,14 +246,17 @@ sorttable = {
         else {
             switch (node.nodeType) {
                 case 3:
+                    console.log('node' + node + 'is case 3');
                     if (node.nodeName.toLowerCase() == 'input') {
                         return node.value.replace(/^\s+|\s+$/g, '');
                     }
                 case 4:
+                    console.log('node' + node + 'is case 4');
                     return node.nodeValue.replace(/^\s+|\s+$/g, '');
                     break;
                 case 1:
                 case 11:
+                    console.log('node' + node + 'is case 1 or 11');
                     var innerText = '';
                     for (var i = 0; i < node.childNodes.length; i++) {
                         innerText += sorttable.getInnerText(node.childNodes[i]);
@@ -252,6 +264,7 @@ sorttable = {
                     return innerText.replace(/^\s+|\s+$/g, '');
                     break;
                 default:
+                    console.log('node' + node + 'is case default');
                     return '';
             }
         }
