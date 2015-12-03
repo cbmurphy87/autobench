@@ -185,12 +185,10 @@ sorttable = {
             if (text != '' && text != 'None') {
                 // check for currency
                 if (text.match(/^-?[£$¤]?[\d,.]+%?$/)) {
-                    console.log('numeric');
                     return sorttable.sort_numeric;
                 }
                 // check for numbers
-                if (!isNaN(text)) {
-                    console.log('NaN!');
+                if (!isNaN(text.split(' ')[0])) {
                     return sorttable.sort_numeric;
                 }
                 // check for a date: dd/mm/yyyy or dd/mm/yy
@@ -199,7 +197,6 @@ sorttable = {
                 possdate = text.match(sorttable.DATE_RE)
                 if (possdate) {
                     // looks like a date
-                    console.log('date');
                     first = parseInt(possdate[1]);
                     second = parseInt(possdate[2]);
                     if (first > 12) {
@@ -215,7 +212,6 @@ sorttable = {
                 }
             }
         }
-        console.log(table + '.' + column + ': ' + text.trim());
         return sortfn;
     },
 
@@ -286,9 +282,9 @@ sorttable = {
      each sort function takes two parameters, a and b
      you are comparing a[0] and b[0] */
     sort_numeric: function (a, b) {
-        aa = parseFloat(a[0].replace(/[^0-9.-]/g, ''));
+        aa = parseFloat(a[0].replace(/[^0-9.-]/g, '').split(' ')[0]);
         if (isNaN(aa)) aa = 0;
-        bb = parseFloat(b[0].replace(/[^0-9.-]/g, ''));
+        bb = parseFloat(b[0].replace(/[^0-9.-]/g, '').split(' ')[0]);
         if (isNaN(bb)) bb = 0;
         return aa - bb;
     },
