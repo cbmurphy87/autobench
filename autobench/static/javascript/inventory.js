@@ -14,7 +14,7 @@ function checkout(id, next) {
                 // change link to release
                 row_a.setAttribute("onclick", "return release('" + id + "','')");
                 // change button to green
-                a_img.src = '/static/pictures/green.png';
+                a_img.src = '/static/pictures/' + jsonResponse.color + '.png';
             } else {
                 row.classList.remove('heldserver');
                 row_a.setAttribute("onclick", "return release('" + id + "','')");
@@ -46,7 +46,7 @@ function release(id, next) {
                 row_a.title = jsonResponse.title;
                 // change image to blue circle
                 var a_img = row_a.getElementsByTagName("IMG")[0];
-                a_img.src = '/static/pictures/blue.png';
+                a_img.src = '/static/pictures/' + jsonResponse.color + '.png';
 
             } else {
                 row.classList.remove('heldserver');

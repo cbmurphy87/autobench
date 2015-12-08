@@ -154,10 +154,17 @@
             <br>
             <a href="/inventory/edit/{{ server.id }}">Edit Server Info</a>
         </div>
+        {% if server.held_by == user.id %}
+        {% if server.dirty %}
+        <div style="float:right;padding:0 10px;background-color:#B7D433;text-align:center;border: 1px solid #414042;">
+            <p>This server is dirty! You should update it!</p>
+        {% else %}
         <div style="float:right;padding:0 10px;background-color:#d3d5d8;text-align:center;border: 1px solid #414042;">
             <p>Has the server info changed? Update it!</p>
+        {% endif %}
             <p><button onclick="updateServer('{{ server.id }}','')">Update</button></p>
         </div>
+        {% endif %}
     </div>
     <!-- Drive info -->
     <h2 style="padding-bottom: 10px;">Drive Info</h2>

@@ -101,16 +101,24 @@
                         </div>
                         {% endfor %}
                         {% elif v == 'available' %}
-                            {% if server['available'] %}
+                            {# set bubble color and hover title #}
+                            {% if server.dirty %}
+                                {% set color = 'yellow' %}
+                            {% elif server.available %}
                                 {% set color = 'blue' %}
+                            {% elif server.held_by == user.id %}
+                                {% set color = 'green' %}
+                            {% else %}
+                                {% set color = 'red' %}
+                            {% endif %}
+                            {# set row color #}
+                            {% if server.available %}
                                 {% set onclick = "checkout('{}','')".format(server.id) %}
                                 {% set hover_title = 'Check out this server' %}
-                            {% elif server['held_by'] == user.id %}
-                                {% set color = 'green' %}
+                            {% elif server.held_by == user.id %}
                                 {% set onclick = "release('{}','')".format(server.id) %}
                                 {% set hover_title = 'Release this server' %}
                             {% else %}
-                                {% set color = 'red' %}
                                 {% set onclick = "alert(\"You cannot check out this server\")".format(server.id) %}
                                 {% set hover_title = 'This server is held by {}'.format(server.holder) %}
                             {% endif %}

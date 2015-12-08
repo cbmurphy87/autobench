@@ -771,10 +771,29 @@ def update_dell_server(mac, user):
             fail_job(job, message=e.message)
             return
 
+    try:
+        mark_server_as_dirty(server.id, dirty=False)
+    except Exception as e:
+        message = 'Error setting server to not dirty: {}'.format(e)
+        logger.error(message)
+        fail_job(job, message=message)
+
     # set job as finished
     finish_job(job)
 
     logger.info('Success')
+
+
+def mark_server_as_dirty(server_id, dirty=True):
+
+    server = models.Servers.query.filter_by(id=server_id).first()
+    logger.debug('Marking {} as {}.'.format(server,
+                                            'dirty' if dirty else 'clean'))
+    server.dirty = dirty
+    db.session.add(server)
+    db.session.commit()
+    logger.debug('Server {} is now {}.'.format(server,
+                                               'dirty' if dirty else 'clean'))
 
 
 def update_server_info(server, new_info, job):
@@ -980,6 +999,11 @@ def check_or_add_drives(server, drives, job):
                 try:
                     existing_drive = models.ServerStorage.query\
                         .filter_by(serial_number=_sn).first()
+
+                    # make old drive owner server dirty
+                    mark_server_as_dirty(existing_drive.server_id)
+
+                    # change drive ownership
                     existing_drive.server_id = server.id
                     existing_drive.slot = slot
                     db.session.add(existing_drive)

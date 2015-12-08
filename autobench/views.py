@@ -400,6 +400,9 @@ def _checkout_id():
             holder_name = str(server.holder)
             title = 'This server is held by {}'.format(holder_name)
             color = 'red'
+        if server.dirty:
+            logger.info('Server is dirty.')
+            color = 'yellow'
         server_json = JSONEncoder().encode({'available': server.available,
                                             'i_am_holder': i_am_holder,
                                             'title': title,
@@ -473,6 +476,9 @@ def _release():
             title = 'Server in unknown state'
             server.available = False
             color = 'red'
+        if server.dirty:
+            logger.info('Server is dirty.')
+            color = 'yellow'
         i_am_holder = False
 
         server_json = JSONEncoder().encode({'available': server.available,
