@@ -55,7 +55,7 @@
                     {% elif k in ['Count'] %}
                         {% set count_type = 'sum' %}
                         {% set units = 'none' %}
-                    {% elif k in ['ID', 'Model', 'Drives', 'CPUs', 'SKU', 'Rack'] %}
+                    {% elif k in ['ID', 'Model', 'Drives', 'CPUs', 'SKU', 'Rack', 'U'] %}
                         {% set count_type = 'unique' %}
                         {% set units = 'none' %}
                     {% else %}

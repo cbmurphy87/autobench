@@ -974,7 +974,23 @@ def check_or_add_drives(server, drives, job):
                 db.session.add(add_drive)
                 db.session.commit()
                 add_job_detail(job, message='Added {}'.format(drive))
-            except (InvalidRequestError, IntegrityError) as e:
+            except IntegrityError:
+                # drive is probably already in database; just change ownership
+                db.session.rollback()
+                try:
+                    existing_drive = models.ServerStorage.query\
+                        .filter_by(serial_number=_sn).first()
+                    existing_drive.server_id = server.id
+                    existing_drive.slot = slot
+                    db.session.add(existing_drive)
+                    db.session.commit()
+                except Exception as e:
+                    db.session.rollback()
+                    message = 'Error changing ownership of {}: {}'\
+                        .format(existing_drive, e)
+                    logger.error(message)
+                    add_job_detail(job, message)
+            except InvalidRequestError as e:
                 db.session.rollback()
                 message = 'Could not add {} to server_storage: {}'\
                     .format(drive, e)
