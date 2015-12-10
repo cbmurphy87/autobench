@@ -2,6 +2,10 @@
 
 {% set server_fields = ('rack', 'u', 'name') %}
 
+{% if user.admin %}
+{% set server_fields = server_fields + ('held_by',) %}
+{% endif %}
+
 {% block content %}
     <h2>Server Info</h2>
     <form action="" method="POST" name="edit_my_info">

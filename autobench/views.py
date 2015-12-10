@@ -6,6 +6,7 @@ from flask import render_template, flash, redirect, session, url_for, request, \
 from flask.ext.login import login_user, logout_user, current_user, \
     login_required
 from sqlalchemy import sql, or_
+from wtforms.ext.sqlalchemy.fields import QuerySelectField
 
 # ___________________________ App Imports ________________________
 from autobench import myapp, lm
@@ -313,7 +314,12 @@ def _inventory_id_add_oob(_id):
 def _inventory_edit_id(_id):
     user = g.user
     server = Servers.query.get(_id)
-    form = EditInventoryForm()
+    ChangeForm = makeEditForm(holder=server.held_by)
+    form = ChangeForm()
+    form.held_by = QuerySelectField('Owner', get_label='id',
+                                    query_factory=models.Users.query.
+                                    order_by('email').all,
+                                    default=server.holder)
     if form.validate_on_submit():
         message = edit_server_info(form, _id)
         flash(message)
@@ -321,6 +327,7 @@ def _inventory_edit_id(_id):
         return redirect('/inventory/{}'.format(_id))
     elif request.method == 'POST':
         flash('Invalid info. Try again.')
+
     for attr in server.__dict__.keys():
         if attr in form.data.keys():
             field = getattr(form, attr)
@@ -625,7 +632,19 @@ def _jenkins_job_info(jobname):
     return redirect('/jenkins_jobs')
 
 
-# ________________________ Debug __________________________
+# ________________________ ADMIN __________________________
+@myapp.route('/admin', methods=['GET', 'POST'])
+@login_required
+def _admin():
+    user = g.user
+    form = ChangeServerOwnerForm()
+    if form.validate_on_submit():
+        flash('You selected {} and {}.'.format(form.server.data,
+                                               form.owner.data))
+    return render_template('admin.html', title='Admin', user=user, form=form,
+                           date=_get_date_last_modified())
+
+
 @myapp.route('/debug', methods=['GET'])
 @login_required
 def _debug():
@@ -682,9 +701,7 @@ def internal_error(error):
     return render_template('500.html', user=user), 500
 
 if __name__ == '__main__':
-    print 'creating logger with name: {}'.format(__name__)
     logger = customlogger.create_logger('views')
     main()
 else:
-    print 'getting logger with name: {}'.format(__name__)
     logger = customlogger.get_logger(__name__)

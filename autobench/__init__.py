@@ -24,7 +24,6 @@ file_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s: '
 myapp.logger.setLevel(logging.INFO)
 file_handler.setLevel(logging.INFO)
 myapp.logger.addHandler(file_handler)
-myapp.logger.info('microblog startup')
 
 # configure environment
 myapp.jinja_env.trim_blocks = True

@@ -12,6 +12,7 @@
             var selection = this.options[this.selectedIndex].value;
             if (selection == '__None') {
                 document.getElementById("os").disabled = true;
+                document.getElementById("os").value = '__None';
             } else {
                 document.getElementById("os").disabled = false;
             }

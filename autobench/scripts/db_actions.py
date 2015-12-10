@@ -120,8 +120,17 @@ def edit_server_info(form, _id):
         return 'Could not find server.'
 
     for field, data in form.data.items():
-        if hasattr(server, field):
+        if hasattr(server, field) and type(data) in (str, unicode):
+            logger.debug('Setting field {} to {}.'.format(field, data))
             setattr(server, field, data)
+        elif hasattr(server, field):
+            if not data:
+                message = 'Setting other field {} to None.'.format(field)
+                setattr(server, field, None)
+            else:
+                message = 'Setting other field {} to {}.'.format(field, data.id)
+                setattr(server, field, data.id)
+            logger.debug(message)
 
     try:
         db.session.add(server)
@@ -1134,5 +1143,4 @@ if __name__ == '__main__':
     logger = customlogger.create_logger(__name__)
     main()
 else:
-    print 'getting logger with name: {}'.format(__name__)
     logger = customlogger.get_logger(__name__)

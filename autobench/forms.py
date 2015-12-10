@@ -175,8 +175,33 @@ class EditInventoryForm(Form):
     rack = StringField('Rack', validators=[DataRequired()])
     u = StringField('U', validators=[DataRequired()])
     name = StringField('Name')
+    held_by = QuerySelectField('Owner', query_factory=None,
+                               get_label='email')
 
 
 class AddInterfaceForm(Form):
     network_address = StringField('Out of Band Mac/IP Address',
                                   validators=[DataRequired(), MacOrIP()])
+
+
+class ChangeServerOwnerForm(Form):
+    server = QuerySelectField('Server', get_label='id', allow_blank=True,
+                              blank_text='Select a server',
+                              query_factory=models.Servers.query.all)
+    owner = QuerySelectField('Owner', query_factory=models.Users.query.all,
+                             get_label='email')
+
+
+def makeEditForm(holder):
+    class EditInventoryForm(Form):
+        rack = StringField('Rack', validators=[DataRequired()])
+        u = StringField('U', validators=[DataRequired()])
+        name = StringField('Name')
+        held_by = QuerySelectField('Owner', get_label='email', allow_blank=True,
+                                   blank_text='None',
+                                   query_factory=models.Users.query.
+                                   order_by('email').all,
+                                   default=models.Users.query.
+                                   filter_by(id=holder).first())
+        print held_by
+    return EditInventoryForm

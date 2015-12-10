@@ -11,5 +11,4 @@ if __name__ == '__main__':
     logger = customlogger.create_logger(__name__)
     main()
 else:
-    print 'getting logger with name: {}'.format(__name__)
     logger = customlogger.get_logger(__name__)
