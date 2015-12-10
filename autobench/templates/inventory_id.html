@@ -154,7 +154,7 @@
             <br>
             <a href="/inventory/edit/{{ server.id }}">Edit Server Info</a>
         </div>
-        {% if server.held_by == user.id %}
+        {% if server.held_by == user.id or user.admin %}
         {% if server.dirty %}
         <div style="float:right;padding:0 10px;background-color:#B7D433;text-align:center;border: 1px solid #414042;">
             <p>This server is dirty! You should update it!</p>
