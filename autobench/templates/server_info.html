@@ -4,7 +4,7 @@
 
 {% set server_fields = (('ID', 'id'),('Host Name','host_name'),
 ('Model','model'),('CPU Count','cpu_count'),('CPU Model','cpu_model'),
-('Memory','memory_capacity')) %}
+('Memory','memory_capacity'),('Rack','rack'),('U','u'),('Groups','groups')) %}
 
 {# =============================================================== #}
 {# set data #}
@@ -29,7 +29,11 @@
                         {{ k }}
                     </td>
                     <td>
+                        {% if v == 'groups'%}
+                            {{ server.groups|join(',') }}
+                        {% else %}
                         {{ server[v] }}
+                        {% endif %}
                     </td>
                 </tr>
             {% endfor %}
