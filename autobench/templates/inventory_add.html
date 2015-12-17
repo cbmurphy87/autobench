@@ -9,8 +9,20 @@
             xhttp.onreadystatechange = function() {
                 var vi = document.getElementById("vendor_info");
                 if (xhttp.readyState == 4 && xhttp.status == 200) {
-                    vi.innerHTML = xhttp.responseText;
+                    vendor = xhttp.responseText;
+                    vi.innerHTML = vendor;
                     vi.style.background = '#d3d5d8';
+                    un = document.getElementById('user_name');
+                    pw = document.getElementById('password');
+                    if (vendor.toLowerCase().startsWith('super')) {
+                        console.log('Got a Super Micro.');
+                        un.value = 'ADMIN';
+                        pw.value = 'ADMIN';
+                    } else {
+                        console.log('Got a something else.');
+                        un.value = 'root';
+                        pw.value = 'Not24Get';
+                    }
                 } else if (xhttp.readyState == 4) {
                     vi.style.background = null;
                     vi.innerHTML = '';
@@ -29,7 +41,7 @@
             <form action="" method="POST" name="add_inventory">
                 {{ form.hidden_tag() }}
                 <div class="add_inventory">
-                {% for field in (form.network_address, form.rack, form.u) %}
+                {% for field in (form.rack, form.u, form.network_address, form.user_name, form.password) %}
                     <p>
                         {{ field.label.text }}:<br>
                         {% if field.label.text.lower().endswith('address') %}

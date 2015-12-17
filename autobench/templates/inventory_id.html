@@ -152,7 +152,7 @@
                 </table>
             </div>
             <br>
-            <a href="/inventory/edit/{{ server.id }}">Edit Server Info</a>
+            <a href="/inventory/{{ server.id }}/edit">Edit Server Info</a>
         </div>
         {% if server.held_by == user.id or user.admin %}
         {% if server.dirty %}

@@ -159,6 +159,8 @@ class LoginForm(Form):
 class AddInventoryForm(Form):
     network_address = StringField('iDRAC/IPMI Mac/IP Address',
                                   validators=[DataRequired(), MacOrIP()])
+    user_name = StringField('Username', default='root')
+    password = StringField('Password', default='Not24Get')
     rack = IntegerField('Rack', validators=[DataRequired(),
                                             NumberRange(min=1, max=15)])
     u = IntegerField('U', validators=[DataRequired(),
@@ -185,14 +187,6 @@ class EditMyInfoForm(Form):
                              validators=[DataRequired()])
 
 
-class EditInventoryForm(Form):
-    rack = StringField('Rack', validators=[DataRequired()])
-    u = StringField('U', validators=[DataRequired()])
-    name = StringField('Name')
-    held_by = QuerySelectField('Owner', query_factory=None,
-                               get_label='email')
-
-
 class AddInterfaceForm(Form):
     network_address = StringField('Out of Band Mac/IP Address',
                                   validators=[DataRequired(), MacOrIP()])
@@ -211,6 +205,8 @@ def makeEditForm(holder):
         rack = StringField('Rack', validators=[DataRequired()])
         u = StringField('U', validators=[DataRequired()])
         name = StringField('Name')
+        user_name = StringField('Username')
+        password = StringField('Password')
         held_by = QuerySelectField('Owner', get_label='email', allow_blank=True,
                                    blank_text='None',
                                    query_factory=models.Users.query.

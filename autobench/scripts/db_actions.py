@@ -204,8 +204,19 @@ def update_user_info(form, user_id, user):
     return 'Successfully updated user info.'
 
 
-def delete_user(form, user):
-    return 'Success!'
+def delete_user(user_name, user):
+    if not user.admin:
+        return 'YOU ARE NOT ADMIN!'
+    user_to_delete = models.Users.query.filter_by(user_name=user_name).first()
+    if user_to_delete == user:
+        return 'YOU CANNOT DELETE YOURSELF!'
+    try:
+        db.session.delete(user_to_delete)
+        db.session.commit()
+    except:
+        return 'Could not delete user {}'.format(user_name)
+
+    return 'Successfully deleted user {}.'.format(user_name)
 
 
 # ============== Inventory METHODS =================
@@ -346,7 +357,8 @@ def add_smc_info(nic_info, form, user, job):
     ip_address = nic_info.get('ip_address')
 
     # get server info here
-    ipmi = SMCIPMIManager(hostname=ip_address, verbose=True)
+    ipmi = SMCIPMIManager(hostname=ip_address, username=form.user_name.data,
+                          password=form.password.data, verbose=True)
     server_info = ipmi.get_server_info()
 
     if server_info:
@@ -361,7 +373,9 @@ def add_smc_info(nic_info, form, user, job):
 
     # add models objects for server and its interfaces
     logger.info('Creating server and interface objects.')
-    server = models.Servers(rack=form.rack.data, u=form.u.data)
+    server = models.Servers(rack=form.rack.data, u=form.u.data,
+                            user_name=form.user_name.data,
+                            password=form.password.data)
     server.held_by = user.id
     server.make = 'Supermicro'
 
@@ -466,8 +480,8 @@ def add_dell_info(nic_info, form, user, job):
 
     s = {
             'hostname': ip_address,
-            'username': 'root',
-            'password': 'Not24Get',
+            'username': form.user_name.data,
+            'password': form.password.data,
             'verbose': True,
         }
 
@@ -492,7 +506,9 @@ def add_dell_info(nic_info, form, user, job):
         return message
 
     # add models objects for server and its interfaces
-    server = models.Servers(rack=form.rack.data, u=form.u.data)
+    server = models.Servers(rack=form.rack.data, u=form.u.data,
+                            user_name=form.user_name.data,
+                            password=form.password.data)
     for interface in server_info.get('interfaces', tuple()):
         _i = models.NetworkDevices()
         for _k, _v in interface.items():

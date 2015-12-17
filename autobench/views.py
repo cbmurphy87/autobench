@@ -309,7 +309,7 @@ def _inventory_id_add_oob(_id):
                            date=_get_date_last_modified(), user=user)
 
 
-@myapp.route('/inventory/edit/<_id>', methods=['GET', 'POST'])
+@myapp.route('/inventory/<_id>/edit', methods=['GET', 'POST'])
 @login_required
 def _inventory_edit_id(_id):
     user = g.user
@@ -651,17 +651,17 @@ def _admin():
                            date=_get_date_last_modified())
 
 
-@myapp.route('/admin/users/<_id>', methods=['GET', 'POST'])
+@myapp.route('/admin/users/<user_name>', methods=['GET', 'POST'])
 @login_required
-def _user_info(_id):
-    me = g.user
-    user = models.Users.query.filter_by(id=_id).first()
+def _user_info(user_name):
+    user = g.user
+    other_user = models.Users.query.filter_by(user_name=user_name).first()
     form = EditUserInfoForm()
-    if not (me.admin and user):
-        return render_template('404.html', user=me), 404
+    if not (user.admin and user):
+        return render_template('404.html', user=user), 404
 
     if form.validate_on_submit():
-        message = update_user_info(form, _id, me)
+        message = update_user_info(form, other_user.id, user)
         flash(message)
         logger.debug(message)
         return redirect('/admin')
@@ -671,19 +671,46 @@ def _user_info(_id):
             field = getattr(form, attr)
             field.data = getattr(user, attr)
 
-    return render_template('user_info.html', title='User Info', user=me,
+    return render_template('user_info.html', title='User Info', user=user,
+                           date=_get_date_last_modified(), form=form,
+                           other_user=other_user)
+
+
+@myapp.route('/admin/users/<user_name>/edit', methods=['GET', 'POST'])
+@login_required
+def _edit_user_info(user_name):
+    user = g.user
+    other_user = models.Users.query.filter_by(user_name=user_name).first()
+    form = EditUserInfoForm()
+    if not (user.admin and other_user):
+        return render_template('404.html', user=user), 404
+
+    if form.validate_on_submit():
+        message = update_user_info(form, other_user.id, user)
+        flash(message)
+        logger.debug(message)
+        return redirect('/admin/users/{}'.format(other_user.user_name))
+
+    for attr in other_user.__dict__.keys():
+        if attr in form.data.keys():
+            field = getattr(form, attr)
+            field.data = getattr(other_user, attr)
+
+    return render_template('edit_user_info.html', title='User Info', user=user,
                            date=_get_date_last_modified(), form=form)
 
 
-@myapp.route('/admin/users/<_id>/delete', methods=['GET', 'POST'])
+@myapp.route('/admin/users/delete', methods=['GET', 'POST'])
 @login_required
 def _delete_user():
-    _id = request.get_json().get('id')
+    user_name = request.get_json().get('user_name')
     user = g.user
     if not user.admin:
         return render_template('404.html', user=user), 404
 
-    return delete_user(_id, user)
+    logger.debug(delete_user(user_name, user))
+
+    return JSONEncoder().encode({'success': 1})
 
 
 @myapp.route('/debug', methods=['GET'])

@@ -68,6 +68,7 @@ class Servers(db.Model):
     available = db.Column(db.Boolean, default=False)
     held_by = db.Column(db.Integer, db.ForeignKey('users.id'))
     dirty = db.Column(db.Boolean, default=True)
+    password = db.Column(db.String(64))
 
     # relationships
     interfaces = db.relationship('NetworkDevices', cascade='all, delete',

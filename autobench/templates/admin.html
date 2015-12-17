@@ -24,7 +24,7 @@
             {% for k, v in users_fields %}
                 <td>
                 {% if v == 'email' %}
-                    <a href="/admin/users/{{ u.id }}" title="Edit user">{{ u[v] }}</a>
+                    <a href="/admin/users/{{ u.user_name }}" title="Edit user">{{ u[v] }}</a>
                 {% else %}
                     {{ u[v] }}
                 {% endif %}

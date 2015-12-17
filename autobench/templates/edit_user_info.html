@@ -1,26 +1,22 @@
 {% extends 'base.html' %}
 
-{% set server_fields = ('rack', 'u', 'name', 'password') %}
-
-{% if user.admin %}
-{% set server_fields = server_fields + ('held_by',) %}
-{% endif %}
+{% set user_fields = ('first_name','last_name','user_name','admin','password') %}
 
 {% block content %}
-    <h2>Server Info</h2>
-    <form action="" method="POST" name="edit_my_info">
+    <h2>User Info</h2>
+    <form action="" method="POST" name="edit_user_info">
         <div class="edit_info">
             <table class="edit_info bigtable pane bigtable stripped" style="width:auto;">
                 <thead>
                     <tr>
                         <th colspan="2">
-                            Server Info
+                            User Info
                         </th>
                     </tr>
                 </thead>
                 <tbody>
                 {# loop over servers in inventory #}
-                {% for field_name in server_fields %}
+                {% for field_name in user_fields %}
                     <tr>
                     {% set field = form[field_name] %}
                         <td style="text-align:right;">

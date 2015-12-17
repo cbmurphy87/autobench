@@ -1,49 +1,199 @@
 {% extends 'base.html' %}
 
-{% set user_fields = ('first_name','last_name','user_name','admin','password') %}
+{% set user_fields = (('First Name','first_name'),('Last Name','last_name'),
+('E-mail','email'),('Username','user_name'),('Admin','admin')) %}
+
+{% set server_fields = (('ID', 'id'),('Rack','rack'),('U','u'),
+('Name','get_name'),('Model','model'),('CPU Count','cpu_count'),
+('CPU Model','cpu_model'),('Memory','memory_capacity'),('Release','release'))%}
+
+{% block links %}
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/filterTable.js') }}></script>
+{% endblock %}
+
+{% block scripts %}
+    function release(id, next) {
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+            if (xhttp.readyState == 4 && xhttp.status == 200) {
+                document.getElementById(id).remove();
+            }
+            // check if all servers are released
+            var aaetable = document.getElementById("aaetable");
+            if (aaetable.rows.length <= 1) {
+                var myServers = document.getElementById("my_servers");
+                myServers.innerHTML = "You have no servers checked out.";
+            }
+        };
+        xhttp.open("POST", "/inventory/release", true);
+        xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+        xhttp.send(JSON.stringify({id: id, next: next}));
+    }
+    function delete_user(user_name) {
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+            if (xhttp.readyState == 4 && xhttp.status == 200) {
+                window.location = "/admin";
+            }
+        };
+        xhttp.open("POST", "/admin/users/delete", true);
+        xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+        xhttp.send(JSON.stringify({user_name: user_name}));
+    }
+    $(document).ready(function () {
+        $("#searchInput").keyup(
+            function () {
+                counttable();
+                updateStriping();
+            }
+        )
+    });
+{% endblock %}
 
 {% block content %}
-    <h2>User Info</h2>
-    <h3>Edit user info</h3>
-    <form action="" method="POST" name="edit_user_info">
-        <div class="edit_info">
-            <table class="edit_info bigtable pane bigtable stripped" style="width:auto;">
+    <h2>User's Info</h2>
+    <div class="pane-frame">
+        <table class="pane bigtable stripped">
+            <thead>
+                <tr class="header">
+                {# create header for inventory table #}
+                    <th colspan="2" style="text-align:center;">
+                        User Info
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+            {# loop over servers in inventory #}
+            {% for k, v in user_fields %}
+                <tr>
+                    <td style="text-align:right;">
+                        {{ k }}:
+                    </td>
+                    <td>
+                        <i>{{ other_user[v] }}</i>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div style="padding-top:5px;">
+        <a href="/admin/users/{{ other_user.user_name }}/edit">Edit User's Info</a>
+    </div>
+    <!-- My Servers -->
+    <h2>User's Servers</h2>
+    <p><input id="searchInput" placeholder="Filter"></p>
+    {% if other_user.servers %}
+    <div id="my_servers">
+        <div class="pane-frame" style="width:100%;">
+            <table id="aaetable" class="sortable pane bigtable stripped count">
                 <thead>
-                    <tr>
-                        <th colspan="2">
-                            User Info
-                        </th>
+                    <tr class="header">
+                    {# create header for inventory table #}
+                        {% for k, v in server_fields %}
+                            {# set count types for columns #}
+                            {% if k in ['S', 'Release'] %}
+                                {% set units = 'none' %}
+                                {% set count_type = 'ignore' %}
+                                {% set class = " class=sorttable_nosort" %}
+                            {% elif k in ['Memory', 'Capacity'] %}
+                                {% set count_type = 'sum' %}
+                                {% set units = 'GB' %}
+                            {% else %}
+                                {% set units = 'none' %}
+                                {% set count_type = 'unique' %}
+                            {% endif %}
+                            <th{{ class }} unit="{{ units }}" count_type="{{ count_type }}">
+                                {{ k }}
+                            </th>
+                        {% endfor %}
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="fbody">
                 {# loop over servers in inventory #}
-                {% for field_name in user_fields %}
-                    <tr>
-                    {% set field = form[field_name] %}
-                        <td style="text-align:right;">
-                        {{ field.label.text }}:
-                        </td>
-                        <td style="text-align:left;">
-                        {% if field_name == 'verify_new_password' %}
-                            {{ field(disabled=True) }}
+                {%- for server in other_user.servers -%}
+                    <tr id="{{ server.id }}">
+                    {% for k, v in server_fields %}
+                        <td>
+                        {% if v == 'id' %}
+                            {% set server_id = server['id'] %}
+                            <a href="/inventory/{{ server_id }}">
+                            {{ server_id }}
+                            </a>
+                        {% elif v == 'release' %}
+                            <button onclick="release('{{ server.id }}','')">
+                                Release
+                            </button>
                         {% else %}
-                        {{ field }}
+                            {% if v == 'get_name' %}
+                            {{ server.get_name() }}
+                            {% else %}
+                            {{ server[v] }}
+                            {% endif %}
+                            <span class="custom_count" style="display:none">{{ server[v] }}</span>
                         {% endif %}
                         </td>
-                        {% if field.errors %}
-                            <td>
-                            {% for error in field.errors %}
-                                <span style="color:red;">[{{ error }}]</span>
-                            {% endfor %}
-                            </td>
-                        {% endif %}
+                        {% endfor %}
                     </tr>
                 {% endfor %}
                 </tbody>
             </table>
         </div>
-        <div style="padding-top:5px;">
-            <input type="submit" value="Submit">
-        </div>
-    </form>
+    </div>
+    {% else %}
+        You have no servers checked out.
+    {% endif %}
+
+    <h2>User's Projects</h2>
+    {% if other_user.projects %}
+    <div class="pane-frame" style="width:100%;">
+        <table id="aaetable" class="sortable pane bigtable stripped">
+            <thead>
+                <tr class="header">
+                {# create header for inventory table #}
+                    {% for k, v in server_fields %}
+                    <th>
+                        {{ k }}
+                    </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+            {# loop over servers in inventory #}
+            {%- for server in other_user.servers -%}
+                <tr>
+                {% for k, v in server_fields %}
+                    <td>
+                    {% if v == 'id' %}
+                        {% set server_id = server['id'] %}
+                        <a href="/inventory/{{ server_id }}">
+                        {{ server_id }}
+                        </a>
+                    {% elif v == 'release' %}
+                        <form>
+                            <button formaction='/inventory/release/{{ server.id }}'>
+                                Release
+                            </button>
+                        </form>
+                    {% else %}
+                        {{ server[v] }}
+                    {% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+        You have no projects yet.
+    {% endif %}
+    {% if (user.admin) and (other_user.id != 1) %}
+    <h2>Delete User</h2>
+    <div>
+        <button onclick="return delete_user('{{ other_user.user_name }}')">
+            Delete User
+        </button>
+    </div>
+    {% endif %}
 {% endblock %}
