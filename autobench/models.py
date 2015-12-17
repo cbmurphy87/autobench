@@ -54,7 +54,7 @@ class Groups(db.Model):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True,
                    nullable=True)
-    group_name = db.Column(db.String(16), primary_key=True)
+    group_name = db.Column(db.String(16), unique=True)
     description = db.Column(db.String(128))
 
     members = db.relationship('Users', secondary='user_group',
