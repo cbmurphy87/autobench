@@ -7,10 +7,12 @@ from werkzeug.security import check_password_hash
 class Users(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
-    first_name = db.Column(db.String(32), index=True)
-    last_name = db.Column(db.String(32), index=True)
-    user_name = db.Column(db.String(32), index=True, unique=True)
-    email = db.Column(db.String(120), index=True, unique=True)
+    first_name = db.Column(db.String(32))
+    last_name = db.Column(db.String(32))
+    user_name = db.Column(db.String(32), index=True,
+                          unique=True, nullable=False)
+    email = db.Column(db.String(120), index=True, unique=True,
+                      nullable=False)
     password = db.Column(db.String(120))
     authenticated = db.Column(db.Boolean, default=False)
     admin = db.Column(db.Boolean, default=False)
@@ -18,7 +20,8 @@ class Users(db.Model):
     # relationships
     jobs = db.relationship('Jobs', backref='creator', lazy='dynamic',
                            cascade="all, delete")
-    groups = db.relationship('Groups', secondary='user_group')
+    groups = db.relationship('Groups', secondary='user_group',
+                             backref='members')
 
     # methods
     def is_authenticated(self):
@@ -57,13 +60,24 @@ class Groups(db.Model):
     group_name = db.Column(db.String(16), unique=True)
     description = db.Column(db.String(128))
 
-    members = db.relationship('Users', secondary='user_group',
-                              cascade="all, delete")
+    def __str__(self):
+
+        return str(self.id)
+
+    def member_count(self):
+
+        return str(len(self.members))
 
 
 class UserGroup(db.Model):
 
     uid = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
+    gid = db.Column(db.Integer, db.ForeignKey('groups.id'), primary_key=True)
+
+
+class ServerGroup(db.Model):
+
+    sid = db.Column(db.Integer, db.ForeignKey('servers.id'), primary_key=True)
     gid = db.Column(db.Integer, db.ForeignKey('groups.id'), primary_key=True)
 
 # ================= Server Inventory ======================
@@ -99,13 +113,15 @@ class Servers(db.Model):
     virtual_drives = db.relationship('VirtualStorageDevices', backref='server',
                                      lazy='dynamic', cascade='all, delete')
     holder = db.relationship('Users', backref='servers')
+    groups = db.relationship('Groups', secondary='server_group',
+                             backref='servers')
 
     # magic methods
     def __repr__(self):
         return '<Server id {}>'.format(self.id)
 
     def get_name(self):
-        return self.name or self.host_name
+        return self.name or self.host_name or self.id
 
 
 class StorageDevices(db.Model):

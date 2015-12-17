@@ -1,11 +1,45 @@
 {% extends 'base.html' %}
 
+{% block scripts %}
+    function delete_group(gid) {
+        if (confirm("Delete group " + gid + "?") == true) {
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function() {
+                if (xhttp.readyState == 4 && xhttp.status == 200) {
+                    window.location = "/admin";
+                }
+            };
+            xhttp.open("POST", "/admin/groups/delete", true);
+            xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+            xhttp.send(JSON.stringify({gid: gid}));
+        }
+    }
+    $(document).ready(function () {
+        $("input[id^='searchInput']").keyup(
+            function () {
+                counttable();
+                updateStriping();
+            }
+        )
+    });
+{% endblock %}
+
+{% block links %}
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/filterTable.js') }}></script>
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/inventory.js') }}></script>
+{% endblock %}
+
 {% set group_fields = (('Group ID','id'),('Group Name','group_name'),
 ('DescriptionD','description')) %}
-{% set member_fields = (('Name','user_name'),
-('Groups','groups')) %}
+{% set member_fields = (('Name','user_name'),('Groups','groups')) %}
+{% set server_fields = (('ID', 'id'),('Rack','rack'),('U','u'),
+('Name','get_name'),('Model','model'),('CPU Count','cpu_count'),
+('CPU Model','cpu_model'),('Memory','memory_capacity'))%}
 
 {% block content %}
+    {# ================= #}
+    {#    Group Info     #}
+    {# ================= #}
     <h2>Group Info</h2>
     <div class="pane-frame">
         <table class="pane bigtable stripped">
@@ -35,9 +69,12 @@
     <div style="padding-top:5px;">
         <a href="/admin/groups/{{ group.id }}/edit">Edit Group Info</a>
     </div>
+    {# ================= #}
+    {# Group Member List #}
+    {# ================= #}
     <h2>Members</h2>
     {% if group.members %}
-    <p><input id="searchInput" placeholder="Filter"></p>
+    <p><input id="searchInput1" placeholder="Filter"></p>
     <table class="sortable pane bigtable stripped">
         <thead>
             <tr class="header">
@@ -48,7 +85,7 @@
             {% endfor %}
             </tr>
         </thead>
-        <tbody id="fbody">
+        <tbody id="fbody1">
         {% for m in group.members %}
             <tr>
             {% for k, v in member_fields %}
@@ -64,10 +101,85 @@
         {% endfor %}
         </tbody>
     </table>
+    <span style="display:inline-block;">
+        <div style="margin-top:5px;">
+            <a href="/admin/groups/{{ group.id }}/add_member">Add Member</a>
+            <a href="/admin/groups/{{ group.id }}/remove_member" style="padding:5px;">Remove Member</a>
+        </div>
+    </span>
     {% else %}
         No members
+        <p><a href="/admin/groups/{{ group.id }}/add_member">Add Member</a></p>
     {% endif %}
-    <p><a href="/admin/groups/{{ group.id }}/add_member">Add Member</a></p>
+
+    {# ================= #}
+    {# Group Server List #}
+    {# ================= #}
+    <h2>Servers</h2>
+    {% if group.servers %}
+    <p><input id="searchInput2" placeholder="Filter"></p>
+    <div id="group_servers">
+        <div class="pane-frame" style="width:100%;">
+            <table id="aaetable" class="sortable pane bigtable stripped count">
+                <thead>
+                    <tr class="header">
+                    {# create header for inventory table #}
+                        {% for k, v in server_fields %}
+                            {# set count types for columns #}
+                            {% if k in ['S', 'Remove'] %}
+                                {% set units = 'none' %}
+                                {% set count_type = 'ignore' %}
+                                {% set class = " class=sorttable_nosort" %}
+                            {% elif k in ['Memory', 'Capacity'] %}
+                                {% set count_type = 'sum' %}
+                                {% set units = 'GB' %}
+                            {% else %}
+                                {% set units = 'none' %}
+                                {% set count_type = 'unique' %}
+                            {% endif %}
+                            <th{{ class }} unit="{{ units }}" count_type="{{ count_type }}">
+                                {{ k }}
+                            </th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody id="fbody2">
+                {# loop over servers in inventory #}
+                {%- for server in group.servers -%}
+                    <tr id="{{ server.id }}">
+                    {% for k, v in server_fields %}
+                        <td>
+                        {% if v == 'id' %}
+                            {% set server_id = server['id'] %}
+                            <a href="/inventory/{{ server_id }}">
+                            {{ server_id }}
+                            </a>
+                        {% else %}
+                            {% if v == 'get_name' %}
+                            {{ server.get_name() }}
+                            {% else %}
+                            {{ server[v] }}
+                            {% endif %}
+                            <span class="custom_count" style="display:none">{{ server[v] }}</span>
+                        {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <span style="display:inline-block;">
+        <div style="margin-top:5px;">
+            <a href="/admin/groups/{{ group.id }}/add_server">Add Server</a>
+            <a href="/admin/groups/{{ group.id }}/remove_server"style="padding:5px;">Remove Server</a>
+        </div>
+    </span>
+    {% else %}
+        No Servers
+        <p><a href="/admin/groups/{{ group.id }}/add_server">Add Server</a></p>
+    {% endif %}
     {% if (user.admin) %}
     <h2>Delete Group</h2>
     <div>

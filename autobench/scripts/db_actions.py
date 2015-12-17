@@ -236,6 +236,20 @@ def add_group(form, user):
     return 'Successfully added group {}'.format(form.group_name.data)
 
 
+def delete_group(gid, user):
+    if not user.admin:
+        return 'YOU ARE NOT ADMIN!'
+    group_to_delete = models.Groups.query.filter_by(id=gid).first()
+
+    try:
+        db.session.delete(group_to_delete)
+        db.session.commit()
+    except Exception as e:
+        return 'Could not delete group {}: {}'.format(gid, e)
+
+    return 'Successfully deleted group {}.'.format(gid)
+
+
 def update_group_info(form, group_id, user):
 
     if not user.admin:
@@ -264,8 +278,7 @@ def add_group_member(form, group_id, user):
         return 'YOU ARE NOT AN ADMIN AND SHOULD NOT BE HERE!!!'
 
     group = models.Groups.query.filter_by(id=group_id).first()
-    user = models.Users.query\
-        .filter_by(id=form.member.data.id).first()
+    user = models.Users.query.filter_by(id=form.member.data.id).first()
 
     group.members.append(user)
 
@@ -279,6 +292,68 @@ def add_group_member(form, group_id, user):
 
     return 'Successfully added group member.'
 
+
+def remove_group_member(gid, uid, user):
+
+    if not user.admin:
+        return 'YOU ARE NOT AN ADMIN AND SHOULD NOT BE HERE!!!'
+
+    group = models.Groups.query.filter_by(id=gid).first()
+    user = models.Users.query.filter_by(id=uid).first()
+
+    group.members.remove(user)
+
+    try:
+        db.session.add(group)
+        db.session.commit()
+    except Exception as e:
+        logger.error('Error removing group member: {}'.format(e))
+        db.session.rollback()
+        return 'Could not remove group member.'
+
+    return 'Successfully removed group member.'
+
+
+def add_group_server(form, group_id, user):
+
+    if not user.admin:
+        return 'YOU ARE NOT AN ADMIN AND SHOULD NOT BE HERE!!!'
+
+    group = models.Groups.query.filter_by(id=group_id).first()
+    server = models.Servers.query.filter_by(id=form.server.data.id).first()
+
+    group.servers.append(server)
+
+    try:
+        db.session.add(group)
+        db.session.commit()
+    except Exception as e:
+        logger.error('Error adding group member: {}'.format(e))
+        db.session.rollback()
+        return 'Could not add group member.'
+
+    return 'Successfully added group member.'
+
+
+def remove_group_server(gid, sid, user):
+
+    if not user.admin:
+        return 'YOU ARE NOT AN ADMIN AND SHOULD NOT BE HERE!!!'
+
+    group = models.Groups.query.filter_by(id=gid).first()
+    user = models.Servers.query.filter_by(id=sid).first()
+
+    group.servers.remove(user)
+
+    try:
+        db.session.add(group)
+        db.session.commit()
+    except Exception as e:
+        logger.error('Error removing group server: {}'.format(e))
+        db.session.rollback()
+        return 'Could not remove server from group.'
+
+    return 'Successfully removed server from group.'
 
 # ============== Inventory METHODS =================
 def get_inventory():

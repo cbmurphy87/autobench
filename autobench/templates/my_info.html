@@ -9,6 +9,7 @@
 
 {% block links %}
     <script type="text/javascript" src={{ url_for('static', filename='javascript/filterTable.js') }}></script>
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/inventory.js') }}></script>
 {% endblock %}
 
 {% block scripts %}
@@ -17,10 +18,13 @@
         xhttp.onreadystatechange = function() {
             if (xhttp.readyState == 4 && xhttp.status == 200) {
                 document.getElementById(id).remove();
+                counttable();
+                updateStriping();
             }
             // check if all servers are released
             var aaetable = document.getElementById("aaetable");
-            if (aaetable.rows.length <= 1) {
+            var aaetable_body = aaetable.getElementsByTagName("tbody")[0];
+            if (aaetable_body.rows.length <= 1) {
                 var myServers = document.getElementById("my_servers");
                 myServers.innerHTML = "You have no servers checked out.";
             }
@@ -71,8 +75,8 @@
     </div>
     <!-- My Servers -->
     <h2>My Servers</h2>
-    <p><input id="searchInput" placeholder="Filter"></p>
     {% if user.servers %}
+    <p><input id="searchInput" placeholder="Filter"></p>
     <div id="my_servers">
         <div class="pane-frame" style="width:100%;">
             <table id="aaetable" class="sortable pane bigtable stripped count">

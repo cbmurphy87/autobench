@@ -39,8 +39,7 @@
     <h2>Deploy a server</h2>
     <form action='' method='POST' name='deploy'>
         {{ form.hidden_tag() }}
-        <div class="build_step" style="border:1px solid #00447c; padding:10px;
-        display:inline-block;">
+        <div class="build_step" style="border:1px solid #00447c; padding:10px; display:inline-block;">
             <span>
                 <div style="height:150px;margin:auto;float:left;">
                     {% for v in (form.target, form.os) %}

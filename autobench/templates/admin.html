@@ -1,8 +1,9 @@
 {% extends 'base.html' %}
 
 {% set users_fields = (('First Name','first_name'),('Last Name','last_name'),
-('User Name','user_name'),('E-mail','email'),('Admin','admin')) %}
-{% set groups_fields = (('GID','id'),('Name','group_name'),('Description','description')) %}
+('User Name','user_name'),('E-mail','email'),('Admin','admin'),('Groups','groups')) %}
+{% set groups_fields = (('GID','id'),('Name','group_name'),
+('Members','members'),('Servers','servers'),('Description','description')) %}
 
 {% block links %}
     <script type="text/javascript" src={{ url_for('static', filename='javascript/filterTable.js') }}></script>
@@ -10,7 +11,7 @@
 
 {% block content %}
     <h2>Users</h2>
-    <p><input id="searchInput" placeholder="Filter"></p>
+    <p><input id="searchInput1" placeholder="Filter"></p>
     <table class="sortable pane bigtable stripped">
         <thead>
             <tr class="header">
@@ -21,13 +22,15 @@
             {% endfor %}
             </tr>
         </thead>
-        <tbody id="fbody">
+        <tbody id="fbody1">
         {% for u in users %}
             <tr>
             {% for k, v in users_fields %}
                 <td>
-                {% if v == 'email' %}
+                {% if v == 'user_name' %}
                     <a href="/admin/users/{{ u.user_name }}" title="Edit user">{{ u[v] }}</a>
+                {% elif v == 'groups' %}
+                    {{ u.groups|join(',') }}
                 {% else %}
                     {{ u[v] }}
                 {% endif %}
@@ -42,7 +45,7 @@
     </div>
     <h2>Groups</h2>
     {% if groups %}
-        <p><input id="searchInput" placeholder="Filter"></p>
+        <p><input id="searchInput2" placeholder="Filter"></p>
         <table class="sortable pane bigtable stripped">
             <thead>
                 <tr class="header">
@@ -53,13 +56,15 @@
                 {% endfor %}
                 </tr>
             </thead>
-            <tbody id="fbody">
+            <tbody id="fbody2">
             {% for g in groups %}
                 <tr>
                 {% for k, v in groups_fields %}
                     <td>
                     {% if v == 'group_name' %}
                         <a href="/admin/groups/{{ g.id }}">{{ g[v] }}</a>
+                    {% elif v in ('members','servers') %}
+                        {{ g[v]|count }}
                     {% else %}
                         {{ g[v] }}
                     {% endif %}

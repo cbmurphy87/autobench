@@ -658,6 +658,21 @@ def _admin_group_add():
                            form=form, date=_get_date_last_modified())
 
 
+@myapp.route('/admin/groups/delete', methods=['GET', 'POST'])
+@login_required
+def _delete_group():
+    gid = request.get_json().get('gid')
+    user = g.user
+    if not user.admin:
+        return render_template('404.html', user=user), 404
+
+    message = delete_group(gid, user)
+    flash(message)
+    logger.debug(message)
+
+    return JSONEncoder().encode({'success': 1})
+
+
 @myapp.route('/admin/user/add', methods=['GET', 'POST'])
 @login_required
 def _admin_user_add():
@@ -776,13 +791,83 @@ def _groups_add_member(_id):
         logger.debug(message)
         return redirect('/admin/groups/{}'.format(group.id))
 
+    return render_template('admin_groups_add_member.html',
+                           title='Add Group Member',
+                           user=user, group=group, form=form,
+                           date=_get_date_last_modified())
+
+
+@myapp.route('/admin/groups/<gid>/remove_member', methods=['GET', 'POST'])
+@login_required
+def _groups_remove_member(gid):
+    user = g.user
+    group = models.Groups.query.filter_by(id=gid).first()
+    if not (user.admin and group):
+        return render_template('404.html', user=user), 404
+
+    RemoveGroupMemberForm = make_remove_group_member_form(gid)
+    form = RemoveGroupMemberForm()
+
+    if form.validate_on_submit():
+        print form.member.id
+        message = remove_group_member(group.id, form.member.data.id, user)
+        flash(message)
+        logger.debug(message)
+        return redirect('/admin/groups/{}'.format(group.id))
+
+    return render_template('admin_groups_remove_member.html',
+                           title='Remove Group Member',
+                           user=user, group=group, form=form,
+                           date=_get_date_last_modified())
+
+
+@myapp.route('/admin/groups/<gid>/remove_server', methods=['GET', 'POST'])
+@login_required
+def _groups_remove_server(gid):
+    user = g.user
+    group = models.Groups.query.filter_by(id=gid).first()
+    if not (user.admin and group):
+        return render_template('404.html', user=user), 404
+
+    RemoveGroupServerForm = make_remove_group_server_form(gid)
+    form = RemoveGroupServerForm()
+
+    if form.validate_on_submit():
+        message = remove_group_server(group.id, form.server.data.id, user)
+        flash(message)
+        logger.debug(message)
+        return redirect('/admin/groups/{}'.format(group.id))
+
+    return render_template('admin_groups_remove_server.html',
+                           title='Remove Group Server',
+                           user=user, group=group, form=form,
+                           date=_get_date_last_modified())
+
+
+@myapp.route('/admin/groups/<_id>/add_server', methods=['GET', 'POST'])
+@login_required
+def _groups_add_server(_id):
+    user = g.user
+    group = models.Groups.query.filter_by(id=_id).first()
+    if not (user.admin and group):
+        return render_template('404.html', user=user), 404
+
+    AddGroupServerForm = make_add_group_server_form(_id)
+    form = AddGroupServerForm()
+
+    if form.validate_on_submit():
+        message = add_group_server(form, group.id, user)
+        flash(message)
+        logger.debug(message)
+        return redirect('/admin/groups/{}'.format(group.id))
+
     for attr in group.__dict__.keys():
         if attr in form.data.keys():
             field = getattr(form, attr)
             field.data = getattr(group, attr)
 
-    return render_template('admin_groups_add_member.html',
-                           title='Edit Group Info',
+    return render_template('admin_groups_add_server.html',
+                           title='Add Group Server',
                            user=user, group=group, form=form,
                            date=_get_date_last_modified())
 
