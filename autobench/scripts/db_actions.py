@@ -663,7 +663,8 @@ def add_dell_info(nic_info, form, user, job):
                             user_name=form.user_name.data,
                             password=form.password.data)
     # add primary group
-    server.groups.append(form.group.data)
+    if form.group.data:
+        server.groups.append(form.group.data)
     for interface in server_info.get('interfaces', tuple()):
         _i = models.NetworkDevices()
         for _k, _v in interface.items():
