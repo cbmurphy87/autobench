@@ -215,7 +215,7 @@ def _root():
 def _my_info():
     user = g.user
     return render_template('my_info.html',
-                           title='About Me',
+                           title='My Info',
                            date=_get_date_last_modified(),
                            user=user)
 
@@ -638,17 +638,50 @@ def _jenkins_job_info(jobname):
 def _admin():
     user = g.user
     users = models.Users.query.order_by('email').all()
-    add_user_form = AddUser()
-    if add_user_form.validate_on_submit():
-        flash(add_user(add_user_form, user))
-        return redirect('/admin')
-    elif add_user_form.validate_on_submit():
-        print 'This one validated!'
-        flash(delete_user(add_user_form, user))
-        return redirect('/admin')
+    groups = models.Groups.query.order_by('id').all()
+
     return render_template('admin.html', title='Admin', user=user,
-                           users=users, add_user_form=add_user_form,
+                           groups=groups, users=users,
                            date=_get_date_last_modified())
+
+
+@myapp.route('/admin/group/add', methods=['GET', 'POST'])
+@login_required
+def _admin_group_add():
+    user = g.user
+    form = AddGroupForm()
+    if form.validate_on_submit():
+        flash(add_group(form, user))
+        return redirect('/admin')
+
+    return render_template('admin_group_add.html', title='Admin', user=user,
+                           form=form, date=_get_date_last_modified())
+
+
+@myapp.route('/admin/user/add', methods=['GET', 'POST'])
+@login_required
+def _admin_user_add():
+    user = g.user
+    form = AddUserForm()
+    if form.validate_on_submit():
+        flash(add_user(form, user))
+        return redirect('/admin')
+
+    return render_template('admin_user_add.html', title='Admin', user=user,
+                           form=form, date=_get_date_last_modified())
+
+
+@myapp.route('/admin/users/delete', methods=['GET', 'POST'])
+@login_required
+def _delete_user():
+    user_name = request.get_json().get('user_name')
+    user = g.user
+    if not user.admin:
+        return render_template('404.html', user=user), 404
+
+    logger.debug(delete_user(user_name, user))
+
+    return JSONEncoder().encode({'success': 1})
 
 
 @myapp.route('/admin/users/<user_name>', methods=['GET', 'POST'])
@@ -656,23 +689,11 @@ def _admin():
 def _user_info(user_name):
     user = g.user
     other_user = models.Users.query.filter_by(user_name=user_name).first()
-    form = EditUserInfoForm()
     if not (user.admin and user):
         return render_template('404.html', user=user), 404
 
-    if form.validate_on_submit():
-        message = update_user_info(form, other_user.id, user)
-        flash(message)
-        logger.debug(message)
-        return redirect('/admin')
-
-    for attr in user.__dict__.keys():
-        if attr in form.data.keys():
-            field = getattr(form, attr)
-            field.data = getattr(user, attr)
-
-    return render_template('user_info.html', title='User Info', user=user,
-                           date=_get_date_last_modified(), form=form,
+    return render_template('admin_users_info.html', title='User Info', user=user,
+                           date=_get_date_last_modified(),
                            other_user=other_user)
 
 
@@ -696,21 +717,74 @@ def _edit_user_info(user_name):
             field = getattr(form, attr)
             field.data = getattr(other_user, attr)
 
-    return render_template('edit_user_info.html', title='User Info', user=user,
+    return render_template('admin_users_edit.html', title='Edit User Info', user=user,
                            date=_get_date_last_modified(), form=form)
 
 
-@myapp.route('/admin/users/delete', methods=['GET', 'POST'])
+@myapp.route('/admin/groups/<_id>', methods=['GET', 'POST'])
 @login_required
-def _delete_user():
-    user_name = request.get_json().get('user_name')
+def _groups_info(_id):
     user = g.user
-    if not user.admin:
+    group = models.Groups.query.filter_by(id=_id).first()
+    if not (user.admin and group):
         return render_template('404.html', user=user), 404
 
-    logger.debug(delete_user(user_name, user))
+    return render_template('admin_groups_info.html', title='Group Info',
+                           user=user, group=group,
+                           date=_get_date_last_modified())
 
-    return JSONEncoder().encode({'success': 1})
+
+@myapp.route('/admin/groups/<_id>/edit', methods=['GET', 'POST'])
+@login_required
+def _groups_info_edit(_id):
+    user = g.user
+    form = EditGroupForm()
+    group = models.Groups.query.filter_by(id=_id).first()
+    if not (user.admin and group):
+        return render_template('404.html', user=user), 404
+
+    if form.validate_on_submit():
+        message = update_group_info(form, group.id, user)
+        flash(message)
+        logger.debug(message)
+        return redirect('/admin/groups/{}'.format(group.id))
+
+    for attr in group.__dict__.keys():
+        if attr in form.data.keys():
+            field = getattr(form, attr)
+            field.data = getattr(group, attr)
+
+    return render_template('admin_groups_edit.html', title='Edit Group Info',
+                           user=user, group=group, form=form,
+                           date=_get_date_last_modified())
+
+
+@myapp.route('/admin/groups/<_id>/add_member', methods=['GET', 'POST'])
+@login_required
+def _groups_add_member(_id):
+    user = g.user
+    group = models.Groups.query.filter_by(id=_id).first()
+    if not (user.admin and group):
+        return render_template('404.html', user=user), 404
+
+    AddGroupMemberForm = make_add_group_member_form(_id)
+    form = AddGroupMemberForm()
+
+    if form.validate_on_submit():
+        message = add_group_member(form, group.id, user)
+        flash(message)
+        logger.debug(message)
+        return redirect('/admin/groups/{}'.format(group.id))
+
+    for attr in group.__dict__.keys():
+        if attr in form.data.keys():
+            field = getattr(form, attr)
+            field.data = getattr(group, attr)
+
+    return render_template('admin_groups_add_member.html',
+                           title='Edit Group Info',
+                           user=user, group=group, form=form,
+                           date=_get_date_last_modified())
 
 
 @myapp.route('/debug', methods=['GET'])

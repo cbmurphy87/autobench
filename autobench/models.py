@@ -16,7 +16,9 @@ class Users(db.Model):
     admin = db.Column(db.Boolean, default=False)
 
     # relationships
-    jobs = db.relationship('Jobs', backref='creator', lazy='dynamic')
+    jobs = db.relationship('Jobs', backref='creator', lazy='dynamic',
+                           cascade="all, delete")
+    groups = db.relationship('Groups', secondary='user_group')
 
     # methods
     def is_authenticated(self):
@@ -48,6 +50,21 @@ class Users(db.Model):
         return '{} {}'.format(self.first_name, self.last_name)
 
 
+class Groups(db.Model):
+
+    id = db.Column(db.Integer, primary_key=True)
+    group_name = db.Column(db.String(16), primary_key=True)
+    description = db.Column(db.String(128))
+
+    members = db.relationship('Users', secondary='user_group',
+                              cascade="all, delete")
+
+
+class UserGroup(db.Model):
+
+    uid = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
+    gid = db.Column(db.Integer, db.ForeignKey('groups.id'), primary_key=True)
+
 # ================= Server Inventory ======================
 
 
@@ -68,6 +85,7 @@ class Servers(db.Model):
     available = db.Column(db.Boolean, default=False)
     held_by = db.Column(db.Integer, db.ForeignKey('users.id'))
     dirty = db.Column(db.Boolean, default=True)
+    user_name = db.Column(db.String(64))
     password = db.Column(db.String(64))
 
     # relationships

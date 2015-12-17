@@ -219,6 +219,67 @@ def delete_user(user_name, user):
     return 'Successfully deleted user {}.'.format(user_name)
 
 
+def add_group(form, user):
+
+    # check if the group exists
+    if models.Groups.query.filter_by(group_name=form.group_name.data).first():
+        return 'Already a group with that name.'
+    group = models.Groups(group_name=form.group_name.data,
+                          description=form.description.data)
+    try:
+        db.session.add(group)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return 'Could not add group.'
+
+    return 'Successfully added group {}'.format(form.group_name.data)
+
+
+def update_group_info(form, group_id, user):
+
+    if not user.admin:
+        return 'YOU ARE NOT AN ADMIN AND SHOULD NOT BE HERE!!!'
+
+    group = models.Groups.query.filter_by(id=group_id).first()
+
+    for field, data in form.data.items():
+        if hasattr(group, field):
+            setattr(group, field, data)
+
+    try:
+        db.session.add(group)
+        db.session.commit()
+    except Exception as e:
+        logger.error('Error updating group info: {}'.format(e))
+        db.session.rollback()
+        return 'Could not update group info.'
+
+    return 'Successfully updated group info.'
+
+
+def add_group_member(form, group_id, user):
+
+    if not user.admin:
+        return 'YOU ARE NOT AN ADMIN AND SHOULD NOT BE HERE!!!'
+
+    group = models.Groups.query.filter_by(id=group_id).first()
+    user = models.Users.query\
+        .filter_by(id=form.member.data.id).first()
+
+    group.members.append(user)
+
+    try:
+        db.session.add(group)
+        db.session.commit()
+    except Exception as e:
+        logger.error('Error adding group member: {}'.format(e))
+        db.session.rollback()
+        return 'Could not add group member.'
+
+    return 'Successfully added group member.'
+
+
 # ============== Inventory METHODS =================
 def get_inventory():
 

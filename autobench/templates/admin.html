@@ -1,13 +1,16 @@
 {% extends 'base.html' %}
 
-{% set add_user_fields = ('first_name', 'last_name','user_name','email','password') %}
-{% set delete_user_fields = ('user',) %}
 {% set users_fields = (('First Name','first_name'),('Last Name','last_name'),
 ('User Name','user_name'),('E-mail','email'),('Admin','admin')) %}
+{% set groups_fields = (('GID','id'),('Name','group_name'),('Description','description')) %}
+
+{% block links %}
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/filterTable.js') }}></script>
+{% endblock %}
 
 {% block content %}
-    <h2>Administration</h2>
     <h2>Users</h2>
+    <p><input id="searchInput" placeholder="Filter"></p>
     <table class="sortable pane bigtable stripped">
         <thead>
             <tr class="header">
@@ -18,7 +21,7 @@
             {% endfor %}
             </tr>
         </thead>
-        <tbody>
+        <tbody id="fbody">
         {% for u in users %}
             <tr>
             {% for k, v in users_fields %}
@@ -34,43 +37,42 @@
         {% endfor %}
         </tbody>
     </table>
-    <h3>Add User</h3>
-    <div>
-        <form action="" method="POST" name="add_user">
-            {{ add_user_form.hidden_tag() }}
-            <div style="height:150px;margin:auto;float:left;">
-                <table class="edit_info bigtable pane bigtable stripped" style="width:auto;">
-                    <thead>
-                        <tr>
-                            <th colspan="2">
-                                My Info
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    {# loop over servers in inventory #}
-                    {% for field_name in add_user_fields %}
-                        <tr>
-                        {% set field = add_user_form[field_name] %}
-                            <td style="text-align:right;">
-                            {{ field.label.text }}:
-                            </td>
-                            <td style="text-align:left;">
-                            {{ field }}
-                            </td>
-                            {% if field.errors %}
-                                <td>
-                                {% for error in field.errors %}
-                                    <span style="color:red;">[{{ error }}]</span>
-                                {% endfor %}
-                                </td>
-                            {% endif %}
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
-                <input type="submit" value="Submit" style="margin-top:10px;">
-            </div>
-        </form>
+    <div style="padding-top:5px;">
+        <a href="/admin/user/add">Add User</a>
     </div>
+    <h2>Groups</h2>
+    {% if groups %}
+        <p><input id="searchInput" placeholder="Filter"></p>
+        <table class="sortable pane bigtable stripped">
+            <thead>
+                <tr class="header">
+                {% for k, v in groups_fields %}
+                    <th>
+                        {{ k }}
+                    </th>
+                {% endfor %}
+                </tr>
+            </thead>
+            <tbody id="fbody">
+            {% for g in groups %}
+                <tr>
+                {% for k, v in groups_fields %}
+                    <td>
+                    {% if v == 'group_name' %}
+                        <a href="/admin/groups/{{ g.id }}">{{ g[v] }}</a>
+                    {% else %}
+                        {{ g[v] }}
+                    {% endif %}
+                    </td>
+                {% endfor %}
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        <div style="padding-top:5px;">
+            <a href="/admin/group/add">Add Group</a>
+        </div>
+    {% else %}
+        No groups
+    {% endif %}
 {% endblock %}

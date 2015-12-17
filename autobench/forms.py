@@ -231,7 +231,7 @@ class EditUserInfoForm(Form):
     admin = BooleanField('Admin', default=False)
 
 
-class AddUser(Form):
+class AddUserForm(Form):
     first_name = StringField('First Name', validators=[DataRequired()])
     last_name = StringField('Last Name', validators=[DataRequired()])
     user_name = StringField('User Name',
@@ -251,3 +251,23 @@ class DeleteUser(Form):
                             blank_text='Select User To Delete',
                             query_factory=models.Users.query
                             .order_by('email').all, validators=[DataRequired()])
+
+
+class AddGroupForm(Form):
+    group_name = StringField('Group Name', validators=[DataRequired()])
+    description = TextAreaField('Description', validators=[DataRequired()])
+
+
+class EditGroupForm(Form):
+    group_name = StringField('Group Name', validators=[DataRequired()])
+    description = TextAreaField('Description', validators=[DataRequired()])
+
+
+def make_add_group_member_form(gid):
+    class AddGroupMember(Form):
+        member = QuerySelectField('Member', get_label='user_name',
+                                  allow_blank=True,
+                                  blank_text='Select Member',
+                                  query_factory=models.Users.query.all)
+
+    return AddGroupMember
