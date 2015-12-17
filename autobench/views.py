@@ -224,10 +224,10 @@ def _my_info():
 @login_required
 def _edit_my_info():
     user = g.user
-    form = EditInfoForm()
+    form = EditMyInfoForm()
     if form.validate_on_submit():
         if user.check_password(str(form.password.data)):
-            message = update_user_info(form, user)
+            message = update_my_info(form, user)
             flash(message)
             logger.debug(message)
             return redirect(url_for('_my_info'))
@@ -637,12 +637,53 @@ def _jenkins_job_info(jobname):
 @login_required
 def _admin():
     user = g.user
-    form = ChangeServerOwnerForm()
-    if form.validate_on_submit():
-        flash('You selected {} and {}.'.format(form.server.data,
-                                               form.owner.data))
-    return render_template('admin.html', title='Admin', user=user, form=form,
+    users = models.Users.query.order_by('email').all()
+    add_user_form = AddUser()
+    if add_user_form.validate_on_submit():
+        flash(add_user(add_user_form, user))
+        return redirect('/admin')
+    elif add_user_form.validate_on_submit():
+        print 'This one validated!'
+        flash(delete_user(add_user_form, user))
+        return redirect('/admin')
+    return render_template('admin.html', title='Admin', user=user,
+                           users=users, add_user_form=add_user_form,
                            date=_get_date_last_modified())
+
+
+@myapp.route('/admin/users/<_id>', methods=['GET', 'POST'])
+@login_required
+def _user_info(_id):
+    me = g.user
+    user = models.Users.query.filter_by(id=_id).first()
+    form = EditUserInfoForm()
+    if not (me.admin and user):
+        return render_template('404.html', user=me), 404
+
+    if form.validate_on_submit():
+        message = update_user_info(form, _id, me)
+        flash(message)
+        logger.debug(message)
+        return redirect('/admin')
+
+    for attr in user.__dict__.keys():
+        if attr in form.data.keys():
+            field = getattr(form, attr)
+            field.data = getattr(user, attr)
+
+    return render_template('user_info.html', title='User Info', user=me,
+                           date=_get_date_last_modified(), form=form)
+
+
+@myapp.route('/admin/users/<_id>/delete', methods=['GET', 'POST'])
+@login_required
+def _delete_user():
+    _id = request.get_json().get('id')
+    user = g.user
+    if not user.admin:
+        return render_template('404.html', user=user), 404
+
+    return delete_user(_id, user)
 
 
 @myapp.route('/debug', methods=['GET'])

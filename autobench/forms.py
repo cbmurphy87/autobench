@@ -4,10 +4,23 @@ from wtforms import StringField, BooleanField, TextAreaField, PasswordField, \
     SelectField, IntegerField
 from wtforms.ext.sqlalchemy.fields import QuerySelectField
 from wtforms.validators import DataRequired, Length, Optional, NumberRange, \
-    required, IPAddress, EqualTo, Regexp
+    required, IPAddress, EqualTo, Regexp, email
+from wtforms import widgets
 from wtforms.validators import ValidationError
 from sqlalchemy import collate
 from autobench import models
+
+
+# ================ Custom Fields =======================
+class ShowPasswordField(StringField):
+    """
+    Original source: https://github.com/wtforms/wtforms/blob/2.0.2/wtforms/fields/simple.py#L35-L42
+
+    A StringField, except renders an ``<input type="password">``.
+    Also, whatever value is accepted by this field is not rendered back
+    to the browser like normal fields.
+    """
+    widget = widgets.PasswordInput(hide_value=False)
 
 
 # ================ Validators =======================
@@ -68,6 +81,7 @@ class MacAddress(Regexp):
     :param message:
         Error message to raise in case of a validation error.
     """
+
     def __init__(self, message=None):
         pattern = r'^(?:[0-9a-fA-F]{2}[:-]?){5}[0-9a-fA-F]{2}$'
         super(MacAddress, self).__init__(pattern, message=message)
@@ -95,7 +109,7 @@ class MacOrIP(object):
             try_ip(form, field)
 
 
-# ================ Forms =======================
+# ================ Generic Forms =======================
 class CreateJobForm(Form):
     job_name = StringField('Job Name', validators=[DataRequired()])
     build = BooleanField('Build', default=True)
@@ -151,7 +165,7 @@ class AddInventoryForm(Form):
                                       NumberRange(min=1, max=42)])
 
 
-class EditInfoForm(Form):
+class EditMyInfoForm(Form):
     first_name = StringField('First Name', validators=[DataRequired()])
     last_name = StringField('Last Name', validators=[DataRequired()])
     user_name = StringField('User Name', validators=[DataRequired()])
@@ -204,4 +218,40 @@ def makeEditForm(holder):
                                    default=models.Users.query.
                                    filter_by(id=holder).first())
         print held_by
+
     return EditInventoryForm
+
+
+# ================ Admin Forms =======================
+class EditUserInfoForm(Form):
+    first_name = StringField('First Name', validators=[DataRequired()])
+    last_name = StringField('Last Name', validators=[DataRequired()])
+    user_name = StringField('User Name', validators=[DataRequired()])
+    password = PasswordField('Password',
+                             validators=[Optional(),
+                                         Length(8, 32, 'New password must '
+                                                       'be at least 8 '
+                                                       'characters')])
+    admin = BooleanField('Admin', default=False)
+
+
+class AddUser(Form):
+    first_name = StringField('First Name', validators=[DataRequired()])
+    last_name = StringField('Last Name', validators=[DataRequired()])
+    user_name = StringField('User Name',
+                            validators=[Optional(),
+                                        Length(6, 32, 'Username must be at '
+                                                      'least 6 characters')])
+    email = StringField('E-mail', validators=[DataRequired(), email()])
+    password = PasswordField('Password',
+                             validators=[DataRequired(),
+                                         Length(8, 32, 'Password must be '
+                                                       'at least 8 '
+                                                       'characters')])
+
+
+class DeleteUser(Form):
+    user = QuerySelectField('User', get_label='email', allow_blank=True,
+                            blank_text='Select User To Delete',
+                            query_factory=models.Users.query
+                            .order_by('email').all, validators=[DataRequired()])

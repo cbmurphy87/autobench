@@ -18,7 +18,7 @@ from aaebench import customlogger
 
 
 # ============== User METHODS ======================
-def update_user_info(form, user):
+def update_my_info(form, user):
 
     user = models.Users.query.filter_by(id=user.id).first()
     if not user:
@@ -141,6 +141,71 @@ def edit_server_info(form, _id):
         return 'Could not update server info.'
 
     return 'Successfully updated server info.'
+
+
+# ================ Admin METHODS =================
+def add_user(form, user):
+
+    if not user.admin:
+        return 'YOU ARE NOT AN ADMIN AND SHOULD NOT BE HERE!!!'
+
+    # First, check if user with that email already exists
+    existing_user = models.Users.query.filter_by(email=form.email.data).first()
+    if existing_user:
+        return 'A user with that E-mail already exists!'
+    # If a username if given, check if that username already exists
+    if form.user_name.data:
+        existing_user = models.Users.query\
+            .filter_by(user_name=form.user_name.data).first()
+        if existing_user:
+            return 'That username is already taken!'
+
+    new_user = models.Users()
+    for field, data in form.data.items():
+        if hasattr(new_user, field):
+            if field == 'password':
+                setattr(new_user, field, generate_password_hash(data))
+            else:
+                setattr(new_user, field, data)
+    try:
+        db.session.add(new_user)
+        db.session.commit()
+    except Exception as e:
+        logger.error('Error updating user info: {}'.format(e))
+        db.session.rollback()
+        return 'Could not add user.'
+
+    return 'Successfully added user {}.'.format(new_user)
+
+
+def update_user_info(form, user_id, user):
+
+    if not user.admin:
+        return 'YOU ARE NOT AN ADMIN AND SHOULD NOT BE HERE!!!'
+
+    update_user = models.Users.query.filter_by(id=user_id).first()
+
+    for field, data in form.data.items():
+        if hasattr(update_user, field):
+            if field == 'password':
+                if data:
+                    setattr(update_user, field, generate_password_hash(data))
+            else:
+                setattr(update_user, field, data)
+
+    try:
+        db.session.add(update_user)
+        db.session.commit()
+    except Exception as e:
+        logger.error('Error updating user info: {}'.format(e))
+        db.session.rollback()
+        return 'Could not update info.'
+
+    return 'Successfully updated user info.'
+
+
+def delete_user(form, user):
+    return 'Success!'
 
 
 # ============== Inventory METHODS =================
