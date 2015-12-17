@@ -423,11 +423,13 @@ def add_inventory(form, user):
         message = 'Could not explicitly detect server type.'
         logger.warning(message)
         try:
-            return add_dell_info(nic_info=nic_info, form=form, user=user)
+            return add_dell_info(nic_info=nic_info, form=form, user=user,
+                                 job=job)
         except IOError:
             # else, it's supermicro, do this
             logger.debug('Not a dell server. try supermicro.')
-            return add_smc_info(nic_info=nic_info, form=form, user=user)
+            return add_smc_info(nic_info=nic_info, form=form, user=user,
+                                job=job)
 
 
 def add_interface(form, server_id, user):
