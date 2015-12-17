@@ -260,9 +260,9 @@ def _server_info():
 @myapp.route('/inventory')
 @login_required
 def _inventory():
+
     user = g.user
-    servers = get_inventory()
-    # count server fields
+    servers = get_inventory(user)
 
     return render_template('inventory.html', title='Inventory',
                            date=_get_date_last_modified(),
@@ -343,7 +343,6 @@ def _update_inventory():
     _id = request.get_json().get('id')
     try:
         server = Servers.query.filter_by(id=_id).first()
-        mac = server.interfaces.filter_by(type='oob').first().mac
         flash('Updating server. Wait 30 seconds, then refresh.')
         logger.info('Updating server {}.'.format(server.id))
         make = server.make or 'unknown'
@@ -355,7 +354,7 @@ def _update_inventory():
             message = 'Could not get server make'
             logger.error(message)
             raise Exception(message)
-        p = Process(target=target, args=(mac, user))
+        p = Process(target=target, args=(server, user))
         p.start()
     except Exception as e:
         logger.error('Could not update server {}.: {}'.format(server.id, e))

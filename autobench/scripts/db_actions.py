@@ -357,9 +357,24 @@ def remove_group_server(gid, sid, user):
 
 
 # ============== Inventory METHODS =================
-def get_inventory():
+def get_inventory(user):
+    # return only servers in your group
+    if user.admin:
+        server_list = [s.id for s in models.Servers.query.all()]
+    else:
+        user_groups = set([group.id for group in user.groups])
+        all_servers = []
+        for group in user.groups:
+            for server in group.servers:
+                all_servers.append(server)
+        server_list = set([s.id for s in all_servers])
 
-    servers = models.Servers.query.order_by('rack', 'u', 'make', 'model').all()
+    servers = models.Servers.query\
+        .order_by('rack', 'u', 'make', 'model')\
+        .filter(models.Servers.id.in_(server_list)).all()
+    print servers
+
+    # add drive into to each selected server
     for server in servers:
         drive_count = db.engine.execute("select server_id, count(model), "
                                         "model, capacity "
@@ -895,31 +910,33 @@ def update_smc_server(mac, user):
     finish_job(job)
 
 
-def update_dell_server(mac, user):
+def update_dell_server(server, user):
 
-    # check that a server in inventory has that mac address and ip
-    interface = models.NetworkDevices.query.filter_by(mac=mac).first()
-    if not interface:
-        logger.warning('No server found with that mac address.')
+    if not server:
+        logger.warning('No server selected.')
         return
-
-    server = models.Servers.query.filter_by(id=interface.server_id).first()
 
     # create job
     job = create_job(user, message='Update server {}'.format(server.id))
 
     # check that the mac address is associated with an ip address
     try:
-        ip = get_ip_from_mac(mac)
+        interface = server.interfaces.filter_by(type='oob').first()
+        ip = get_ip_from_mac(interface.mac)
+
     except Exception as e:
-        message = 'Could not get an IP address: {}'.format(e)
+        message = 'Could not get an IP address from DHCP: {}'.format(e)
         logger.warning(message)
+        add_job_detail(job, message=message)
         ip = interface.ip
-        fail_job(job, message=message)
-        return
+        message = 'Trying stored IP address.'
+        logger.debug(message)
+        add_job_detail(job, message=message)
 
     if not ip:
-        logger.error('No ip address found for server {}.'.format(server))
+        message = 'No ip address found for server {}.'.format(server)
+        logger.error(message)
+        fail_job(job, message=message)
         return
 
     # set job as pending
@@ -929,8 +946,8 @@ def update_dell_server(mac, user):
 
     s = {
             'hostname': ip,
-            'username': 'root',
-            'password': 'Not24Get',
+            'username': server.user_name,
+            'password': server.password,
             'verbose': True,
         }
 
@@ -951,8 +968,8 @@ def update_dell_server(mac, user):
 
     try:
         update_server_info(server, new_info, job)
-    except Exception:
-        message = 'Error updating server info.'
+    except Exception as e:
+        message = 'Error updating server info: {}'.format(e)
         logger.error(message)
         fail_job(job, message=message)
         return
