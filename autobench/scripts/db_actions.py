@@ -372,7 +372,6 @@ def get_inventory(user):
     servers = models.Servers.query\
         .order_by('rack', 'u', 'make', 'model')\
         .filter(models.Servers.id.in_(server_list)).all()
-    print servers
 
     # add drive into to each selected server
     for server in servers:
@@ -663,6 +662,8 @@ def add_dell_info(nic_info, form, user, job):
     server = models.Servers(rack=form.rack.data, u=form.u.data,
                             user_name=form.user_name.data,
                             password=form.password.data)
+    # add primary group
+    server.groups.append(form.group.data)
     for interface in server_info.get('interfaces', tuple()):
         _i = models.NetworkDevices()
         for _k, _v in interface.items():

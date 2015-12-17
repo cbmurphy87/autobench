@@ -156,15 +156,23 @@ class LoginForm(Form):
     password = PasswordField('Password', validators=[DataRequired()])
 
 
-class AddInventoryForm(Form):
-    network_address = StringField('iDRAC/IPMI Mac/IP Address',
-                                  validators=[DataRequired(), MacOrIP()])
-    user_name = StringField('Username', default='root')
-    password = StringField('Password', default='Not24Get')
-    rack = IntegerField('Rack', validators=[DataRequired(),
-                                            NumberRange(min=1, max=15)])
-    u = IntegerField('U', validators=[DataRequired(),
-                                      NumberRange(min=1, max=42)])
+def make_add_inventory_form(group_ids):
+    class AddInventoryForm(Form):
+        network_address = StringField('iDRAC/IPMI Mac/IP Address',
+                                      validators=[DataRequired(), MacOrIP()])
+        user_name = StringField('Username', default='root')
+        password = StringField('Password', default='Not24Get')
+        group = QuerySelectField('Group', allow_blank=True,
+                                 get_label='group_name',
+                                 blank_text='Select Group',
+                                 query_factory=models.Groups.query
+                                 .filter(models.Groups.id.in_(group_ids)).all)
+        rack = IntegerField('Rack', validators=[DataRequired(),
+                                                NumberRange(min=1, max=15)])
+        u = IntegerField('U', validators=[DataRequired(),
+                                          NumberRange(min=1, max=42)])
+
+    return AddInventoryForm
 
 
 class EditMyInfoForm(Form):

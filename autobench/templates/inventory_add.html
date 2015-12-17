@@ -41,7 +41,7 @@
             <form action="" method="POST" name="add_inventory">
                 {{ form.hidden_tag() }}
                 <div class="add_inventory">
-                {% for field in (form.rack, form.u, form.network_address, form.user_name, form.password) %}
+                {% for field in (form.rack, form.u, form.network_address, form.user_name, form.password, form.group) %}
                     <p>
                         {{ field.label.text }}:<br>
                         {% if field.label.text.lower() == 'rack' %}

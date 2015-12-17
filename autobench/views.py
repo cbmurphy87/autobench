@@ -273,6 +273,8 @@ def _inventory():
 @login_required
 def _add_inventory():
     user = g.user
+    group_ids = [group.id for group in user.groups]
+    AddInventoryForm = make_add_inventory_form(group_ids)
     form = AddInventoryForm()
     if form.validate_on_submit():
         flash('Adding server. Wait 30 seconds, then refresh.')

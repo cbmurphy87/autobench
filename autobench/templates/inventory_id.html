@@ -84,7 +84,8 @@
 {% set server_fields = (('ID', 'id'),('Name','name'),('Host Name','host_name'),
 ('Make','make'),('Model','model'),('CPU Count','cpu_count'),('CPU Model','cpu_model'),
 ('BIOS','bios'),('Memory','memory_capacity'),('Rack','rack'),('U','u'),
-('Username','user_name'),('Password','password'),('Available','available')) %}
+('Username','user_name'),('Password','password'),('Available','available'),
+('Groups','groups')) %}
 
 {% set drive_fields = (('Slot','slot'),('Manufacturer','manufacturer'),
 ('Model','model'),('Capacity','capacity'),('Standard','standard'),
@@ -128,7 +129,9 @@
                             {{ k }}:
                         </td>
                         <td>
-                            {% if server[v] != None %}
+                            {% if v == 'groups' %}
+                                <i>{{ server.groups|join(',') }}</i>
+                            {% elif server[v] != None %}
                                 <i>{{ server[v] }}</i>
                             {% else %}
                                 <i>N/A</i>
