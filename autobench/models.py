@@ -52,7 +52,7 @@ class Users(db.Model):
 
 class Groups(db.Model):
 
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     group_name = db.Column(db.String(16), primary_key=True)
     description = db.Column(db.String(128))
 
