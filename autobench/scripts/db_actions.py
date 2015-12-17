@@ -355,6 +355,7 @@ def remove_group_server(gid, sid, user):
 
     return 'Successfully removed server from group.'
 
+
 # ============== Inventory METHODS =================
 def get_inventory():
 
@@ -413,11 +414,11 @@ def add_inventory(form, user):
     if 'dell' in vendor.lower():
         message = 'Detected server as Dell.'
         logger.info(message)
-        return add_dell_info(nic_info=nic_info, form=form, user=user)
+        return add_dell_info(nic_info=nic_info, form=form, user=user, job=job)
     elif 'super' in vendor.lower():
         message = 'Detected server as Supermicro.'
         logger.info(message)
-        return add_smc_info(nic_info=nic_info, form=form, user=user)
+        return add_smc_info(nic_info=nic_info, form=form, user=user, job=job)
     else:
         message = 'Could not explicitly detect server type.'
         logger.warning(message)
