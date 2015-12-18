@@ -132,6 +132,9 @@ def edit_server_info(form, _id):
                 setattr(server, field, data.id)
             logger.debug(message)
 
+    # set server to unavailabel if held by someone
+    server.available = False if server.held_by else True
+
     try:
         db.session.add(server)
         db.session.commit()

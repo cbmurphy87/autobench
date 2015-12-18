@@ -14,7 +14,8 @@ from autobench import models
 # ================ Custom Fields =======================
 class ShowPasswordField(StringField):
     """
-    Original source: https://github.com/wtforms/wtforms/blob/2.0.2/wtforms/fields/simple.py#L35-L42
+    Original source: https://github.com/wtforms/wtforms/blob/2.0.2/wtforms/
+        fields/simple.py#L35-L42
 
     A StringField, except renders an ``<input type="password">``.
     Also, whatever value is accepted by this field is not rendered back
@@ -86,12 +87,13 @@ class MacAddress(Regexp):
         pattern = r'^(?:[0-9a-fA-F]{2}[:-]?){5}[0-9a-fA-F]{2}$'
         super(MacAddress, self).__init__(pattern, message=message)
 
-    def __call__(self, form, field):
+    def __call__(self, form, field, **kwargs):
         message = self.message
         if message is None:
             message = field.gettext('Invalid Mac address.')
 
-        super(MacAddress, self).__call__(form, field, message)
+        super(MacAddress, self).__call__(form=form, field=field,
+                                         message=message)
 
 
 class MacOrIP(object):
@@ -100,11 +102,9 @@ class MacOrIP(object):
 
     def __call__(self, form, field):
         try:
-            print 'trying mac'
             try_mac = MacAddress(message=self.message)
             try_mac(form, field)
         except ValidationError:
-            print 'trying ip'
             try_ip = IPAddress(message=self.message)
             try_ip(form, field)
 
@@ -221,7 +221,6 @@ def makeEditForm(holder):
                                    order_by('email').all,
                                    default=models.Users.query.
                                    filter_by(id=holder).first())
-        print held_by
 
     return EditInventoryForm
 
@@ -297,6 +296,7 @@ def make_add_group_server_form(gid):
     class AddGroupServerForm(Form):
         def get_name(self):
             return self.get_name()
+
         server = QuerySelectField('Server', get_label=get_name,
                                   allow_blank=True,
                                   blank_text='Select Server',
@@ -333,6 +333,7 @@ def make_remove_group_server_form(gid):
     class RemoveGroupServerForm(Form):
         def get_name(self):
             return self.get_name()
+
         server = QuerySelectField('Server', get_label=get_name,
                                   allow_blank=True,
                                   blank_text='Select Server',

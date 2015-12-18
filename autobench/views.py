@@ -810,7 +810,6 @@ def _groups_remove_member(gid):
     form = RemoveGroupMemberForm()
 
     if form.validate_on_submit():
-        print form.member.id
         message = remove_group_member(group.id, form.member.data.id, user)
         flash(message)
         logger.debug(message)
