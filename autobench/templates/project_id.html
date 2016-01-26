@@ -218,7 +218,7 @@
                         {% endfor %}
                         {% if user == project.owner or user.admin %}
                             <th class="sorttable_nosort">
-                                <a href="/projects/{{ project.id }}/add_member">
+                                <a href="/projects/{{ project.id }}/add_server">
                                     <img src="{{ url_for('static', filename='pictures/plus.png') }}"/>
                                 </a>
                             </th>
