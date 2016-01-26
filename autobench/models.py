@@ -1,7 +1,10 @@
 from autobench import db
+import datetime
+from sqlalchemy.dialects.sqlite import DATE
+import re
 from werkzeug.security import check_password_hash
 
-# ================ Users for Flask Login ==================
+# ======================= Users for Flask Login =======================
 
 
 class Users(db.Model):
@@ -14,14 +17,14 @@ class Users(db.Model):
     email = db.Column(db.String(120), index=True, unique=True,
                       nullable=False)
     password = db.Column(db.String(120))
-    authenticated = db.Column(db.Boolean, default=False)
-    admin = db.Column(db.Boolean, default=False)
+    authenticated = db.Column(db.SmallInteger, default=False)
+    admin = db.Column(db.SmallInteger, default=False)
 
     # relationships
     jobs = db.relationship('Jobs', backref='creator', lazy='dynamic',
-                           cascade="all, delete")
+                           cascade='all, delete')
     groups = db.relationship('Groups', secondary='user_group',
-                             backref='members')
+                             backref='members', lazy='dynamic')
 
     # methods
     def is_authenticated(self):
@@ -52,35 +55,7 @@ class Users(db.Model):
     def __str__(self):
         return '{} {}'.format(self.first_name, self.last_name)
 
-
-class Groups(db.Model):
-
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True,
-                   nullable=True)
-    group_name = db.Column(db.String(16), unique=True)
-    description = db.Column(db.String(128))
-
-    def __str__(self):
-
-        return str(self.id)
-
-    def member_count(self):
-
-        return str(len(self.members))
-
-
-class UserGroup(db.Model):
-
-    uid = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
-    gid = db.Column(db.Integer, db.ForeignKey('groups.id'), primary_key=True)
-
-
-class ServerGroup(db.Model):
-
-    sid = db.Column(db.Integer, db.ForeignKey('servers.id'), primary_key=True)
-    gid = db.Column(db.Integer, db.ForeignKey('groups.id'), primary_key=True)
-
-# ================= Server Inventory ======================
+# ========================= Server Inventory ==========================
 
 
 class Servers(db.Model):
@@ -93,15 +68,21 @@ class Servers(db.Model):
     model = db.Column(db.String(16))
     cpu_count = db.Column(db.Integer)
     cpu_model = db.Column(db.String(16))
-    memory_capacity = db.Column(db.String(16))
+    memory_capacity = db.Column(db.Integer)
     bios = db.Column(db.String(16))
-    rack = db.Column(db.Integer, default='?')
-    u = db.Column(db.Integer, default='?')
-    available = db.Column(db.Boolean, default=False)
+    rack = db.Column(db.Integer)
+    u = db.Column(db.Integer)
+    available = db.Column(db.SmallInteger, default=False)
     held_by = db.Column(db.Integer, db.ForeignKey('users.id'))
-    dirty = db.Column(db.Boolean, default=True)
+    dirty = db.Column(db.SmallInteger, default=False)
     user_name = db.Column(db.String(64))
     password = db.Column(db.String(64))
+    project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
+
+    # constraints
+    __table_args__ = (
+        db.UniqueConstraint('rack', 'u'),
+    )
 
     # relationships
     interfaces = db.relationship('NetworkDevices', cascade='all, delete',
@@ -115,6 +96,7 @@ class Servers(db.Model):
     holder = db.relationship('Users', backref='servers')
     groups = db.relationship('Groups', secondary='server_group',
                              backref='servers')
+    project = db.relationship('Projects', backref='servers')
 
     # magic methods
     def __repr__(self):
@@ -128,7 +110,7 @@ class StorageDevices(db.Model):
 
     id = db.Column(db.Integer, primary_key=True, nullable=False)
     manufacturer = db.Column(db.String(16))
-    model = db.Column(db.String(16))
+    model = db.Column(db.String(32))
     capacity = db.Column(db.Integer)
     standard = db.Column(db.String(8))
     type = db.Column(db.String(8))
@@ -178,7 +160,7 @@ class ServerStorage(db.Model):
 
 class ServerCommunication(db.Model):
 
-    id = db.Column(db.String(64), db.ForeignKey('communication_devices.id'),
+    id = db.Column(db.Integer, db.ForeignKey('communication_devices.id'),
                    primary_key=True)
     server_id = db.Column(db.String(16), db.ForeignKey('servers.id'))
     type = db.Column(db.String(16),
@@ -189,11 +171,11 @@ class ServerCommunication(db.Model):
 
 class NetworkDevices(db.Model):
 
-    mac = db.Column(db.String(12), primary_key=True)
+    mac = db.Column(db.String(17), primary_key=True)
     server_id = db.Column(db.String(16), db.ForeignKey('servers.id'))
     ip = db.Column(db.String(15), unique=True, nullable=True)
-    name = db.Column(db.String(3))
-    slot = db.Column(db.Integer)
+    name = db.Column(db.String(6))
+    slot = db.Column(db.String(24))
     type = db.Column(db.String(3),
                      db.CheckConstraint('type="ib" or type="oob"'))
 
@@ -201,7 +183,37 @@ class NetworkDevices(db.Model):
         return '<NetworkDevice mac {}>'.format(self.mac)
 
 
-# =========================== OS Models ==========================
+# =========================== Group Models ============================
+class Groups(db.Model):
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True,
+                   nullable=True)
+    group_name = db.Column(db.String(16), unique=True)
+    description = db.Column(db.String(128))
+
+    def __str__(self):
+
+        return str(self.id)
+
+    def member_count(self):
+
+        return str(len(self.members))
+
+
+class UserGroup(db.Model):
+
+    uid = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
+    gid = db.Column(db.Integer, db.ForeignKey('groups.id'), primary_key=True)
+
+
+class ServerGroup(db.Model):
+
+    sid = db.Column(db.String(16), db.ForeignKey('servers.id'),
+                    primary_key=True)
+    gid = db.Column(db.Integer, db.ForeignKey('groups.id'), primary_key=True)
+
+
+# ============================= OS Models =============================
 class OS(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
@@ -210,22 +222,52 @@ class OS(db.Model):
     kernel = db.Column(db.String(128))
     initrd = db.Column(db.String(128))
     append = db.Column(db.String(128))
-    validated = db.Column(db.Boolean, default=False)
+    validated = db.Column(db.SmallInteger, default=False)
 
     def __repr__(self):
 
         return '<OS: {} {}>'.format(self.flavor, self.version)
 
 
-# =========================== Projects ==========================
+# ============================= Projects ==============================
 class Projects(db.Model):
 
-    id = db.Column(db.String(16), primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
     owner_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    date_created = db.Column(db.String(32))
+    gid = db.Column(db.Integer, db.ForeignKey('groups.id'))
+    name = db.Column(db.String(32), unique=True)
+    start_date = db.Column(db.DATE)
+    target_end_date = db.Column(db.DATE)
+    actual_end_date = db.Column(db.DATE, default=None)
+    description = db.Column(db.Text())
+
+    owner = db.relationship('Users', backref='projects_owned')
+    members = db.relationship('Users', secondary='project_members',
+                              backref='member_of_projects', lazy='dynamic')
+    statuses = db.relationship('ProjectStatus', backref='project',
+                               cascade='all, delete, delete-orphan',
+                               order_by='desc(ProjectStatus.date)')
 
 
-# =========================== Jobs ==========================
+class ProjectStatus(db.Model):
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    pid = db.Column(db.Integer, db.ForeignKey('projects.id'))
+    date = db.Column(db.DATE)
+    engineer_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    message = db.Column(db.String(128))
+
+    # relationships
+    engineer = db.relationship('Users', backref='statuses')
+
+
+class ProjectMembers(db.Model):
+
+    pid = db.Column(db.Integer, db.ForeignKey('projects.id'), primary_key=True)
+    uid = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
+
+
+# =============================== Jobs ================================
 class Jobs(db.Model):
 
     """

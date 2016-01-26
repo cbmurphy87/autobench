@@ -7,6 +7,10 @@
 ('Name','get_name'),('Model','model'),('CPU Count','cpu_count'),
 ('CPU Model','cpu_model'),('Memory','memory_capacity'),('Release','release'))%}
 
+{% set project_fields = (('Project ID','id'),('Name','name'),
+('Owner','owner'),('Start Date','date_created'),
+('Completion Date','date_target_completion')) %}
+
 {% block links %}
     <script type="text/javascript" src={{ url_for('static', filename='javascript/filterTable.js') }}></script>
     <script type="text/javascript" src={{ url_for('static', filename='javascript/inventory.js') }}></script>
@@ -140,11 +144,11 @@
     <h2>My Projects</h2>
     {% if user.projects %}
     <div class="pane-frame" style="width:100%;">
-        <table id="aaetable" class="sortable pane bigtable stripped">
+        <table id="aaetable" class="sortable pane bigtable stripped count">
             <thead>
                 <tr class="header">
                 {# create header for inventory table #}
-                    {% for k, v in server_fields %}
+                    {% for k, v in project_fields %}
                     <th>
                         {{ k }}
                     </th>
@@ -153,23 +157,17 @@
             </thead>
             <tbody>
             {# loop over servers in inventory #}
-            {%- for server in user.servers -%}
+            {%- for project in user.projects -%}
                 <tr>
-                {% for k, v in server_fields %}
+                {% for k, v in project_fields %}
                     <td>
                     {% if v == 'id' %}
-                        {% set server_id = server['id'] %}
-                        <a href="/inventory/{{ server_id }}">
-                        {{ server_id }}
+                        {% set project_id = project.id %}
+                        <a href="/projects/{{ project_id }}">
+                        {{ project_id }}
                         </a>
-                    {% elif v == 'release' %}
-                        <form>
-                            <button formaction='/inventory/release/{{ server.id }}'>
-                                Release
-                            </button>
-                        </form>
                     {% else %}
-                        {{ server[v] }}
+                        {{ project[v] }}
                     {% endif %}
                     </td>
                     {% endfor %}
@@ -181,4 +179,7 @@
     {% else %}
         You have no projects yet.
     {% endif %}
+    <p>
+        <a href="/projects/add">Add Project</a>
+    </p>
 {% endblock %}

@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{# =============================================================== #}
+{# set head data #}
+{# =============================================================== #}
+
+{% block links %}
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/inventory.js') }}></script>
+{% endblock %}
+
+{# =============================================================== #}
+{# set variables #}
+{# =============================================================== #}
+
+{% set member_fields = (form.member) %}
+
+{# =============================================================== #}
+{# set body data #}
+{# =============================================================== #}
+
+{% block content %}
+    <h2>Add Member</h2>
+    <div style="display:inline-block;width:100%;">
+        <div style="float:left;">
+            <form action="" method="POST" name="add_status">
+                {{ form.hidden_tag() }}
+                <div class="add_status">
+                {% for field in (form.member,) %}
+                    <p>
+                        {{ field.label.text }}:<br>
+                        {{ field }}
+                        {% for error in field.errors %}
+                            <span style="color:red;">[{{ error }}]</span>
+                        {% endfor %}
+                    </p>
+                {% endfor %}
+                </div>
+                <input type="submit" value="submit">
+            </form>
+        </div>
+    </div>
+{% endblock %}

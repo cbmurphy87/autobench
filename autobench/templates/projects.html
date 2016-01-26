@@ -7,42 +7,20 @@
 {% block links %}
     <script type="text/javascript" src={{ url_for('static', filename='javascript/filterTable.js') }}></script>
     <script type="text/javascript" src={{ url_for('static', filename='javascript/inventory.js') }}></script>
-{% endblock %}
-
-{% block scripts %}
-function deleteAllJobs(id, next) {
-        var xhttp = new XMLHttpRequest();
-        xhttp.onreadystatechange = function() {
-            if (xhttp.readyState == 4 && xhttp.status == 200) {
-                alert(xhttp.responseText);
-                location.reload();
-            }
-        };
-        xhttp.open("GET", "/jobs/delete", true);
-        xhttp.send();
-    }
-    $(document).ready(function () {
-        $("#searchInput").keyup(
-            function () {
-                counttable();
-                updateStriping();
-            }
-        )
-    });
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/projects.js') }}></script>
 {% endblock %}
 
 {# =============================================================== #}
 {# set body data #}
 {# =============================================================== #}
 
-{% set field_pairs = (('Job ID','id'),('Message','message'),
-('Creator','creator'),('Start','start_time'),('End','end_time'),
-('Status','status')) %}
+{% set field_pairs = (('Project ID','id'),('Name','name'),
+('Owner','owner'),('Start Date','start_date'),
+('Completion Date','target_end_date')) %}
 
 {% block content %}
-    <h2>Jobs</h2>
-    {% if jobs %}
-    <p>Jobs are shown newest to oldest.</p>
+    <h2>Projects</h2>
+    {% if projects %}
     <p><input id="searchInput" placeholder="Filter"></p>
     <table id="aaetable" class="sortable pane bigtable stripped count">
         <thead>
@@ -53,7 +31,7 @@ function deleteAllJobs(id, next) {
                 {% if k.lower() in ['start', 'end'] %}
                     {% set count_type = 'ignore' %}
                     {% set units = 'none' %}
-                {% elif k.lower() in ['message', 'creator'] %}
+                {% elif k.lower() =='owner' %}
                     {% set count_type = 'unique' %}
                     {% set units = 'none' %}
                 {% else %}
@@ -67,34 +45,42 @@ function deleteAllJobs(id, next) {
                     {{ k }}
                 </th>
             {% endfor %}
+                <th class="sorttable_nosort" count_type="ignore">
+                    <a href="/projects/add">
+                        <img src="{{ url_for('static', filename='pictures/plus.png') }}"/>
+                    </a>
+                </th>
             </tr>
         </thead>
         <tbody id="fbody">
-        {% for job in jobs %}
+        {% for project in projects %}
             <tr>
             {% for k, v in field_pairs %}
                 <td>
-                {% if v == 'status'%}
-                    <a href="/job/{{ job.id }}">{{ job.get_status() }}</a>
+                {% if v == 'id'%}
+                    <a href="/projects/{{ project.id }}">{{ project.id }}</a>
                 {% else %}
-                    {{ job[v] }}
+                    {{ project[v] }}
                 {% endif %}
-                <span class="custom_count" style="display:none">{{ job[v] }}}</span>
+                <span class="custom_count" style="display:none">{{ project[v] }}}</span>
                 </td>
             {% endfor %}
+            {% if (user == project.owner) or (user.admin) %}
+                <td>
+                    <img src="{{ url_for('static', filename='pictures/minus.png') }}"
+                         onclick="delete_project({{ project.id }})"/>
+                </td>
+            {% endif %}
             </tr>
         {% endfor %}
         </tbody>
     </table>
-    {% if user.admin %}
-    <p>
-        <button onclick="deleteAllJobs()">
-        Delete all jobs
-        </button>
-    </p>
-    {% endif %}
     {% else %}
-        No jobs yet.
+        No Projects yet.
+    <p>
+        <a href="/projects/add">Add Project</a>
+    </p>
+
     {% endif %}
 
 {% endblock %}

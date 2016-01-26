@@ -131,6 +131,8 @@
                         <td>
                             {% if v == 'groups' %}
                                 <i>{{ server.groups|join(',') }}</i>
+                            {% elif v == 'available' %}
+                                {{ 'True' if not server.held_by else 'False' }}
                             {% elif server[v] != None %}
                                 <i>{{ server[v] }}</i>
                             {% else %}

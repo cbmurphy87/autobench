@@ -3,6 +3,7 @@ from flask.ext.wtf import Form
 from wtforms import StringField, BooleanField, TextAreaField, PasswordField, \
     SelectField, IntegerField
 from wtforms.ext.sqlalchemy.fields import QuerySelectField
+from wtforms.fields.html5 import DateField
 from wtforms.validators import DataRequired, Length, Optional, NumberRange, \
     required, IPAddress, EqualTo, Regexp, email
 from wtforms import widgets
@@ -11,7 +12,7 @@ from sqlalchemy import collate
 from autobench import models
 
 
-# ================ Custom Fields =======================
+# =========================== Custom Fields ===========================
 class ShowPasswordField(StringField):
     """
     Original source: https://github.com/wtforms/wtforms/blob/2.0.2/wtforms/
@@ -109,7 +110,7 @@ class MacOrIP(object):
             try_ip(form, field)
 
 
-# ================ Generic Forms =======================
+# =========================== Generic Forms ===========================
 class CreateJobForm(Form):
     job_name = StringField('Job Name', validators=[DataRequired()])
     build = BooleanField('Build', default=True)
@@ -131,7 +132,7 @@ class DeployForm(Form):
                               validators=[required()])
     os = QuerySelectField('OS', query_factory=models.OS.query
                           .filter_by(validated=True)
-                          .order_by(collate(models.OS.flavor, 'NOCASE'),
+                          .order_by(models.OS.flavor,
                                     models.OS.version.desc()).all,
                           get_label=make_name, allow_blank=True,
                           blank_text='Select an OS',
@@ -218,6 +219,7 @@ def makeEditForm(holder):
         held_by = QuerySelectField('Owner', get_label='email', allow_blank=True,
                                    blank_text='None',
                                    query_factory=models.Users.query.
+                                   filter_by(models.Users.groups).
                                    order_by('email').all,
                                    default=models.Users.query.
                                    filter_by(id=holder).first())
@@ -225,7 +227,7 @@ def makeEditForm(holder):
     return EditInventoryForm
 
 
-# ================ Admin Forms =======================
+# ============================ Admin Forms ============================
 class EditUserInfoForm(Form):
     first_name = StringField('First Name', validators=[DataRequired()])
     last_name = StringField('Last Name', validators=[DataRequired()])
@@ -342,3 +344,52 @@ def make_remove_group_server_form(gid):
                                   .all, validators=[DataRequired()])
 
     return RemoveGroupServerForm
+
+
+# =========================== Project Forms ===========================
+def make_add_project_form(user):
+    class AddProjectForm(Form):
+
+        name = StringField('Project Name', validators=[DataRequired()])
+        primary_group = QuerySelectField('Primary group',
+                                         query_factory=user.groups.all,
+                                         get_label='group_name')
+        start_date = DateField('Start Date', format='%Y-%m-%d')
+        target_end_date = DateField('Target Completion Date')
+        description = TextAreaField('Project Description')
+
+    return AddProjectForm
+
+
+def make_edit_project_form(project):
+    class EditProjectForm(Form):
+
+        name = StringField('Project Name', validators=[DataRequired()])
+        owner = QuerySelectField('Owner', query_factory=models.Users.query.all)
+        start_date = DateField('Start Date', format='%Y-%m-%d')
+        target_end_date = DateField('Target Completion Date')
+        description = TextAreaField('Project Description')
+
+
+class AddProjectStatusForm(Form):
+
+    date = DateField('Date', validators=[DataRequired()])
+    message = TextAreaField('Message', validators=[DataRequired()])
+
+
+def make_add_project_member_form(project):
+    class AddProjectMemberForm(Form):
+        # get list of user ids in group
+        group = models.Groups.query.filter_by(id=project.gid).first()
+        members = group.members
+        member_list = [member.id for member in members
+                       if not ((member in project.members) or
+                               (member == project.owner))]
+
+        member = QuerySelectField('Member', allow_blank=True,
+                                  blank_text='Select member',
+                                  query_factory=models.Users.query
+                                  .filter(models.Users.id.in_(member_list))
+                                  .all, validators=[DataRequired()])
+
+    return AddProjectMemberForm

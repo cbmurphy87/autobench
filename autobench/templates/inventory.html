@@ -104,7 +104,7 @@
                             {# set bubble color and hover title #}
                             {% if server.dirty %}
                                 {% set color = 'yellow' %}
-                            {% elif server.available %}
+                            {% elif not server.held_by %}
                                 {% set color = 'blue' %}
                             {% elif server.held_by == user.id %}
                                 {% set color = 'green' %}
@@ -112,7 +112,7 @@
                                 {% set color = 'red' %}
                             {% endif %}
                             {# set row color #}
-                            {% if server.available %}
+                            {% if not server.held_by %}
                                 {% set onclick = "checkout('{}','')".format(server.id) %}
                                 {% set hover_title = 'Check out this server' %}
                             {% elif server.held_by == user.id %}

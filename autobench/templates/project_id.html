@@ -1,0 +1,260 @@
+{% extends 'base.html' %}
+
+{# =============================================================== #}
+{# set head data #}
+{# =============================================================== #}
+
+{% block links %}
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/filterTable.js') }}></script>
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/inventory.js') }}></script>
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/projects.js') }}></script>
+{% endblock %}
+
+{% block scripts %}
+    $(document).ready(function () {
+        $("#searchInput").keyup(
+            function () {
+                counttable();
+                updateStriping();
+            }
+        );
+        $("th").click(
+            function () {
+                updateStriping();
+            }
+        );
+    });
+{% endblock %}
+
+{# =============================================================== #}
+{# set variables #}
+{# =============================================================== #}
+
+{% set project_fields = (('Project ID','id'),('Name','name'),
+('Owner','owner'),('Start Date','start_date'),
+('Completion Date','target_end_date')) %}
+
+{% set status_fields = (('Date','date'),('Engineer','engineer'),
+('Message','message')) %}
+
+{% set member_fields = (('First Name','first_name'),('Last Name','last_name'),
+('User Name','user_name'),('E-mail','email')) %}
+
+{% set server_fields = (('ID', 'id'),('Rack','rack'),('U','u'),
+('Name','get_name'),('Model','model'),('CPU Count','cpu_count'),
+('CPU Model','cpu_model'),('Memory','memory_capacity'),('Release','release'))%}
+
+{# =============================================================== #}
+{# set body data #}
+{# =============================================================== #}
+
+{% block content %}
+    <!-- Basic project info -->
+    <h2 style="padding-bottom: 10px;">Basic Info</h2>
+    <div style="display:inline-block;width:100%;">
+        <div style="float:left;">
+            <div class="pane-frame" style="width:auto;">
+                <table id="aaetable" class="sortable pane bigtable stripped">
+                    <tbody>
+                    <tr class="header">
+                    {# create header for table #}
+                        <th style="text-align:right;">
+                            Field:
+                        </th>
+                        <th>
+                            Value
+                        </th>
+                    </tr>
+                    {# loop over field values for each parame #}
+                    {% for k, v in project_fields %}
+                    <tr>
+                        <td style="text-align:right;">
+                            {{ k }}:
+                        </td>
+                        <td>
+                            <i>{{ project[v] }}</i>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <br>
+            <a href="/projects/{{ project.id }}/edit">Edit project Info</a>
+        </div>
+    </div>
+
+    <!-- Status info -->
+    <h2 style="padding-bottom: 10px;">Status</h2>
+    {% if project.statuses|length > 0 %}
+    <p><input id="searchInput1" placeholder="Filter"></p>
+    <table class="sortable pane bigtable stripped">
+        <thead>
+            <tr class="header">
+            {% for k, v in status_fields %}
+                <th>
+                    {{ k }}
+                </th>
+            {% endfor %}
+            {% if (user == project.owner) or (user in project.members) or (user.admin) %}
+                <th class="sorttable_nosort">
+                    <a href="/projects/{{ project.id }}/add_status">
+                        <img src="{{ url_for('static', filename='pictures/plus.png') }}"/>
+                    </a>
+                </th>
+            {% endif %}
+            </tr>
+        </thead>
+        <tbody id="fbody1">
+        {% for status in project.statuses %}
+            <tr>
+            {% for k, v in status_fields %}
+                <td>
+                {% if v == 'engineer' and status == True %}
+                    {{ status.engineer.full_name() }}
+                {% else %}
+                    {{ status[v] }}
+                {% endif %}
+                </td>
+            {% endfor %}
+            {% if (user == project.owner) or (user.admin) %}
+                <td>
+                    <img src="{{ url_for('static', filename='pictures/minus.png') }}"
+                         onclick="remove_status({{ project.id }}, {{ status.id }})"/>
+                </td>
+            {% endif %}
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    No status information for this project.
+    {% if user == project.owner %}
+    <p>
+        <div style="padding-top:5px;">
+            <a href="/projects/{{ project.id }}/add_status">Add Status</a>
+        </div>
+    </p>
+    {% endif %}
+    {% endif %}
+
+
+    <!-- Associated engineers -->
+    <h2 style="padding-bottom: 10px;">Project Members</h2>
+    {% set members = project.members.all() %}
+    {% if members|length > 0 %}
+    <p><input id="searchInput2" placeholder="Filter"></p>
+    <table class="sortable pane bigtable stripped">
+        <thead>
+            <tr class="header">
+            {% for k, v in member_fields %}
+                <th>
+                    {{ k }}
+                </th>
+            {% endfor %}
+            {% if user == project.owner or user.admin %}
+                <th class="sorttable_nosort">
+                    <a href="/projects/{{ project.id }}/add_member">
+                        <img src="{{ url_for('static', filename='pictures/plus.png') }}"/>
+                    </a>
+                </th>
+            {% endif %}
+            </tr>
+        </thead>
+        <tbody id="fbody2">
+        {% for member in members %}
+            <tr>
+            {% for k, v in member_fields %}
+                <td>
+                    {{ member[v] }}
+                </td>
+            {% endfor %}
+            {% if user == project.owner or user.admin %}
+                <td>
+                    <img src="{{ url_for('static', filename='pictures/minus.png') }}"
+                         onclick="remove_member({{ project.id }}, {{ member.id }}, '{{ member.full_name() }}')"/>
+                </td>
+            {% endif %}
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    No members associated with this project.
+    {% if user == project.owner %}
+    <p>
+        <a href="/projects/{{ project.id }}/add_member">Add Member</a>
+    </p>
+    {% endif %}
+    {% endif %}
+
+
+    <!-- Associated servers -->
+    <h2 style="padding-bottom: 10px;">Servers</h2>
+    {% if project.servers > 0 %}
+    <p><input id="searchInput3" placeholder="Filter"></p>
+    <div id="project_servers">
+        <div class="pane-frame" style="width:100%;">
+            <table id="aaetable" class="sortable pane bigtable stripped count">
+                <thead>
+                    <tr class="header">
+                    {# create header for inventory table #}
+                        {% for k, v in server_fields %}
+                            {# set count types for columns #}
+                            {% if k in ['S', 'Release'] %}
+                                {% set units = 'none' %}
+                                {% set count_type = 'ignore' %}
+                                {% set class = " class=sorttable_nosort" %}
+                            {% elif k in ['Memory', 'Capacity'] %}
+                                {% set count_type = 'sum' %}
+                                {% set units = 'GB' %}
+                            {% else %}
+                                {% set units = 'none' %}
+                                {% set count_type = 'unique' %}
+                            {% endif %}
+                            <th{{ class }} unit="{{ units }}" count_type="{{ count_type }}">
+                                {{ k }}
+                            </th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody id="fbody3">
+                {# loop over servers in inventory #}
+                {%- for server in project.servers -%}
+                    <tr id="{{ server.id }}">
+                    {% for k, v in server_fields %}
+                        <td>
+                        {% if v == 'id' %}
+                            {% set server_id = server['id'] %}
+                            <a href="/inventory/{{ server_id }}">
+                            {{ server_id }}
+                            </a>
+                        {% elif v == 'release' %}
+                            <button onclick="release('{{ server.id }}','')">
+                                Release
+                            </button>
+                        {% else %}
+                            {% if v == 'get_name' %}
+                            {{ server.get_name() }}
+                            {% else %}
+                            {{ server[v] }}
+                            {% endif %}
+                            <span class="custom_count" style="display:none">{{ server[v] }}</span>
+                        {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+        No servers associated with this project.
+    {% endif %}
+    {% if user == project.owner %}
+    <p>
+        <a href="/projects/{{ project.id }}/add_server">Add Server</a>
+    </p>
+    {% endif %}
+{% endblock %}

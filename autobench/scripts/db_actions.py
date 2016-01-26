@@ -17,7 +17,7 @@ import requests
 from aaebench import customlogger
 
 
-# ============== User METHODS ======================
+# =========================== User METHODS ============================
 def update_my_info(form, user):
 
     user = models.Users.query.filter_by(id=user.id).first()
@@ -46,7 +46,7 @@ def update_my_info(form, user):
     return 'Successfully updated your info.'
 
 
-# ============== Server METHODS ===================
+# ========================== Server METHODS ===========================
 def is_mac(check):
 
     search_string = re.compile(r'(?is)'
@@ -132,9 +132,6 @@ def edit_server_info(form, _id):
                 setattr(server, field, data.id)
             logger.debug(message)
 
-    # set server to unavailabel if held by someone
-    server.available = False if server.held_by else True
-
     try:
         db.session.add(server)
         db.session.commit()
@@ -146,7 +143,7 @@ def edit_server_info(form, _id):
     return 'Successfully updated server info.'
 
 
-# ================ Admin METHODS =================
+# =========================== Admin METHODS ===========================
 def add_user(form, user):
 
     if not user.admin:
@@ -359,7 +356,7 @@ def remove_group_server(gid, sid, user):
     return 'Successfully removed server from group.'
 
 
-# ============== Inventory METHODS =================
+# ========================= Inventory METHODS =========================
 def get_inventory(user):
     # return only servers in your group
     if user.admin:
@@ -795,22 +792,34 @@ def remove_inventory(_id):
         return e
 
 
-def update_smc_server(mac, user):
+def update_smc_server(server, user):
 
-    # check that the mac address is associated with an ip address
-    interface = models.NetworkDevices.query.filter_by(mac=mac).first()
-    server = models.Servers.query.filter_by(id=interface.server_id).first()
+    if not server:
+        logger.warning('No server selected.')
+        return
 
     # create job
     job = create_job(user, message='Update server {}'.format(server.id))
 
+    # check that the mac address is associated with an ip address
     try:
-        ip = get_ip_from_mac(mac)
+        interface = server.interfaces.filter_by(type='oob').first()
+        ip = get_ip_from_mac(interface.mac)
+
     except Exception as e:
-        message = 'Could not get an IP address: {}'.format(e)
+        message = 'Could not get an IP address from DHCP: {}'.format(e)
         logger.warning(message)
+        add_job_detail(job, message=message)
         ip = interface.ip
+        message = 'Trying stored IP address.'
+        logger.debug(message)
+        add_job_detail(job, message=message)
+
+    if not ip:
+        message = 'No ip address found for server {}.'.format(server)
+        logger.error(message)
         fail_job(job, message=message)
+        return
 
     if ip != interface.ip:
         interface.ip = ip
@@ -1275,7 +1284,7 @@ def check_or_add_drives(server, drives, job):
     finish_job(job)
 
 
-# ============== JOB METHODS ======================
+# ============================ JOB METHODS ============================
 def create_job(user, message=''):
 
     # create job
@@ -1354,9 +1363,9 @@ def get_all_jobs():
     return []
 
 
-def get_job(_id):
+def get_job(id_):
 
-    job = models.Jobs.query.filter_by(id=_id).first()
+    job = models.Jobs.query.filter_by(id=id_).first()
     return job
 
 
@@ -1373,6 +1382,152 @@ def delete_all_jobs():
         logger.error('Could not delete all jobs. Rolling back: {}'.format(e))
         db.session.rollback()
         raise Exception('Could not delete jobs.')
+
+
+# ========================== PROJECT METHODS ==========================
+def get_all_projects():
+
+    all_projects = models.Projects.query \
+        .order_by(models.Projects.id.desc()).all()
+    if all_projects:
+        return all_projects
+    return []
+
+
+def get_project_by_id(id_):
+
+    project = models.Projects.query \
+        .filter_by(id=id_).first()
+    return project
+
+
+def get_project_by_name(name):
+
+    project = models.Projects.query \
+        .filter_by(name=name).first()
+    return project
+
+
+def add_project(form, user):
+
+    new_project = models.Projects(owner_id=user.id)
+    for field, value in form.data.items():
+        if hasattr(new_project, field):
+            setattr(new_project, field, value)
+        else:
+            logger.debug('Attr {} from form is not in project.'.format(field))
+
+    try:
+        db.session.add(new_project)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        message = 'Error adding project: {}'.format(e)
+        logger.debug(message)
+        return message
+
+
+def delete_project(project, user):
+
+    if user != project.owner:
+        return 'You are not the project owner!'
+
+    try:
+        db.session.delete(project)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        message = 'Failed to delete project: {}'.format(e)
+        logger.error(message)
+        return message
+
+    message = 'Successfully deleted project.'
+    logger.debug(message)
+    return message
+
+
+def add_project_member(form, user, project):
+
+    if project.owner != user:
+        return 'You are not the project owner!'
+    new_member = form.member.data
+    project.members.append(new_member)
+
+    try:
+        db.session.add(project)
+        db.session.commit()
+    except Exception as e:
+        error = 'Error adding member: {}'.format(e)
+        logger.error(error)
+        db.session.rollback()
+        return error
+
+    return 'Successfully added member!'
+
+
+def remove_project_member(user, project, member):
+
+    if project.owner != user:
+        return 'You are not the project owner!'
+
+    project.members.remove(member)
+
+    try:
+        db.session.add(project)
+        db.session.commit()
+    except Exception as e:
+        error = 'Error removing member: {}'.format(e)
+        logger.error(error)
+        db.session.rollback()
+        return error
+
+    return 'Successfully removed member!'
+
+
+def add_project_status(form, user, project_id):
+
+    project = models.Projects.query.filter_by(id=project_id).first()
+
+    if not ((user == project.owner) or (user in project.members)):
+        return 'You are not the project owner!'
+
+    new_status = models.ProjectStatus(pid=project.id,
+                                      date=form.date.data,
+                                      engineer_id=user.id,
+                                      message=form.message.data)
+    project.statuses.append(new_status)
+    try:
+        db.session.add(project)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        message = 'Error adding status: {}'.format(e)
+        logger.error(message)
+        return message
+
+    message = 'Successfully added status!'
+    logger.debug(message)
+    return message
+
+
+def remove_project_status(user, project, status):
+
+    if project.owner != user:
+        return 'You are not the project owner!'
+
+    project.statuses.remove(status)
+
+    try:
+        db.session.add(project)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        message = 'Error removing status. The developer has been notified'\
+            .format(e)
+        logger.error(message)
+        return message
+
+    return 'Successfully removed status!'
 
 
 def main():

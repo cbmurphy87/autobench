@@ -1,19 +1,20 @@
 #!/usr/bin/python
 
-# ___________________________ Flask Imports ________________________
+# ============================== IMPORTS ==============================
+# ___________________________ Flask Imports ___________________________
 from flask import render_template, flash, redirect, session, url_for, request, \
     g, abort, send_from_directory
 from flask.ext.login import login_user, logout_user, current_user, \
     login_required
-from sqlalchemy import sql, or_
+from sqlalchemy import sql
 from wtforms.ext.sqlalchemy.fields import QuerySelectField
 
-# ___________________________ App Imports ________________________
+# ____________________________ App Imports ____________________________
 from autobench import myapp, lm
 from autobench.forms import *
 from models import Users, Servers
 
-# ___________________________ Standard Imports ________________________
+# _________________________ Standard Imports __________________________
 from datetime import datetime
 import fnmatch
 from jenkins import JenkinsException
@@ -22,21 +23,21 @@ from multiprocessing import Process
 import os
 from subprocess import Popen, PIPE
 
-# ___________________________ AAEBench Imports ________________________
+# _________________________ AAEBench Imports __________________________
 from aaebench import customlogger
 from aaebench.testautomation.syscontrol.file_transfer import SFTPManager
 from aaebench.testautomation.syscontrol.racadm import RacadmManager
 from aaebench.testautomation.syscontrol.smcipmi import SMCIPMIManager
 from aaebench.parents.managers import GenericManager
 
-# ___________________________ Flask Imports ________________________
+# ___________________________ Flask Imports ___________________________
 from scripts.jenkinsMethods import *
 from scripts.db_actions import *
 
 
-# ========================== METHODS ============================
+# ============================== METHODS ==============================
 
-# _______________________ HELPER METHODS ________________________
+# ___________________________ HELPER METHODS __________________________
 def _get_date_last_modified():
     try:
         matches = []
@@ -52,7 +53,7 @@ def _get_date_last_modified():
         return date
 
 
-# ___________________ Asynchronous METHODS ______________________
+# _______________________ Asynchronous METHODS ________________________
 # method for creating a separate process
 def _deploy_server(form):
 
@@ -134,7 +135,7 @@ def _run_debug():
             f.write(err)
 
 
-# ________________________ LOGIN METHODS ________________________
+# ___________________________ LOGIN METHODS ___________________________
 @lm.user_loader
 def load_user(id):
     return Users.query.get(id)
@@ -152,7 +153,7 @@ def _before_request():
         return render_template('500.html'), 500
 
 
-# =========================== LOGIN VIEWS =============================
+# =============================== VIEWS ===============================
 @myapp.route('/login', methods=['GET', 'POST'])
 def _login():
     if g.user is not None and g.user.is_authenticated:
@@ -199,7 +200,7 @@ def _logout():
     return redirect('/login')
 
 
-# =========================== REGULAR VIEWS ===========================
+# _______________________________ ROOT ________________________________
 @myapp.route('/')
 @login_required
 def _root():
@@ -210,6 +211,8 @@ def _root():
                            user=user)
 
 
+# _______________________________ INFO ________________________________
+# methods used to get info
 @myapp.route('/my_info')
 @login_required
 def _my_info():
@@ -245,8 +248,6 @@ def _edit_my_info():
                            user=user, form=form)
 
 
-# _______________________ INFO _________________________
-# methods used to get inventory info
 @myapp.route('/server_info', methods=['POST'])
 @login_required
 def _server_info():
@@ -256,7 +257,7 @@ def _server_info():
                            .filter_by(id=server_id).first())
 
 
-# _______________________ INVENTORY ________________________
+# _____________________________ INVENTORY _____________________________
 @myapp.route('/inventory')
 @login_required
 def _inventory():
@@ -429,7 +430,6 @@ def _checkout_id():
 @login_required
 def _delete_id():
     _id = request.get_json().get('id')
-    _next = request.get_json().get('next')
     user = g.user
     logger.info('User {} is deleting server {}'.format(user, _id))
     server = Servers.query.filter_by(id=_id).first()
@@ -504,7 +504,7 @@ def _release():
                                  'title': 'Error getting status'})
 
 
-# _______________________ Deploy ________________________
+# ______________________________ DEPLOY _______________________________
 @myapp.route('/deploy', methods=['GET', 'POST'])
 @login_required
 def _deploy():
@@ -542,7 +542,7 @@ def _deploy():
                            user=user, form=form, servers=servers)
 
 
-# _______________________ JOBS ________________________
+# _______________________________ JOBS ________________________________
 @myapp.route('/jobs')
 @login_required
 def _jobs():
@@ -574,7 +574,142 @@ def _jobs_delete():
         return e.message
 
 
-# ___________________ JENKINS JOBS ____________________
+# _____________________________ PROJECTS ______________________________
+@myapp.route('/projects')
+@login_required
+def _projects():
+    user = g.user
+    projects = get_all_projects()
+    return render_template('projects.html', title='Projects', user=user,
+                           projects=projects)
+
+
+@myapp.route('/projects/add', methods=['GET', 'POST'])
+@login_required
+def _projects_add():
+    user = g.user
+    AddProjectForm = make_add_project_form(user)
+    form = AddProjectForm()
+    if form.validate_on_submit():
+        error = add_project(form, user)
+        if not error:
+            message = 'Project successfully added!'
+            logger.debug(message)
+            flash(message)
+            return redirect('/projects')
+        else:
+            message = 'Could not create project: {}'.format(error)
+            logger.error(message)
+            flash(message)
+    if form.errors:
+        logger.error(form.errors)
+    return render_template('projects_add.html', title='Add Project', user=user,
+                           form=form)
+
+
+@myapp.route('/projects/delete', methods=['GET', 'POST'])
+@login_required
+def _projects_delete():
+    user = g.user
+    project_id = request.get_json().get('project_id')
+    project = models.Projects.query.filter_by(id=project_id).first()
+    if user != project.owner:
+        return 'You do not own this project!'
+    return delete_project(project, user)
+
+
+@myapp.route('/projects/<id_>')
+@login_required
+def _projects_id(id_):
+    user = g.user
+    project = get_project_by_id(id_)
+    return render_template('project_id.html', title='Projects', user=user,
+                           project=project)
+
+
+@myapp.route('/projects/<id_>/edit')
+@login_required
+def _projects_id_edit(id_):
+    user = g.user
+    project = get_project_by_id(id_)
+    return render_template('project_id_edit.html', title='Edit Project',
+                           user=user, project=project)
+
+
+@myapp.route('/projects/<id_>/add_member', methods=['GET', 'POST'])
+@login_required
+def _projects_id_add_member(id_):
+    user = g.user
+    project = get_project_by_id(id_)
+    AddProjectMemberForm = make_add_project_member_form(project)
+    form = AddProjectMemberForm()
+    if not user == project.owner:
+        flash('You are not the owner of this project!')
+        return redirect('/projects/{}'.format(id_))
+    if form.validate_on_submit():
+        message = add_project_member(form=form, user=user, project=project)
+        flash(message)
+        return redirect('/projects/{}'.format(id_))
+    return render_template('project_id_add_member.html', title='Projects',
+                           user=user, project=project, form=form)
+
+
+@myapp.route('/projects/<id_>/remove_member', methods=['GET', 'POST'])
+@login_required
+def _projects_id_remove_member(id_):
+    member_id = request.get_json().get('member_id')
+    member = models.Users.query.filter_by(id=member_id).first()
+    user = g.user
+    project = get_project_by_id(id_)
+    if not user == project.owner:
+        return 'You are not the owner of this project!'
+    message = remove_project_member(user=user, project=project, member=member)
+    return message
+
+
+@myapp.route('/projects/<id_>/add_server', methods=['GET', 'POST'])
+@login_required
+def _projects_id_add_server(id_):
+    user = g.user
+    project = get_project_by_id(id_)
+    if not user == project.owner:
+        flash('You are not the owner of this project!')
+        return redirect('/projects/{}'.format(id_))
+    return render_template('project_id_add_server.html', title='Projects',
+                           user=user, project=project)
+
+
+@myapp.route('/projects/<id_>/add_status', methods=['GET', 'POST'])
+@login_required
+def _projects_id_add_status(id_):
+    user = g.user
+    project = get_project_by_id(id_)
+    form = AddProjectStatusForm()
+    if not user == project.owner:
+        flash('You are not the owner of this project!')
+        return redirect('/projects/{}'.format(id_))
+    if form.validate_on_submit():
+        message = add_project_status(form=form, user=user,
+                                     project_id=project.id)
+        flash(message)
+        return redirect('/projects/{}'.format(id_))
+    return render_template('project_id_add_status.html', title='Add Status',
+                           user=user, project=project, form=form)
+
+
+@myapp.route('/projects/<id_>/remove_status', methods=['GET', 'POST'])
+@login_required
+def _projects_id_remove_status(id_):
+    status_id = request.get_json().get('status_id')
+    status = models.Users.query.filter_by(id=status_id).first()
+    user = g.user
+    project = get_project_by_id(id_)
+    if not user == project.owner:
+        return 'You are not the owner of this project!'
+    message = remove_project_status(user=user, project=project, status=status)
+    return message
+
+# ___________________________ JENKINS JOBS ____________________________
 @myapp.route('/build_jenkins_job/<job_name>', methods=['POST', 'GET'])
 @login_required
 def _build_jenkins_job(job_name):
@@ -633,11 +768,14 @@ def _jenkins_job_info(jobname):
     return redirect('/jenkins_jobs')
 
 
-# ________________________ ADMIN __________________________
+# _______________________________ ADMIN _______________________________
 @myapp.route('/admin', methods=['GET', 'POST'])
 @login_required
 def _admin():
     user = g.user
+    if not user.admin:
+        print 'not admin'
+        abort(401)
     users = models.Users.query.order_by('email').all()
     groups = models.Groups.query.order_by('id').all()
 
@@ -650,6 +788,9 @@ def _admin():
 @login_required
 def _admin_group_add():
     user = g.user
+    if not user.admin:
+        print 'not admin'
+        abort(401)
     form = AddGroupForm()
     if form.validate_on_submit():
         flash(add_group(form, user))
@@ -665,8 +806,8 @@ def _delete_group():
     gid = request.get_json().get('gid')
     user = g.user
     if not user.admin:
-        return render_template('404.html', user=user), 404
-
+        print 'not admin'
+        abort(401)
     message = delete_group(gid, user)
     flash(message)
     logger.debug(message)
@@ -678,6 +819,9 @@ def _delete_group():
 @login_required
 def _admin_user_add():
     user = g.user
+    if not user.admin:
+        print 'not admin'
+        abort(401)
     form = AddUserForm()
     if form.validate_on_submit():
         flash(add_user(form, user))
@@ -693,8 +837,8 @@ def _delete_user():
     user_name = request.get_json().get('user_name')
     user = g.user
     if not user.admin:
-        return render_template('404.html', user=user), 404
-
+        print 'not admin'
+        abort(401)
     logger.debug(delete_user(user_name, user))
 
     return JSONEncoder().encode({'success': 1})
@@ -704,6 +848,9 @@ def _delete_user():
 @login_required
 def _user_info(user_name):
     user = g.user
+    if not user.admin:
+        print 'not admin'
+        abort(401)
     other_user = models.Users.query.filter_by(user_name=user_name).first()
     if not (user.admin and user):
         return render_template('404.html', user=user), 404
@@ -717,10 +864,12 @@ def _user_info(user_name):
 @login_required
 def _edit_user_info(user_name):
     user = g.user
+    if not user.admin:
+        abort(401)
     other_user = models.Users.query.filter_by(user_name=user_name).first()
     form = EditUserInfoForm()
-    if not (user.admin and other_user):
-        return render_template('404.html', user=user), 404
+    if not other_user:
+        abort(401)
 
     if form.validate_on_submit():
         message = update_user_info(form, other_user.id, user)
@@ -914,7 +1063,13 @@ def _last_debug_out():
     return redirect(url_for('_last_debug'))
 
 
-# _______________________ Handlers ________________________
+# ______________________________ HANDLERS _____________________________
+@myapp.errorhandler(401)
+def unauthorized_error(error):
+    user = g.user
+    return render_template('401.html', user=user), 401
+
+
 @myapp.errorhandler(404)
 def not_found_error(error):
     user = g.user

@@ -3,3 +3,7 @@ $(document).ready(function () {
         $(this).fadeOut();
     });
 });
+
+function goBack() {
+    window.history.back();
+}

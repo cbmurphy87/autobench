@@ -10,15 +10,16 @@
             </li>
             <li><a href="/inventory">Inventory</a>
                 <ul>
-                    <li><a href="/inventory">View Inventory</a></li>
-                    <li><a href="/inventory/add">Add Inventory</a></li>
+                    <li><a href="/inventory">Servers</a></li>
+                    <li><a href="/projects">Projects</a></li>
+                    <li><a href="/inventory/add">Add Server</a></li>
                 </ul>
             </li>
             <li><a href="/deploy">Deploy</a></li>
             <li><a href="/jobs">Jobs</a>
             </li>
             {% if user.admin == true %}
-                <li><a href="/admin">Admin</a>
+                <li style="background-color:yellow;"><a href="/admin">Admin</a>
                     <ul>
                         <li><a href="/admin">Admin</a>
                         <li><a href="/debug">Run Debug</a></li>

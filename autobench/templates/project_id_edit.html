@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{# =============================================================== #}
+{# set variables #}
+{# =============================================================== #}
+
+{% set project_fields = (('Project ID','id'),('Name','name'),
+('Owner','owner'),('Start Date','start_date'),
+('Completion Date','target_end_date')) %}
+
+{# =============================================================== #}
+{# set body data #}
+{# =============================================================== #}
+
+{% block content %}
+    <h2>Project Info</h2>
+    <form action="" method="POST" name="edit_project_info">
+        <div class="edit_info">
+            <table class="bigtable pane bigtable stripped" style="width:auto;">
+                <thead>
+                    <tr>
+                        <th colspan="2">
+                            My Info
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                {# loop over project fields #}
+                {% for field_name in project_fields %}
+                    <tr>
+                    {% set field = form[field_name] %}
+                        <td style="text-align:right;">
+                        {{ field.label.text }}:
+                        </td>
+                        <td style="text-align:left;">
+                        {{ field }}
+                        </td>
+                        {% if field.errors %}
+                            <td>
+                            {% for error in field.errors %}
+                                <span style="color:red;">[{{ error }}]</span>
+                            {% endfor %}
+                            </td>
+                        {% endif %}
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div style="padding-top:5px;">
+            <input type="submit" value="Submit">
+        </div>
+    </form>
+{% endblock %}
