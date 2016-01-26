@@ -706,7 +706,9 @@ def _projects_id_remove_status(id_):
     project = get_project_by_id(id_)
     if not user == project.owner:
         return 'You are not the owner of this project!'
-    message = remove_project_status(user=user, project=project, status=status)
+    message = remove_project_status(user=user, project_id=project.id,
+                                    status_id=status.id)
+    logger.debug(message)
     return message
 
 # ___________________________ JENKINS JOBS ____________________________

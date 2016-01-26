@@ -1510,20 +1510,21 @@ def add_project_status(form, user, project_id):
     return message
 
 
-def remove_project_status(user, project, status):
+def remove_project_status(user, project_id, status_id):
 
+    project = models.Projects.query.filter_by(id=project_id).first()
+    status = models.ProjectStatus.query.filter_by(pid=project_id,
+                                                  id=status_id).first()
     if project.owner != user:
         return 'You are not the project owner!'
 
-    project.statuses.remove(status)
-
     try:
+        project.statuses.remove(status)
         db.session.add(project)
         db.session.commit()
     except Exception as e:
         db.session.rollback()
-        message = 'Error removing status. The developer has been notified'\
-            .format(e)
+        message = 'Error removing status: {}'.format(e)
         logger.error(message)
         return message
 

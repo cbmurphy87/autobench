@@ -234,7 +234,7 @@ class Projects(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     owner_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    gid = db.Column(db.Integer, db.ForeignKey('groups.id'))
+    gid = db.Column(db.Integer, db.ForeignKey('groups.id'), nullable=False)
     name = db.Column(db.String(32), unique=True)
     start_date = db.Column(db.DATE)
     target_end_date = db.Column(db.DATE)
