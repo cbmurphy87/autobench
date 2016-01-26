@@ -42,7 +42,7 @@
 
 {% set server_fields = (('ID', 'id'),('Rack','rack'),('U','u'),
 ('Name','get_name'),('Model','model'),('CPU Count','cpu_count'),
-('CPU Model','cpu_model'),('Memory','memory_capacity'),('Release','release'))%}
+('CPU Model','cpu_model'),('Memory','memory_capacity'))%}
 
 {# =============================================================== #}
 {# set body data #}
@@ -242,6 +242,12 @@
                             <span class="custom_count" style="display:none">{{ server[v] }}</span>
                         {% endif %}
                         </td>
+                        {% if (user == project.owner) or (user.admin) %}
+                        <td>
+                            <img src="{{ url_for('static', filename='pictures/minus.png') }}"
+                                 onclick="remove_server({{ project.id }}, {{ server.id }})"/>
+                        </td>
+                        {% endif %}
                         {% endfor %}
                     </tr>
                 {% endfor %}
