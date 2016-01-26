@@ -627,13 +627,27 @@ def _projects_id(id_):
                            project=project)
 
 
-@myapp.route('/projects/<id_>/edit')
+@myapp.route('/projects/<id_>/edit', methods=['GET', 'POST'])
 @login_required
 def _projects_id_edit(id_):
     user = g.user
     project = get_project_by_id(id_)
+    EditProjectForm = make_edit_project_form(project)
+    form = EditProjectForm()
+
+    if form.validate_on_submit():
+        edit_project(project.id, user, form)
+
+    # set all form values except project_id
+    for attr in project.__dict__.keys():
+        if attr in form.data.keys():
+            field = getattr(form, attr)
+            field.data = getattr(project, attr)
+
+    if form.errors:
+        logger.error(form.errors)
     return render_template('project_id_edit.html', title='Edit Project',
-                           user=user, project=project)
+                           user=user, project=project, form=form)
 
 
 @myapp.route('/projects/<id_>/add_member', methods=['GET', 'POST'])
@@ -672,11 +686,17 @@ def _projects_id_remove_member(id_):
 def _projects_id_add_server(id_):
     user = g.user
     project = get_project_by_id(id_)
+    AddProjectServerForm = make_add_project_server_form(project)
+    form = AddProjectServerForm()
     if not user == project.owner:
         flash('You are not the owner of this project!')
         return redirect('/projects/{}'.format(id_))
+    if form.validate_on_submit():
+        message = add_project_server(form=form, user=user, project=project)
+        flash(message)
+        return redirect('/projects/{}'.format(id_))
     return render_template('project_id_add_server.html', title='Projects',
-                           user=user, project=project)
+                           user=user, project=project, form=form)
 
 
 @myapp.route('/projects/<id_>/add_status', methods=['GET', 'POST'])

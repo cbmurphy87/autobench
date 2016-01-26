@@ -191,7 +191,7 @@
 
     <!-- Associated servers -->
     <h2 style="padding-bottom: 10px;">Servers</h2>
-    {% if project.servers > 0 %}
+    {% if project.servers|length > 0 %}
     <p><input id="searchInput3" placeholder="Filter"></p>
     <div id="project_servers">
         <div class="pane-frame" style="width:100%;">
@@ -216,6 +216,13 @@
                                 {{ k }}
                             </th>
                         {% endfor %}
+                        {% if user == project.owner or user.admin %}
+                            <th class="sorttable_nosort">
+                                <a href="/projects/{{ project.id }}/add_member">
+                                    <img src="{{ url_for('static', filename='pictures/plus.png') }}"/>
+                                </a>
+                            </th>
+                        {% endif %}
                     </tr>
                 </thead>
                 <tbody id="fbody3">
@@ -242,15 +249,16 @@
                             <span class="custom_count" style="display:none">{{ server[v] }}</span>
                         {% endif %}
                         </td>
+                        {% endfor %}
                         {% if (user == project.owner) or (user.admin) %}
                         <td>
                             <img src="{{ url_for('static', filename='pictures/minus.png') }}"
                                  onclick="remove_server({{ project.id }}, {{ server.id }})"/>
                         </td>
                         {% endif %}
-                        {% endfor %}
                     </tr>
                 {% endfor %}
+
                 </tbody>
             </table>
         </div>

@@ -1446,6 +1446,29 @@ def delete_project(project, user):
     return message
 
 
+def edit_project(project_id, user, form):
+
+    if not user.admin:
+        return 'You do not own this project!'
+
+    project = models.Projects.query.filter_by(id=project_id).first()
+
+    for field, data in form.data.items():
+        if hasattr(project, field):
+            setattr(project, field, data)
+
+    try:
+        db.session.add(project)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        message = 'Error editing project info: {}'.format(e)
+        logger.error(message)
+        return message
+
+    return 'Successfully updated user info.'
+
+
 def add_project_member(form, user, project):
 
     if project.owner != user:
@@ -1482,6 +1505,25 @@ def remove_project_member(user, project, member):
         return error
 
     return 'Successfully removed member!'
+
+
+def add_project_server(form, user, project):
+
+    if project.owner != user:
+        return 'You are not the project owner!'
+    new_server = form.server.data
+    project.members.append(new_server)
+
+    try:
+        db.session.add(project)
+        db.session.commit()
+    except Exception as e:
+        error = 'Error adding server: {}'.format(e)
+        logger.error(error)
+        db.session.rollback()
+        return error
+
+    return 'Successfully added server!'
 
 
 def add_project_status(form, user, project_id):

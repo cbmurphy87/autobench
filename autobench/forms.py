@@ -364,10 +364,13 @@ def make_edit_project_form(project):
     class EditProjectForm(Form):
 
         name = StringField('Project Name', validators=[DataRequired()])
-        owner = QuerySelectField('Owner', query_factory=models.Users.query.all)
+        owner_id = QuerySelectField('Owner', query_factory=models.Users.query
+                                    .all)
         start_date = DateField('Start Date', format='%Y-%m-%d')
         target_end_date = DateField('Target Completion Date')
         description = TextAreaField('Project Description')
+
+    return EditProjectForm
 
 
 class AddProjectStatusForm(Form):
@@ -377,13 +380,15 @@ class AddProjectStatusForm(Form):
 
 
 def make_add_project_member_form(project):
+
+    # get list of user ids in group
+    group = models.Groups.query.filter_by(id=project.gid).first()
+    members = group.members
+    member_list = [member.id for member in members
+                   if not ((member in project.members) or
+                           (member == project.owner))]
+
     class AddProjectMemberForm(Form):
-        # get list of user ids in group
-        group = models.Groups.query.filter_by(id=project.gid).first()
-        members = group.members
-        member_list = [member.id for member in members
-                       if not ((member in project.members) or
-                               (member == project.owner))]
 
         member = QuerySelectField('Member', allow_blank=True,
                                   blank_text='Select member',
@@ -392,3 +397,24 @@ def make_add_project_member_form(project):
                                   .all, validators=[DataRequired()])
 
     return AddProjectMemberForm
+
+
+def make_add_project_server_form(project):
+
+    # get list of user ids in group
+    group = models.Groups.query.filter_by(id=project.gid).first()
+    servers = group.servers
+    server_list = [server.id for server in servers
+                   if not ((server in project.servers) or
+                           server.project_id)]
+
+    class AddProjectServerForm(Form):
+
+        server = QuerySelectField('Server', allow_blank=True,
+                                  blank_text='Select server',
+                                  get_label='id',
+                                  query_factory=models.Servers.query
+                                  .filter(models.Servers.id.in_(server_list))
+                                  .all, validators=[DataRequired()])
+
+    return AddProjectServerForm
