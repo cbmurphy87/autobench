@@ -317,12 +317,8 @@ def _inventory_id_add_oob(_id):
 def _inventory_edit_id(_id):
     user = g.user
     server = Servers.query.get(_id)
-    ChangeForm = makeEditForm(current_server=server)
+    ChangeForm = make_edit_form(current_server=server)
     form = ChangeForm()
-    form.project = QuerySelectField('Project', get_label='name',
-                                    query_factory=models.Projects.query.
-                                    order_by('name').all,
-                                    default=server.project_id)
     if form.validate_on_submit():
         message = edit_server_info(form, _id)
         flash(message)
@@ -331,8 +327,12 @@ def _inventory_edit_id(_id):
     elif request.method == 'POST':
         flash('Invalid info. Try again.')
 
+    # set all form values except project_id
     for attr in server.__dict__.keys():
         if attr in form.data.keys():
+            if attr in ('project_id', 'project'):
+                logger.debug('skipping attr {}'.format(attr))
+                continue
             field = getattr(form, attr)
             field.data = getattr(server, attr)
     return render_template('inventory_edit_id.html', title=_id, server=server,

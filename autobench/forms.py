@@ -209,7 +209,7 @@ class ChangeServerOwnerForm(Form):
                              get_label='email')
 
 
-def makeEditForm(current_server):
+def make_edit_form(current_server):
     class EditInventoryForm(Form):
         rack = StringField('Rack', validators=[DataRequired()])
         u = StringField('U', validators=[DataRequired()])
@@ -218,7 +218,10 @@ def makeEditForm(current_server):
         password = StringField('Password')
         project_id = QuerySelectField('Project', get_label='name',
                                       allow_blank=True, blank_text='None',
-                                      query_factory=models.Projects.query.all)
+                                      query_factory=models.Projects.query.all,
+                                      default=models.Projects.query
+                                      .filter_by(id=current_server.project_id)
+                                      .first())
 
     return EditInventoryForm
 
