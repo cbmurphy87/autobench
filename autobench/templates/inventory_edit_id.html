@@ -3,7 +3,7 @@
 {% set server_fields = ('rack', 'u', 'name', 'password') %}
 
 {% if user.admin %}
-{% set server_fields = server_fields + ('held_by',) %}
+{% set server_fields = server_fields + ('project_id',) %}
 {% endif %}
 
 {% block content %}

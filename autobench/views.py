@@ -317,12 +317,12 @@ def _inventory_id_add_oob(_id):
 def _inventory_edit_id(_id):
     user = g.user
     server = Servers.query.get(_id)
-    ChangeForm = makeEditForm(holder=server.held_by)
+    ChangeForm = makeEditForm(current_server=server)
     form = ChangeForm()
-    form.held_by = QuerySelectField('Owner', get_label='id',
-                                    query_factory=models.Users.query.
-                                    order_by('email').all,
-                                    default=server.holder)
+    form.project = QuerySelectField('Project', get_label='name',
+                                    query_factory=models.Projects.query.
+                                    order_by('name').all,
+                                    default=server.project_id)
     if form.validate_on_submit():
         message = edit_server_info(form, _id)
         flash(message)

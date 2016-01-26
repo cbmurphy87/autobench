@@ -84,8 +84,8 @@
 {% set server_fields = (('ID', 'id'),('Name','name'),('Host Name','host_name'),
 ('Make','make'),('Model','model'),('CPU Count','cpu_count'),('CPU Model','cpu_model'),
 ('BIOS','bios'),('Memory','memory_capacity'),('Rack','rack'),('U','u'),
-('Username','user_name'),('Password','password'),('Available','available'),
-('Groups','groups')) %}
+('Username','user_name'),('Password','password'),
+('Groups','groups'),('Project','project')) %}
 
 {% set drive_fields = (('Slot','slot'),('Manufacturer','manufacturer'),
 ('Model','model'),('Capacity','capacity'),('Standard','standard'),
@@ -131,8 +131,8 @@
                         <td>
                             {% if v == 'groups' %}
                                 <i>{{ server.groups|join(',') }}</i>
-                            {% elif v == 'available' %}
-                                {{ 'True' if not server.held_by else 'False' }}
+                            {% elif v == 'project' %}
+                                <i>{{ server.project.name }}</i>
                             {% elif server[v] != None %}
                                 <i>{{ server[v] }}</i>
                             {% else %}
@@ -141,18 +141,6 @@
                         </td>
                     </tr>
                     {% endfor %}
-                    <tr>
-                        <td style="text-align:right">
-                            Held By:
-                        </td>
-                        <td>
-                        {% if server['holder'] != None %}
-                            <i>{{ server['holder'].first_name }} {{ server['holder'].last_name }}</i>
-                        {% else %}
-                            Nobody
-                        {% endif %}
-                        </td>
-                    </tr>
                     </tbody>
                 </table>
             </div>
