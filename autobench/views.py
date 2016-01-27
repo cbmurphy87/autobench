@@ -632,6 +632,11 @@ def _projects_id(id_):
 def _projects_id_edit(id_):
     user = g.user
     project = get_project_by_id(id_)
+
+    if not ((project.owner == user) or user.admin):
+        flash('You do not own this project!')
+        return redirect('/projects/{}'.format(id_))
+
     EditProjectForm = make_edit_project_form(project, user)
     form = EditProjectForm()
 
@@ -666,7 +671,7 @@ def _projects_id_add_member(id_):
     project = get_project_by_id(id_)
     AddProjectMemberForm = make_add_project_member_form(project)
     form = AddProjectMemberForm()
-    if not user == project.owner:
+    if not ((project.owner == user) or user.admin):
         flash('You are not the owner of this project!')
         return redirect('/projects/{}'.format(id_))
     if form.validate_on_submit():
@@ -684,7 +689,7 @@ def _projects_id_remove_member(id_):
     member = models.Users.query.filter_by(id=member_id).first()
     user = g.user
     project = get_project_by_id(id_)
-    if not user == project.owner:
+    if not ((project.owner == user) or user.admin):
         return 'You are not the owner of this project!'
     message = remove_project_member(user=user, project=project, member=member)
     return message
@@ -697,7 +702,7 @@ def _projects_id_add_server(id_):
     project = get_project_by_id(id_)
     AddProjectServerForm = make_add_project_server_form(project)
     form = AddProjectServerForm()
-    if not user == project.owner:
+    if not ((project.owner == user) or user.admin):
         flash('You are not the owner of this project!')
         return redirect('/projects/{}'.format(id_))
     if form.validate_on_submit():
@@ -728,7 +733,7 @@ def _projects_id_add_status(id_):
     user = g.user
     project = get_project_by_id(id_)
     form = AddProjectStatusForm()
-    if not user == project.owner:
+    if not ((project.owner == user) or (user in project.members) or user.admin):
         flash('You are not the owner of this project!')
         return redirect('/projects/{}'.format(id_))
     if form.validate_on_submit():
@@ -747,7 +752,7 @@ def _projects_id_remove_status(id_):
     status = models.Users.query.filter_by(id=status_id).first()
     user = g.user
     project = get_project_by_id(id_)
-    if not user == project.owner:
+    if not ((project.owner == user) or user.admin):
         return 'You are not the owner of this project!'
     message = remove_project_status(user=user, project_id=project.id,
                                     status_id=status.id)
