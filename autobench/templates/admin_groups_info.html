@@ -91,7 +91,7 @@
             {% for k, v in member_fields %}
                 <td>
                 {% if v == 'groups' %}
-                    {{ m[v]|count }}
+                    {{ m[v] }}
                 {% else %}
                     {{ m[v] }}
                 {% endif %}
