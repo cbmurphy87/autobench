@@ -348,11 +348,17 @@ def make_remove_group_server_form(gid):
 
 # =========================== Project Forms ===========================
 def make_add_project_form(user):
+
+    if user.admin:
+        groups = models.Groups.query.all
+    else:
+        groups = user.groups.all
+
     class AddProjectForm(Form):
 
         name = StringField('Project Name', validators=[DataRequired()])
         primary_group = QuerySelectField('Primary group',
-                                         query_factory=user.groups.all,
+                                         query_factory=groups,
                                          get_label='group_name')
         start_date = DateField('Start Date', format='%Y-%m-%d')
         target_end_date = DateField('Target Completion Date')
@@ -363,13 +369,16 @@ def make_add_project_form(user):
 
 def make_edit_project_form(project, user):
 
-    class EditProjectForm(Form):
+    if user.admin:
+        groups = models.Groups.query.all
+    else:
+        groups = user.groups.all
 
-        print project.owner.id
+    class EditProjectForm(Form):
 
         name = StringField('Project Name', validators=[DataRequired()])
         primary_group = QuerySelectField('Primary group',
-                                         query_factory=user.groups.all)
+                                         query_factory=groups)
         owner_id = QuerySelectField('Owner', query_factory=models.Users.query
                                     .all, default=models.Users.query
                                     .filter_by(id=project.owner.id).first())
