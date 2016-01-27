@@ -91,7 +91,7 @@
             {% for k, v in member_fields %}
                 <td>
                 {% if v == 'groups' %}
-                    {{ m[v] }}
+                    {{ m[v]|join(',') }}
                 {% else %}
                     {{ m[v] }}
                 {% endif %}
