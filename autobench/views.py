@@ -720,7 +720,7 @@ def _projects_id_remove_server(id_):
     server = models.Servers.query.filter_by(id=server_id).first()
     user = g.user
     project = get_project_by_id(id_)
-    if not user == project.owner:
+    if not ((project.owner == user) or user.admin):
         return 'You are not the owner of this project!'
     message = remove_project_server(user=user, project=project,
                                     server_id=server.id)
