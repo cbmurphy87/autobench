@@ -55,7 +55,7 @@
     </div>
 
     <h2>My Projects</h2>
-    {% if user.projects %}
+    {% if user.projects_owned %}
     <div class="pane-frame" style="width:100%;">
         <table id="aaetable" class="sortable pane bigtable stripped count">
             <thead>
@@ -70,7 +70,7 @@
             </thead>
             <tbody>
             {# loop over servers in inventory #}
-            {%- for project in user.projects -%}
+            {%- for project in user.projects_owned -%}
                 <tr>
                 {% for k, v in project_fields %}
                     <td>
@@ -95,4 +95,43 @@
     <p>
         <a href="/projects/add">Add Project</a>
     </p>
+
+    <h2>Other Projects</h2>
+    {% if user.member_of_projects %}
+    <div class="pane-frame" style="width:100%;">
+        <table id="aaetable" class="sortable pane bigtable stripped count">
+            <thead>
+                <tr class="header">
+                {# create header for inventory table #}
+                    {% for k, v in project_fields %}
+                    <th>
+                        {{ k }}
+                    </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+            {# loop over servers in inventory #}
+            {%- for project in user.member_of_projects -%}
+                <tr>
+                {% for k, v in project_fields %}
+                    <td>
+                    {% if v == 'id' %}
+                        {% set project_id = project.id %}
+                        <a href="/projects/{{ project_id }}">
+                        {{ project_id }}
+                        </a>
+                    {% else %}
+                        {{ project[v] }}
+                    {% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+        You are not a member of any other projects.
+    {% endif %}
 {% endblock %}
