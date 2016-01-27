@@ -10,7 +10,6 @@
 
 {% block links %}
     <script type="text/javascript" src={{ url_for('static', filename='javascript/filterTable.js') }}></script>
-    <script type="text/javascript" src={{ url_for('static', filename='javascript/inventory.js') }}></script>
 {% endblock %}
 
 {% block scripts %}
@@ -75,7 +74,7 @@
             {# loop over servers in inventory #}
             {% set col_counts = [] %}
             {% for server in servers %}
-                {% if server.holder.id == user.id %}
+                {% if user.id in server.project.members %}
                     {% set class = "heldserver" %}
                 {% else %}
                     {% set class = '' %}
@@ -112,20 +111,18 @@
                                 {% set color = 'red' %}
                             {% endif %}
                             {# set row color #}
-                            {% if not server.held_by %}
-                                {% set onclick = "checkout('{}','')".format(server.id) %}
-                                {% set hover_title = 'Check out this server' %}
-                            {% elif server.held_by == user.id %}
-                                {% set onclick = "release('{}','')".format(server.id) %}
-                                {% set hover_title = 'Release this server' %}
+                            {% if not server.project %}
+                                {% set hover_title = 'This server is not part of a project.' %}
+                                {% set color = 'blue' %}
+                            {% elif server.project.owner == user %}
+                                {% set hover_title = 'This server is part of your project {}'.format(server.project) %}
+                                {% set color = 'green' %}
                             {% else %}
-                                {% set onclick = "alert(\"You cannot check out this server\")".format(server.id) %}
-                                {% set hover_title = 'This server is held by {}'.format(server.holder) %}
+                                {% set hover_title = 'This server is held by project {}'.format(server.project|string) %}
+                                {% set color = 'red' %}
                             {% endif %}
-                            <a onclick="return {{ onclick }}" title="{{ hover_title }}">
-                                <img src={{ url_for('static', filename='pictures/{}.png'.format(color)) }} style="width:16px;height:16px;">
-                                <span class="custom_count" style="display:none">{{ color }}</span>
-                            </a>
+                            <img title="{{ hover_title }}" src={{ url_for('static', filename='pictures/{}.png'.format(color)) }} style="width:16px;height:16px;">
+                            <span class="custom_count" style="display:none">{{ color }}</span>
                         {% elif server[v] is not undefined %}
                             {% if k == 'ID' %}
                             <a href="/inventory/{{ server[v] }}">{{ server[v] }}</a>

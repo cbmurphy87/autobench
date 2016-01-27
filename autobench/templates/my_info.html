@@ -3,10 +3,6 @@
 {% set user_fields = (('First Name','first_name'),('Last Name','last_name'),
 ('E-mail','email'),('Username','user_name')) %}
 
-{% set server_fields = (('ID', 'id'),('Rack','rack'),('U','u'),
-('Name','get_name'),('Model','model'),('CPU Count','cpu_count'),
-('CPU Model','cpu_model'),('Memory','memory_capacity'),('Release','release'))%}
-
 {% set project_fields = (('Project ID','id'),('Name','name'),
 ('Owner','owner'),('Start Date','date_created'),
 ('Completion Date','date_target_completion')) %}
@@ -17,26 +13,6 @@
 {% endblock %}
 
 {% block scripts %}
-    function release(id, next) {
-        var xhttp = new XMLHttpRequest();
-        xhttp.onreadystatechange = function() {
-            if (xhttp.readyState == 4 && xhttp.status == 200) {
-                document.getElementById(id).remove();
-                counttable();
-                updateStriping();
-            }
-            // check if all servers are released
-            var aaetable = document.getElementById("aaetable");
-            var aaetable_body = aaetable.getElementsByTagName("tbody")[0];
-            if (aaetable_body.rows.length <= 1) {
-                var myServers = document.getElementById("my_servers");
-                myServers.innerHTML = "You have no servers checked out.";
-            }
-        };
-        xhttp.open("POST", "/inventory/release", true);
-        xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
-        xhttp.send(JSON.stringify({id: id, next: next}));
-    }
     $(document).ready(function () {
         $("#searchInput").keyup(
             function () {
@@ -77,69 +53,6 @@
     <div style="padding-top:5px;">
         <a href="/my_info/edit">Edit My Info</a>
     </div>
-    <!-- My Servers -->
-    <h2>My Servers</h2>
-    {% if user.servers %}
-    <p><input id="searchInput" placeholder="Filter"></p>
-    <div id="my_servers">
-        <div class="pane-frame" style="width:100%;">
-            <table id="aaetable" class="sortable pane bigtable stripped count">
-                <thead>
-                    <tr class="header">
-                    {# create header for inventory table #}
-                        {% for k, v in server_fields %}
-                            {# set count types for columns #}
-                            {% if k in ['S', 'Release'] %}
-                                {% set units = 'none' %}
-                                {% set count_type = 'ignore' %}
-                                {% set class = " class=sorttable_nosort" %}
-                            {% elif k in ['Memory', 'Capacity'] %}
-                                {% set count_type = 'sum' %}
-                                {% set units = 'GB' %}
-                            {% else %}
-                                {% set units = 'none' %}
-                                {% set count_type = 'unique' %}
-                            {% endif %}
-                            <th{{ class }} unit="{{ units }}" count_type="{{ count_type }}">
-                                {{ k }}
-                            </th>
-                        {% endfor %}
-                    </tr>
-                </thead>
-                <tbody id="fbody">
-                {# loop over servers in inventory #}
-                {%- for server in user.servers -%}
-                    <tr id="{{ server.id }}">
-                    {% for k, v in server_fields %}
-                        <td>
-                        {% if v == 'id' %}
-                            {% set server_id = server['id'] %}
-                            <a href="/inventory/{{ server_id }}">
-                            {{ server_id }}
-                            </a>
-                        {% elif v == 'release' %}
-                            <button onclick="release('{{ server.id }}','')">
-                                Release
-                            </button>
-                        {% else %}
-                            {% if v == 'get_name' %}
-                            {{ server.get_name() }}
-                            {% else %}
-                            {{ server[v] }}
-                            {% endif %}
-                            <span class="custom_count" style="display:none">{{ server[v] }}</span>
-                        {% endif %}
-                        </td>
-                        {% endfor %}
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-    {% else %}
-        You have no servers checked out.
-    {% endif %}
 
     <h2>My Projects</h2>
     {% if user.projects %}

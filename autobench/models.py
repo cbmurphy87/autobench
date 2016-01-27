@@ -77,6 +77,7 @@ class Servers(db.Model):
     dirty = db.Column(db.SmallInteger, default=False)
     user_name = db.Column(db.String(64))
     password = db.Column(db.String(64))
+    group_id = db.Column(db.Integer, db.ForeignKey('groups.id'))
     project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
 
     # constraints
@@ -95,8 +96,7 @@ class Servers(db.Model):
     virtual_drives = db.relationship('VirtualStorageDevices', backref='server',
                                      lazy='dynamic', cascade='all, delete')
     holder = db.relationship('Users', backref='servers')
-    groups = db.relationship('Groups', secondary='server_group',
-                             backref='servers')
+    group = db.relationship('Groups', backref='servers')
     project = db.relationship('Projects', backref='servers')
 
     # magic methods
