@@ -1511,11 +1511,11 @@ def add_project_server(form, user, project):
 
     if project.owner != user:
         return 'You are not the project owner!'
-    new_server = form.server.data
-    project.members.append(new_server)
+    server = models.Servers.query.filter_by(id=form.server.data.id).first()
+    server.project_id = project.id
 
     try:
-        db.session.add(project)
+        db.session.add(server)
         db.session.commit()
     except Exception as e:
         error = 'Error adding server: {}'.format(e)
@@ -1524,6 +1524,25 @@ def add_project_server(form, user, project):
         return error
 
     return 'Successfully added server!'
+
+
+def remove_project_server(user, project, server_id):
+
+    if project.owner != user:
+        return 'You are not the project owner!'
+    server = models.Servers.query.filter_by(id=server_id).first()
+    server.project_id = None
+
+    try:
+        db.session.add(server)
+        db.session.commit()
+    except Exception as e:
+        error = 'Error removing server from project: {}'.format(e)
+        logger.error(error)
+        db.session.rollback()
+        return error
+
+    return 'Successfully removed server!'
 
 
 def add_project_status(form, user, project_id):

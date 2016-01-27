@@ -699,6 +699,20 @@ def _projects_id_add_server(id_):
                            user=user, project=project, form=form)
 
 
+@myapp.route('/projects/<id_>/remove_server', methods=['GET', 'POST'])
+@login_required
+def _projects_id_remove_server(id_):
+    server_id = request.get_json().get('server_id')
+    server = models.Servers.query.filter_by(id=server_id).first()
+    user = g.user
+    project = get_project_by_id(id_)
+    if not user == project.owner:
+        return 'You are not the owner of this project!'
+    message = remove_project_server(user=user, project=project,
+                                    server_id=server.id)
+    return message
+
+
 @myapp.route('/projects/<id_>/add_status', methods=['GET', 'POST'])
 @login_required
 def _projects_id_add_status(id_):
