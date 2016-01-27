@@ -1429,7 +1429,7 @@ def add_project(form, user):
 
 def delete_project(project, user):
 
-    if user != project.owner:
+    if not ((project.owner == user) or user.admin):
         return 'You are not the project owner!'
 
     try:
@@ -1448,10 +1448,10 @@ def delete_project(project, user):
 
 def edit_project(project_id, user, form):
 
-    if not user.admin:
-        return 'You do not own this project!'
-
     project = models.Projects.query.filter_by(id=project_id).first()
+
+    if not ((project.owner == user) or user.admin):
+        return 'You do not own this project!'
 
     for field, data in form.data.items():
         if hasattr(project, field) and data:
@@ -1473,7 +1473,7 @@ def edit_project(project_id, user, form):
 
 def add_project_member(form, user, project):
 
-    if project.owner != user:
+    if not ((project.owner == user) or user.admin):
         return 'You are not the project owner!'
     new_member = form.member.data
     project.members.append(new_member)
@@ -1492,7 +1492,7 @@ def add_project_member(form, user, project):
 
 def remove_project_member(user, project, member):
 
-    if project.owner != user:
+    if not ((project.owner == user) or user.admin):
         return 'You are not the project owner!'
 
     project.members.remove(member)
@@ -1511,7 +1511,7 @@ def remove_project_member(user, project, member):
 
 def add_project_server(form, user, project):
 
-    if project.owner != user:
+    if not ((project.owner == user) or user.admin):
         return 'You are not the project owner!'
     server = models.Servers.query.filter_by(id=form.server.data.id).first()
     server.project_id = project.id
@@ -1530,7 +1530,7 @@ def add_project_server(form, user, project):
 
 def remove_project_server(user, project, server_id):
 
-    if project.owner != user:
+    if not ((project.owner == user) or user.admin):
         return 'You are not the project owner!'
     server = models.Servers.query.filter_by(id=server_id).first()
     server.project_id = None
@@ -1551,7 +1551,7 @@ def add_project_status(form, user, project_id):
 
     project = models.Projects.query.filter_by(id=project_id).first()
 
-    if not ((user == project.owner) or (user in project.members)):
+    if not ((user == project.owner) or (user in project.members) or user.admin):
         return 'You are not the project owner!'
 
     new_status = models.ProjectStatus(pid=project.id,
@@ -1578,7 +1578,7 @@ def remove_project_status(user, project_id, status_id):
     project = models.Projects.query.filter_by(id=project_id).first()
     status = models.ProjectStatus.query.filter_by(pid=project_id,
                                                   id=status_id).first()
-    if project.owner != user:
+    if not ((project.owner == user) or user.admin):
         return 'You are not the project owner!'
 
     try:
