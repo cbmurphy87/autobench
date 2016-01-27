@@ -1454,7 +1454,9 @@ def edit_project(project_id, user, form):
     project = models.Projects.query.filter_by(id=project_id).first()
 
     for field, data in form.data.items():
-        if hasattr(project, field):
+        if hasattr(project, field) and data:
+            if field == 'owner_id':
+                data = data.id
             setattr(project, field, data)
 
     try:

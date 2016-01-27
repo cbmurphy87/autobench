@@ -193,7 +193,7 @@ class Groups(db.Model):
 
     def __str__(self):
 
-        return str(self.id)
+        return str(self.group_name)
 
     def member_count(self):
 
@@ -242,11 +242,18 @@ class Projects(db.Model):
     description = db.Column(db.Text())
 
     owner = db.relationship('Users', backref='projects_owned')
+    primary_group = db.relationship('Groups', backref='projects')
     members = db.relationship('Users', secondary='project_members',
                               backref='member_of_projects', lazy='dynamic')
     statuses = db.relationship('ProjectStatus', backref='project',
                                cascade='all, delete, delete-orphan',
                                order_by='desc(ProjectStatus.date)')
+
+    def __repr__(self):
+        return '<Projects {}>'.format(self.id)
+
+    def __str__(self):
+        return str(self.name)
 
 
 class ProjectStatus(db.Model):

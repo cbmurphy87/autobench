@@ -632,17 +632,26 @@ def _projects_id(id_):
 def _projects_id_edit(id_):
     user = g.user
     project = get_project_by_id(id_)
-    EditProjectForm = make_edit_project_form(project)
+    EditProjectForm = make_edit_project_form(project, user)
     form = EditProjectForm()
 
     if form.validate_on_submit():
-        edit_project(project.id, user, form)
+        message = edit_project(project.id, user, form)
+        logger.debug(message)
+        flash(message)
+        return redirect('/projects/{}'.format(id_))
+    elif request.method == 'POST':
+        print form.errors
 
     # set all form values except project_id
     for attr in project.__dict__.keys():
         if attr in form.data.keys():
             field = getattr(form, attr)
             field.data = getattr(project, attr)
+    form.primary_group.data = models.Groups.query.filter_by(id=project.gid)\
+        .first()
+    form.owner_id.data = models.Users.query.filter_by(id=project.owner_id)\
+        .first()
 
     if form.errors:
         logger.error(form.errors)

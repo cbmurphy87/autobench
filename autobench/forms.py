@@ -2,7 +2,8 @@ import re
 from flask.ext.wtf import Form
 from wtforms import StringField, BooleanField, TextAreaField, PasswordField, \
     SelectField, IntegerField
-from wtforms.ext.sqlalchemy.fields import QuerySelectField
+from wtforms.ext.sqlalchemy.fields import QuerySelectField, \
+    QuerySelectMultipleField
 from wtforms.fields.html5 import DateField
 from wtforms.validators import DataRequired, Length, Optional, NumberRange, \
     required, IPAddress, EqualTo, Regexp, email
@@ -360,12 +361,18 @@ def make_add_project_form(user):
     return AddProjectForm
 
 
-def make_edit_project_form(project):
+def make_edit_project_form(project, user):
+
     class EditProjectForm(Form):
 
+        print project.owner.id
+
         name = StringField('Project Name', validators=[DataRequired()])
+        primary_group = QuerySelectField('Primary group',
+                                         query_factory=user.groups.all)
         owner_id = QuerySelectField('Owner', query_factory=models.Users.query
-                                    .all)
+                                    .all, default=models.Users.query
+                                    .filter_by(id=project.owner.id).first())
         start_date = DateField('Start Date', format='%Y-%m-%d')
         target_end_date = DateField('Target Completion Date')
         description = TextAreaField('Project Description')
