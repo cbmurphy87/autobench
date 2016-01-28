@@ -3,10 +3,10 @@ $(document).ready(function () {counttable()});
 function counttable() {
     var count_tables = $('table.count');
     // loop over tables to count
-    var total_count = [];
-    var count_type = '';
-    var unique_entries = [];
     for (var table_num = 0, table; table = count_tables[table_num]; table_num++) {
+        var total_count = [];
+        var count_type = '';
+        var unique_entries = [];
         // get tbody
         var table_body = table.getElementsByTagName('tbody')[0];
         // if no body, return

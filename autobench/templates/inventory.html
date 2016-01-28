@@ -100,16 +100,6 @@
                         </div>
                         {% endfor %}
                         {% elif v == 'available' %}
-                            {# set bubble color and hover title #}
-                            {% if server.dirty %}
-                                {% set color = 'yellow' %}
-                            {% elif not server.held_by %}
-                                {% set color = 'blue' %}
-                            {% elif server.held_by == user.id %}
-                                {% set color = 'green' %}
-                            {% else %}
-                                {% set color = 'red' %}
-                            {% endif %}
                             {# set row color #}
                             {% if not server.project %}
                                 {% set hover_title = 'This server is not part of a project.' %}

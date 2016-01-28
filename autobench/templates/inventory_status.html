@@ -1,24 +1,13 @@
-{% if server.available %}
-    {% if user.admin %}
-        <div style="background-color:lightgrey;">
-            You are admin, so you can delete this from inventory:
-        <button onclick="deleteServer('{{ server.id }}','/inventory')">
-            Delete
-        </button>
-        </div>
-    {% endif %}
+{% if not server.project %}
     <h3>This Server is available</h3>
     <p>Would you like to check it out?</p>
     <button onclick="checkout('{{ server.id }}','')">
         Checkout
     </button>
-{% elif server.holder.id == user.id %}
-    <h3>You have this server checked out!</h3>
-    <p>Go to the <a href="/my_info">My Info</a> page to see all of your servers.</p>
-    <button onclick="release('{{ server.id }}','')">
-        Release
-    </button>
+{% elif server.project.owner == user %}
+    <h3>This server is part of your project <b>{{ server.project }}</b></h3>
+    <p>Go to the <a href="/my_info">My Info</a> page to see all of your projects.</p>
 {% else %}
     <h3>This Server is not available</h3>
-    <p>Server is held by {{ user_holding }}</p>
+    <p>Server is part of project <b>{{ server.project }}</b></p>
 {% endif %}

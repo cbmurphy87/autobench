@@ -4,13 +4,10 @@
 {# set head data #}
 {# =============================================================== #}
 
-{% block meta %}
-{{ super() }}
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-{% endblock %}
-
 {% block links %}
-    <script src="http://code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/filterTable.js') }}></script>
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/inventory.js') }}></script>
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/countTable.js') }}></script>
 {% endblock %}
 
 {% block scripts %}
@@ -84,8 +81,7 @@
 {% set server_fields = (('ID', 'id'),('Name','name'),('Host Name','host_name'),
 ('Make','make'),('Model','model'),('CPU Count','cpu_count'),('CPU Model','cpu_model'),
 ('BIOS','bios'),('Memory','memory_capacity'),('Rack','rack'),('U','u'),
-('Username','user_name'),('Password','password'),
-('Groups','groups'),('Project','project')) %}
+('Group','group'),('Project','project')) %}
 
 {% set drive_fields = (('Slot','slot'),('Manufacturer','manufacturer'),
 ('Model','model'),('Capacity','capacity'),('Standard','standard'),
@@ -102,7 +98,7 @@
 {# =============================================================== #}
 
 {% block content %}
-    <h2>Ownership</h2>
+    <h2>Project</h2>
     <div id="inventory_status">
         {% include "inventory_status.html" %}
     </div>
@@ -149,35 +145,57 @@
         </div>
         {% if server.held_by == user.id or user.admin %}
         <div style="float:right;padding:0 10px;background-color:#d3d5d8;text-align:center;border: 1px solid #414042;">
+            <p>Has this server's information changed?</p>
             <p><button onclick="updateServer('{{ server.id }}','')">Update</button></p>
         </div>
         {% endif %}
     </div>
+
     <!-- Drive info -->
     <h2 style="padding-bottom: 10px;">Drive Info</h2>
     {% if server.drives.all()|length >= 1 %}
         <div class="pane-frame" style="width:100%;">
-            <table id="aaetable" class="sortable pane bigtable stripped">
+            <table id="aaetable" class="sortable pane bigtable stripped count">
+                <thead>
+                    <tr class="header">
+                    {# create header for inventory table #}
+                    {% for k, v in drive_fields %}
+                        {# set count types for columns #}
+                        {% if k == 'Capacity' %}
+                            {% set count_type = 'sum' %}
+                            {% set units = 'GB' %}
+                        {% elif k in ['Slot', 'Model', 'Manufacturer', 'Standard', 'Type', 'Serial Number'] %}
+                            {% set count_type = 'unique' %}
+                            {% set units = 'none' %}
+                        {% else %}
+                            {% set count_type = 'count' %}
+                            {% set units = 'none' %}
+                        {% endif %}
+                        {% if  v == None %}
+                            {% set class = " class=sorttable_nosort" %}
+                        {% endif %}
+                        <th{{ class }} unit="{{ units }}" count_type="{{ count_type }}">
+                            {{ k }}
+                        </th>
+                    {% endfor %}
+                    </tr>
+                </thead>
                 <tbody>
-                <tr class="header">
-                {# create header for inventory table #}
-                {% for k, v in drive_fields %}
-                    <th>
-                        {{ k }}
-                    </th>
-                {% endfor %}
-                </tr>
                 {# loop over drives in server #}
                 {% for drive in server.drives.order_by('slot') %}
                 <tr>
                 {# loop over field values for each server #}
                 {% for k, v in drive_fields %}
                     <td>
-                    {% if drive[v] is defined %}
-                        {{ drive[v] }}
-                    {% else %}
-                        {{ drive['info'][v] }}
-                    {% endif %}
+                        <div>
+                        {% if drive[v] is defined %}
+                            {{ drive[v] }}
+                            <span class="custom_count" style="display:none">{{ drive[v] }}</span>
+                        {% else %}
+                            {{ drive['info'][v] }}
+                            <span class="custom_count" style="display:none">{{ drive['info'][v] }}</span>
+                        {% endif %}
+                        </div>
                     </td>
                 {% endfor %}
                 </tr>
@@ -188,31 +206,59 @@
     {% else %}
         No drives found.
     {% endif %}
+
     <!-- Virtual drive info -->
     <h2 style="padding-bottom: 10px;">Virtual Drive Info</h2>
     {% if server.virtual_drives.all()|length >= 1 %}
     <div class="pane-frame" style="width:100%;">
-        <table id="aaetable" class="sortable pane bigtable stripped">
+        <table id="aaetable" class="sortable pane bigtable stripped count">
+            <thead>
+                <tr class="header">
+                {# create header for inventory table #}
+                {% for k, v in virtual_drive_fields %}
+                    {# set count types for columns #}
+                    {% if k in ['S', 'Update'] %}
+                        {% set count_type = 'ignore' %}
+                        {% set units = 'none' %}
+                    {% elif k in ['Memory','Capacity'] %}
+                        {% set count_type = 'sum' %}
+                        {% set units = 'GB' %}
+                    {% elif k in ['Count'] %}
+                        {% set count_type = 'sum' %}
+                        {% set units = 'none' %}
+                    {% elif k in ['ID', 'RAID Level'] %}
+                        {% set count_type = 'unique' %}
+                        {% set units = 'none' %}
+                    {% else %}
+                        {% set count_type = 'count' %}
+                        {% set units = 'none' %}
+                    {% endif %}
+                    {% if  v == None %}
+                        {% set class = " class=sorttable_nosort" %}
+                    {% endif %}
+                    <th{{ class }} unit="{{ units }}" count_type="{{ count_type }}">
+                        {{ k }}
+                    </th>
+                {% endfor %}
+                </tr>
+            </thead>
             <tbody>
-            <tr class="header">
-            {# create header for inventory table #}
-            {% for k, v in virtual_drive_fields %}
-                <th>
-                    {{ k }}
-                </th>
-            {% endfor %}
-            </tr>
             {# loop over drives in server #}
             {% for drive in server.virtual_drives.order_by('number') %}
             <tr>
             {# loop over field values for each server #}
             {% for k, v in virtual_drive_fields %}
                 <td>
-                {% if drive[v] is defined %}
-                    {{ drive[v] }}
-                {% else %}
-                    Empty
-                {% endif %}
+                    <div>
+
+                    {% if drive[v] is defined %}
+                        {{ drive[v] }}
+                        <span class="custom_count" style="display:none">{{ drive[v] }}</span>
+                    {% else %}
+                        Empty
+                        <span class="custom_count" style="display:none">0</span>
+                    {% endif %}
+                    </div>
                 </td>
             {% endfor %}
             </tr>
@@ -223,39 +269,61 @@
     {% else %}
         No virtual drives found.
     {% endif %}
+
     <!-- Networking info -->
     <h2 style="padding-bottom: 10px;">Network Info</h2>
     {% if server.interfaces.all()|length >= 1 %}
     <div class="pane-frame" style="width:100%;">
-        <table id="aaetable" class="sortable pane bigtable stripped">
+        <table id="aaetable" class="sortable pane bigtable stripped count">
+            <thead>
+                <tr class="header">
+                {# create header for inventory table #}
+                {% for k, v in network_fields %}
+                    {# set count types for columns #}
+                    {% if k == 'Type' %}
+                        {% set count_type = 'unique' %}
+                        {% set units = 'none' %}
+                    {% else %}
+                        {% set count_type = 'unique' %}
+                        {% set units = 'none' %}
+                    {% endif %}
+                    {% if  v == None %}
+                        {% set class = " class=sorttable_nosort" %}
+                    {% endif %}
+                    <th{{ class }} unit="{{ units }}" count_type="{{ count_type }}">
+                        {{ k }}
+                    </th>
+                {% endfor %}
+                </tr>
+            </thead>
             <tbody>
-            <tr class="header">
-            {# create header for inventory table #}
-            {% for k, v in network_fields %}
-                <th>
-                    {{ k }}
-                </th>
-            {% endfor %}
-            </tr>
             {# loop over drives in server #}
             {% for interface in server.interfaces %}
-            <tr>
-            {# loop over field values for each server #}
-            {% for k, v in network_fields %}
-                <td>
-                    {{ interface[v] }}
-                </td>
-            {% endfor %}
-            </tr>
+                <tr>
+                {# loop over field values for each server #}
+                {% for k, v in network_fields %}
+                    <td>
+                        <div>
+                            {{ interface[v] }}
+                            <span class="custom_count" style="display:none">{{ interface[v] }}</span>
+                        </div>
+                    </td>
+                {% endfor %}
+                </tr>
             {% endfor %}
             </tbody>
         </table>
     </div>
     {% else %}
-        <p>No network interfaces found.</p>
-        <p><a href="/inventory/{{ server.id }}/add_oob">Add Out of Band Interface</a></p>
+    <p>No network interfaces found.</p>
+    <p><a href="/inventory/{{ server.id }}/add_oob">Add Out of Band Interface</a></p>
     {% endif %}
-    <div style="padding-top: 10px;">
-        <a href="/inventory">Back</a>
-    </div>
+    {% if user.admin %}
+    <p>
+        You are admin, so you can delete this from inventory:
+    <button onclick="deleteServer('{{ server.id }}','/inventory')">
+        Delete
+    </button>
+    </p>
+    {% endif %}
 {% endblock %}
