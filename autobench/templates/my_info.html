@@ -4,8 +4,8 @@
 ('E-mail','email'),('Username','user_name')) %}
 
 {% set project_fields = (('Project ID','id'),('Name','name'),
-('Owner','owner'),('Start Date','date_created'),
-('Completion Date','date_target_completion')) %}
+('Owner','owner'),('Start Date','start_date'),
+('Completion Date','target_end_date')) %}
 
 {% block links %}
     <script type="text/javascript" src={{ url_for('static', filename='javascript/filterTable.js') }}></script>

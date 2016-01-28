@@ -56,7 +56,7 @@ function remove_server(project_id, server_id) {
 }
 
 function remove_status(project_id, status_id) {
-    if (confirm('Are you sure you want to remove status' + status_id + ' from this project?')) {
+    if (confirm('Are you sure you want to remove this status from the project?')) {
         var xhttp = new XMLHttpRequest();
         xhttp.onreadystatechange = function () {
             if (xhttp.readyState == 4) {
