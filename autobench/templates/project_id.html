@@ -129,7 +129,7 @@
     </table>
     {% else %}
     No status information for this project.
-    {% if user == project.owner %}
+    {% if user == project.owner or user.admin %}
     <p>
         <div style="padding-top:5px;">
             <a href="/projects/{{ project.id }}/add_status">Add Status</a>
@@ -181,7 +181,7 @@
     </table>
     {% else %}
     No members associated with this project.
-    {% if user == project.owner %}
+    {% if user == project.owner or user.admin %}
     <p>
         <a href="/projects/{{ project.id }}/add_member">Add Member</a>
     </p>
