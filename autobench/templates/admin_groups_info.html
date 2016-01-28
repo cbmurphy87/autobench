@@ -27,6 +27,7 @@
 {% block links %}
     <script type="text/javascript" src={{ url_for('static', filename='javascript/filterTable.js') }}></script>
     <script type="text/javascript" src={{ url_for('static', filename='javascript/inventory.js') }}></script>
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/admin.js') }}></script>
 {% endblock %}
 
 {% set group_fields = (('Group ID','id'),('Group Name','group_name'),
@@ -75,14 +76,22 @@
     <h2>Members</h2>
     {% if group.members %}
     <p><input id="searchInput1" placeholder="Filter"></p>
-    <table class="sortable pane bigtable stripped">
+    <table class="sortable pane bigtable stripped count">
         <thead>
             <tr class="header">
             {% for k, v in member_fields %}
-                <th>
+                {# set count types for columns #}
+                {% set units = 'none' %}
+                {% set count_type = 'unique' %}
+                <th{{ class }} unit="{{ units }}" count_type="{{ count_type }}">
                     {{ k }}
                 </th>
             {% endfor %}
+                <th class="sorttable_nosort" count_type="ignore">
+                    <a href="/admin/groups/{{ group.id }}/add_member">
+                        <img src="{{ url_for('static', filename='pictures/plus.png') }}"/>
+                    </a>
+                </th>
             </tr>
         </thead>
         <tbody id="fbody1">
@@ -90,23 +99,27 @@
             <tr>
             {% for k, v in member_fields %}
                 <td>
-                {% if v == 'groups' %}
-                    {{ m[v]|join(',') }}
-                {% else %}
-                    {{ m[v] }}
-                {% endif %}
+                <div>
+                    {% if v == 'groups' %}
+                        {% set group_string = m[v]|join(',') %}
+                        {{ group_string }}
+                        <span class="custom_count" style="display:none">{{ group_string }}</span>
+                    {% else %}
+                        {{ m[v] }}
+                        <span class="custom_count" style="display:none">{{ m[v] }}</span>
+                    {% endif %}
+
+                </div>
                 </td>
             {% endfor %}
+                <td>
+                    <img src="{{ url_for('static', filename='pictures/minus.png') }}"
+                         onclick="remove_group_member({{ group.id }}, '{{ m.user_name }}')"/>
+                </td>
             </tr>
         {% endfor %}
         </tbody>
     </table>
-    <span style="display:inline-block;">
-        <div style="margin-top:5px;">
-            <a href="/admin/groups/{{ group.id }}/add_member">Add Member</a>
-            <a href="/admin/groups/{{ group.id }}/remove_member" style="padding:5px;">Remove Member</a>
-        </div>
-    </span>
     {% else %}
         No members
         <p><a href="/admin/groups/{{ group.id }}/add_member">Add Member</a></p>
@@ -141,6 +154,11 @@
                                 {{ k }}
                             </th>
                         {% endfor %}
+                            <th class="sorttable_nosort" count_type="ignore">
+                                <a href="/admin/groups/{{ group.id }}/add_server">
+                                    <img src="{{ url_for('static', filename='pictures/plus.png') }}"/>
+                                </a>
+                            </th>
                     </tr>
                 </thead>
                 <tbody id="fbody2">
@@ -150,9 +168,8 @@
                     {% for k, v in server_fields %}
                         <td>
                         {% if v == 'id' %}
-                            {% set server_id = server['id'] %}
-                            <a href="/inventory/{{ server_id }}">
-                            {{ server_id }}
+                            <a href="/inventory/{{ server.id }}">
+                            {{ server.id }}
                             </a>
                         {% else %}
                             {% if v == 'get_name' %}
@@ -164,28 +181,18 @@
                         {% endif %}
                         </td>
                         {% endfor %}
+                        <td>
+                            <img src="{{ url_for('static', filename='pictures/minus.png') }}"
+                                 onclick="remove_group_server({{ group.id }}, '{{ server.id }}')"/>
+                        </td>
                     </tr>
                 {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
-    <span style="display:inline-block;">
-        <div style="margin-top:5px;">
-            <a href="/admin/groups/{{ group.id }}/add_server">Add Server</a>
-            <a href="/admin/groups/{{ group.id }}/remove_server"style="padding:5px;">Remove Server</a>
-        </div>
-    </span>
     {% else %}
         No Servers
         <p><a href="/admin/groups/{{ group.id }}/add_server">Add Server</a></p>
-    {% endif %}
-    {% if (user.admin) %}
-    <h2>Delete Group</h2>
-    <div>
-        <button onclick="return delete_group('{{ group.id }}')">
-            Delete Group
-        </button>
-    </div>
     {% endif %}
 {% endblock %}

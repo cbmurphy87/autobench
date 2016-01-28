@@ -341,9 +341,9 @@ def remove_group_server(gid, sid, user):
         return 'YOU ARE NOT AN ADMIN AND SHOULD NOT BE HERE!!!'
 
     group = models.Groups.query.filter_by(id=gid).first()
-    user = models.Servers.query.filter_by(id=sid).first()
+    server = models.Servers.query.filter_by(id=sid).first()
 
-    group.servers.remove(user)
+    group.servers.remove(server)
 
     try:
         db.session.add(group)

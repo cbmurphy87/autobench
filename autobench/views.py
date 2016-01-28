@@ -896,9 +896,10 @@ def _delete_user():
     if not user.admin:
         print 'not admin'
         abort(401)
-    logger.debug(delete_user(user_name, user))
+    message = delete_user(user_name, user)
+    logger.debug(message)
 
-    return JSONEncoder().encode({'success': 1})
+    return JSONEncoder().encode({'message': message})
 
 
 @myapp.route('/admin/users/<user_name>', methods=['GET', 'POST'])
@@ -1011,20 +1012,12 @@ def _groups_remove_member(gid):
     group = models.Groups.query.filter_by(id=gid).first()
     if not (user.admin and group):
         return render_template('404.html', user=user), 404
+    user_name = request.get_json().get('user_name')
+    u = models.Users.query.filter_by(user_name=user_name).first()
 
-    RemoveGroupMemberForm = make_remove_group_member_form(gid)
-    form = RemoveGroupMemberForm()
+    message = remove_group_member(gid, u.id, user)
 
-    if form.validate_on_submit():
-        message = remove_group_member(group.id, form.member.data.id, user)
-        flash(message)
-        logger.debug(message)
-        return redirect('/admin/groups/{}'.format(group.id))
-
-    return render_template('admin_groups_remove_member.html',
-                           title='Remove Group Member',
-                           user=user, group=group, form=form,
-                           date=_get_date_last_modified())
+    return JSONEncoder().encode({'message': message})
 
 
 @myapp.route('/admin/groups/<gid>/remove_server', methods=['GET', 'POST'])
@@ -1034,20 +1027,11 @@ def _groups_remove_server(gid):
     group = models.Groups.query.filter_by(id=gid).first()
     if not (user.admin and group):
         return render_template('404.html', user=user), 404
+    server_id = request.get_json().get('server_id')
 
-    RemoveGroupServerForm = make_remove_group_server_form(gid)
-    form = RemoveGroupServerForm()
+    message = remove_group_server(gid=gid, sid=server_id, user=user)
 
-    if form.validate_on_submit():
-        message = remove_group_server(group.id, form.server.data.id, user)
-        flash(message)
-        logger.debug(message)
-        return redirect('/admin/groups/{}'.format(group.id))
-
-    return render_template('admin_groups_remove_server.html',
-                           title='Remove Group Server',
-                           user=user, group=group, form=form,
-                           date=_get_date_last_modified())
+    return JSONEncoder().encode({'message': message})
 
 
 @myapp.route('/admin/groups/<_id>/add_server', methods=['GET', 'POST'])

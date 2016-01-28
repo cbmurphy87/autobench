@@ -12,19 +12,7 @@
 {% endblock %}
 
 {% block scripts %}
-    function delete_user(user_name) {
-        if (confirm("Delete user " + user_name + "?") == true) {
-            var xhttp = new XMLHttpRequest();
-            xhttp.onreadystatechange = function() {
-                if (xhttp.readyState == 4 && xhttp.status == 200) {
-                    window.location = "/admin";
-                }
-            };
-            xhttp.open("POST", "/admin/users/delete", true);
-            xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
-            xhttp.send(JSON.stringify({user_name: user_name}));
-        }
-    }
+
     $(document).ready(function () {
         $("#searchInput").keyup(
             function () {
@@ -172,13 +160,5 @@
     </div>
     {% else %}
         User has no projects yet.
-    {% endif %}
-    {% if (user.admin) and (other_user.id != 1) %}
-    <h2>Delete User</h2>
-    <div>
-        <button onclick="return delete_user('{{ other_user.user_name }}')">
-            Delete User
-        </button>
-    </div>
     {% endif %}
 {% endblock %}

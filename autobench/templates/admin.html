@@ -1,7 +1,8 @@
 {% extends 'base.html' %}
 
 {% set users_fields = (('First Name','first_name'),('Last Name','last_name'),
-('User Name','user_name'),('E-mail','email'),('Admin','admin'),('Groups','groups')) %}
+('User Name','user_name'),('E-mail','email'),('Admin','admin'),
+('Groups','groups')) %}
 {% set groups_fields = (('GID','id'),('Name','group_name'),
 ('Members','members'),('Servers','servers'),('Description','description')) %}
 {% set project_fields = (('Project ID','id'),('Name','name'),
@@ -11,6 +12,7 @@
 {% block links %}
     <script type="text/javascript" src={{ url_for('static', filename='javascript/filterTable.js') }}></script>
     <script type="text/javascript" src={{ url_for('static', filename='javascript/inventory.js') }}></script>
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/admin.js') }}></script>
 {% endblock %}
 
 {% block scripts %}
@@ -76,7 +78,7 @@
             {% endfor %}
                 <td>
                     <img src="{{ url_for('static', filename='pictures/minus.png') }}"
-                         onclick="delete_user({{ u.id }})"/>
+                         onclick="delete_user('{{ u.user_name }}')"/>
                 </td>
             </tr>
         {% endfor %}

@@ -311,43 +311,6 @@ def make_add_group_server_form(gid):
     return AddGroupServerForm
 
 
-def make_remove_group_member_form(gid):
-    # get list of user ids in group
-    group = models.Groups.query.filter_by(id=gid).first()
-    members = group.members
-    member_list = [member.id for member in members]
-
-    class RemoveGroupMemberForm(Form):
-        member = QuerySelectField('Member', get_label='user_name',
-                                  allow_blank=True,
-                                  blank_text='Select Member',
-                                  query_factory=models.Users.query
-                                  .filter(models.Users.id.in_(member_list)).all,
-                                  validators=[DataRequired()])
-
-    return RemoveGroupMemberForm
-
-
-def make_remove_group_server_form(gid):
-    # get list of user ids in group
-    group = models.Groups.query.filter_by(id=gid).first()
-    servers = group.servers
-    server_list = [server.id for server in servers]
-
-    class RemoveGroupServerForm(Form):
-        def get_name(self):
-            return self.get_name()
-
-        server = QuerySelectField('Server', get_label=get_name,
-                                  allow_blank=True,
-                                  blank_text='Select Server',
-                                  query_factory=models.Servers.query
-                                  .filter(models.Servers.id.in_(server_list))
-                                  .all, validators=[DataRequired()])
-
-    return RemoveGroupServerForm
-
-
 # =========================== Project Forms ===========================
 def make_add_project_form(user):
 
