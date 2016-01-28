@@ -6,7 +6,7 @@ from flask import render_template, flash, redirect, session, url_for, request, \
     g, abort, send_from_directory
 from flask.ext.login import login_user, logout_user, current_user, \
     login_required
-from sqlalchemy import sql
+from sqlalchemy import sql, desc
 from wtforms.ext.sqlalchemy.fields import QuerySelectField
 
 # ____________________________ App Imports ____________________________
@@ -165,6 +165,9 @@ def _login():
         try:
             # get user from db
             user = Users.query.filter_by(email=str(form.email.data)).first()
+            if not user:
+                user = Users.query.filter_by(user_name=str(form.email.data))\
+                    .first()
         except Exception as e:
             logger.error('Error fetching user: {}'.format(e))
         # if valid user
@@ -237,12 +240,13 @@ def _edit_my_info():
         else:
             flash('Invalid password. Try again.')
 
+    # fill out form with current values, except for passwords
     for attr in user.__dict__.keys():
         if attr in form.data.keys():
             field = getattr(form, attr)
             field.data = getattr(user, attr)
 
-    return render_template('edit_my_info.html',
+    return render_template('my_info_edit.html',
                            title='Edit About Me',
                            date=_get_date_last_modified(),
                            user=user, form=form)
@@ -596,7 +600,9 @@ def _projects_add():
             message = 'Project successfully added!'
             logger.debug(message)
             flash(message)
-            return redirect('/projects')
+            if user.admin:
+                return redirect('/admin')
+            return redirect('/my_info')
         else:
             message = 'Could not create project: {}'.format(error)
             logger.error(message)
@@ -828,9 +834,10 @@ def _admin():
         abort(401)
     users = models.Users.query.order_by('email').all()
     groups = models.Groups.query.order_by('id').all()
+    projects = models.Projects.query.order_by(desc('id')).all()
 
     return render_template('admin.html', title='Admin', user=user,
-                           groups=groups, users=users,
+                           groups=groups, users=users, projects=projects,
                            date=_get_date_last_modified())
 
 

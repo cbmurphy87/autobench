@@ -4,7 +4,7 @@ from wtforms import StringField, BooleanField, TextAreaField, PasswordField, \
     SelectField, IntegerField
 from wtforms.ext.sqlalchemy.fields import QuerySelectField, \
     QuerySelectMultipleField
-from wtforms.fields.html5 import DateField
+from wtforms.fields.html5 import DateField, EmailField
 from wtforms.validators import DataRequired, Length, Optional, NumberRange, \
     required, IPAddress, EqualTo, Regexp, email
 from wtforms import widgets
@@ -154,7 +154,7 @@ class BuildStepForm(Form):
 
 
 class LoginForm(Form):
-    email = StringField('E-mail', validators=[DataRequired()])
+    email = StringField('E-mail or username', validators=[DataRequired()])
     password = PasswordField('Password', validators=[DataRequired()])
 
 
@@ -181,6 +181,7 @@ class EditMyInfoForm(Form):
     first_name = StringField('First Name', validators=[DataRequired()])
     last_name = StringField('Last Name', validators=[DataRequired()])
     user_name = StringField('User Name', validators=[DataRequired()])
+    email = EmailField('E-mail', validators=[email()])
     new_password = PasswordField('New Password',
                                  validators=[Optional(),
                                              Length(8, 32, 'New password must '
@@ -232,6 +233,7 @@ class EditUserInfoForm(Form):
     first_name = StringField('First Name', validators=[DataRequired()])
     last_name = StringField('Last Name', validators=[DataRequired()])
     user_name = StringField('User Name', validators=[DataRequired()])
+    email = EmailField('E-mail', validators=[email()])
     password = PasswordField('Password',
                              validators=[Optional(),
                                          Length(8, 32, 'New password must '

@@ -66,6 +66,11 @@
                         {{ k }}
                     </th>
                     {% endfor %}
+                    <th class="sorttable_nosort" count_type="ignore">
+                        <a href="/projects/add">
+                            <img src="{{ url_for('static', filename='pictures/plus.png') }}"/>
+                        </a>
+                    </th>
                 </tr>
             </thead>
             <tbody>
@@ -84,6 +89,12 @@
                     {% endif %}
                     </td>
                     {% endfor %}
+                    {% if (user == project.owner) or (user.admin) %}
+                    <td>
+                        <img src="{{ url_for('static', filename='pictures/minus.png') }}"
+                             onclick="delete_project({{ project.id }})"/>
+                    </td>
+                    {% endif %}
                 </tr>
             {% endfor %}
             </tbody>
