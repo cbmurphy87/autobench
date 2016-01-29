@@ -55,32 +55,45 @@
         <div style="float:left;">
             <div class="pane-frame" style="width:auto;">
                 <table id="aaetable" class="sortable pane bigtable stripped">
+                    <thead>
+                        <tr class="header">
+                        {# create header for table #}
+                            <th style="text-align:right;" class="sorttable_nosort">
+                                Field:
+                            </th>
+                            <th class="sorttable_nosort">
+                            {% if project.owner == user or user.admin %}
+                                <div style="display:inline">
+                                    <div style="float:left;">
+                                        Value
+                                    </div>
+                                    <div style="float:right;padding-right:5px;">
+                                        <a href="/projects/{{ project.id }}/edit">
+                                            <img style="height:1em;" src="{{ url_for('static', filename='pictures/edit_pencil_light_blue.png') }}"/>
+                                        </a>
+                                    </div>
+                                </div>
+                            {% else %}
+                                    Value
+                            {% endif %}
+                            </th>
+                        </tr>
+                    </thead>
                     <tbody>
-                    <tr class="header">
-                    {# create header for table #}
-                        <th style="text-align:right;">
-                            Field:
-                        </th>
-                        <th>
-                            Value
-                        </th>
-                    </tr>
-                    {# loop over field values for each parame #}
-                    {% for k, v in project_fields %}
-                    <tr>
-                        <td style="text-align:right;">
-                            {{ k }}:
-                        </td>
-                        <td>
-                            <i>{{ project[v] }}</i>
-                        </td>
-                    </tr>
+                        {# loop over field values for each parame #}
+                        {% for k, v in project_fields %}
+                        <tr>
+                            <td style="text-align:right;">
+                                {{ k }}:
+                            </td>
+                            <td style="text-align:left;padding-left:5px;">
+                                <i>{{ project[v] }}</i>
+                            </td>
+                        </tr>
                     {% endfor %}
                     </tbody>
                 </table>
             </div>
-            <br>
-            <a href="/projects/{{ project.id }}/edit">Edit project Info</a>
         </div>
     </div>
 
@@ -88,16 +101,19 @@
     <h2 style="padding-bottom: 10px;">Status</h2>
     {% if project.statuses|length > 0 %}
     <p><input id="searchInput1" placeholder="Filter"></p>
-    <table class="sortable pane bigtable stripped">
+    <table class="sortable pane bigtable stripped count">
         <thead>
             <tr class="header">
             {% for k, v in status_fields %}
-                <th>
+                {# set count types for columns #}
+                {% set units = 'none' %}
+                {% set count_type = 'unique' %}
+                <th{{ class }} unit="{{ units }}" count_type="{{ count_type }}">
                     {{ k }}
                 </th>
             {% endfor %}
             {% if (user == project.owner) or (user in project.members) or (user.admin) %}
-                <th class="sorttable_nosort">
+                <th class="sorttable_nosort" count_type="ignore">
                     <a href="/projects/{{ project.id }}/add_status">
                         <img src="{{ url_for('static', filename='pictures/plus.png') }}"/>
                     </a>
@@ -112,8 +128,10 @@
                 <td>
                 {% if v == 'engineer' and status == True %}
                     {{ status.engineer.full_name() }}
+                    <span class="custom_count" style="display:none">{{ status.engineer.full_name() }}</span>
                 {% else %}
                     {{ status[v] }}
+                    <span class="custom_count" style="display:none">{{ status[v] }}</span>
                 {% endif %}
                 </td>
             {% endfor %}
@@ -144,16 +162,19 @@
     {% set members = project.members.all() %}
     {% if members|length > 0 %}
     <p><input id="searchInput2" placeholder="Filter"></p>
-    <table class="sortable pane bigtable stripped">
+    <table class="sortable pane bigtable stripped count">
         <thead>
             <tr class="header">
             {% for k, v in member_fields %}
-                <th>
+                {# set count types for columns #}
+                {% set units = 'none' %}
+                {% set count_type = 'unique' %}
+                <th{{ class }} unit="{{ units }}" count_type="{{ count_type }}">
                     {{ k }}
                 </th>
             {% endfor %}
             {% if user == project.owner or user.admin %}
-                <th class="sorttable_nosort">
+                <th class="sorttable_nosort" count_type="ignore">
                     <a href="/projects/{{ project.id }}/add_member">
                         <img src="{{ url_for('static', filename='pictures/plus.png') }}"/>
                     </a>
@@ -167,6 +188,7 @@
             {% for k, v in member_fields %}
                 <td>
                     {{ member[v] }}
+                    <span class="custom_count" style="display:none">{{ member[v] }}</span>
                 </td>
             {% endfor %}
             {% if user == project.owner or user.admin %}
@@ -217,7 +239,7 @@
                             </th>
                         {% endfor %}
                         {% if user == project.owner or user.admin %}
-                            <th class="sorttable_nosort">
+                            <th class="sorttable_nosort" count_type="ignore">
                                 <a href="/projects/{{ project.id }}/add_server">
                                     <img src="{{ url_for('static', filename='pictures/plus.png') }}"/>
                                 </a>

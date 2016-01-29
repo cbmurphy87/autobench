@@ -1468,7 +1468,7 @@ def edit_project(project_id, user, form):
         logger.error(message)
         return message
 
-    return 'Successfully updated user info.'
+    return 'Successfully updated project info.'
 
 
 def add_project_member(form, user, project):
