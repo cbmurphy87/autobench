@@ -5,11 +5,12 @@
 {# =============================================================== #}
 
 {% set field_pairs = (('S', 'available'),('Rack','rack'),('U','u'),('ID', 'id'),
-('Name','get_name'),('Model','model'),('Memory','memory_capacity'),
-('Drives','model'),('Capacity','capacity'),('Count','count')) %}
+('Group','group'),('Name','get_name'),('Model','model'),
+('Memory','memory_capacity')) %}
 
 {% block links %}
     <script type="text/javascript" src={{ url_for('static', filename='javascript/filterTable.js') }}></script>
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/inventory.js') }}></script>
 {% endblock %}
 
 {% block scripts %}
@@ -86,20 +87,7 @@
                     {% set count = 1 %}
                     {# if field is not None, populate k:v #}
                     {% if v!= None %}
-                        {% if k in ('Drives', 'Capacity', 'Count') %}
-                        {% for drive in server['drive_counts'] %}
-                        <div>
-                            {{ drive[v] }}
-                            {% if k == 'Capacity' %}
-                            <span class="custom_count" style="display:none">{{ drive['capacity']|split(0)|int * drive['count']|int }}</span>
-                            {% elif k == 'Count' %}
-                            <span class="custom_count" style="display:none">{{ drive[v]|int }}</span>
-                            {% else %}
-                            <span class="custom_count" style="display:none">{{ drive[v] }}</span>
-                            {% endif %}
-                        </div>
-                        {% endfor %}
-                        {% elif v == 'available' %}
+                        {% if v == 'available' %}
                             {# set row color #}
                             {% if not server.project %}
                                 {% set hover_title = 'This server is not part of a project.' %}
@@ -111,8 +99,10 @@
                                 {% set hover_title = 'This server is held by project {}'.format(server.project|string) %}
                                 {% set color = 'red' %}
                             {% endif %}
-                            <img title="{{ hover_title }}" src={{ url_for('static', filename='pictures/{}.png'.format(color)) }} style="width:16px;height:16px;">
-                            <span class="custom_count" style="display:none">{{ color }}</span>
+                            <a onclick="expand('{{ server.id }}')">
+                                <img title="{{ hover_title }}" src={{ url_for('static', filename='pictures/{}_plus.png'.format(color)) }} style="width:16px;height:16px;">
+                                <span class="custom_count" style="display:none">{{ color }}</span>
+                            </a>
                         {% elif server[v] is not undefined %}
                             {% if k == 'ID' %}
                             <a href="/inventory/{{ server[v] }}">{{ server[v] }}</a>
@@ -130,21 +120,41 @@
                             <span class="custom_count" style="display:none">{{ server[v] }}</span>
                             {% else %}
                             <span class="custom_count" style="display:none">{{ count }}</span>
+                            {# end not undefined key check #}
                             {% endif %}
+                        {# end server key key check #}
                         {% endif %}
                         {% endif %}
-                    {# else (field is None), insert "update" button #}
+                    {# else (field is None), try key v #}
                     {% else %}
-                        {# if server is Supermicro #}
-                        {% if server.make|lower == 'supermicro' %}
-                            &nbsp;
-                        {% else %}
-                        <button {{ disabled }}onclick="update('{{ server.id }}','')">Update</button>
-                        {% endif %}
+                        {{ server[v] }}
                     {% endif %}
                     </td>
                 {% endfor %}
                 </tr>
+                {% if server.drives %}
+                <tr id="{{ server.id }}_childheader" style="display:none;">
+                    <td>Slot</td>
+                    <td colspan="2">Make</td>
+                    <td colspan="2">Model</td>
+                    <td>Capacity</td>
+                    <td colspan="2">Serial Number</td>
+                </tr>
+                {% for drive in server.drives %}
+                <tr id="{{ server.id }}_child" style="display:none;">
+                    <td>{{ drive.slot }}</td>
+                    <td colspan="2">{{ drive.info.manufacturer }}</td>
+                    <td colspan="2">{{ drive.info.model }}</td>
+                    <td>{{ drive.info.capacity }}</td>
+                    <td colspan="2">{{ drive.serial_number }}</td>
+                </tr>
+                {# end looping over drives in server #}
+                {% endfor %}
+                {% else %}
+                    <td colspan="8">No drives detected in this server.</td>
+                {% endif %}
+
+            {# end looping over servers #}
             {% endfor %}
             </tbody>
         </table>

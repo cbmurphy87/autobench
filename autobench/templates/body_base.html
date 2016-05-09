@@ -2,15 +2,15 @@
 
 {% block body %}
     <div class="top_header">
-        <span style="display:block;width:100%;min-width:1000px;margin-bottom:70px;">
+        <span style="display:block;width:100%;min-width:1000px;margin-bottom:80px;">
             <div style="display:inline-block;position:fixed;">
-                <img src={{ url_for('static', filename='pictures/micronlogos/high_res_micron_logo_black.png') }} class="top_image">
+                <img src={{ url_for('static', filename='pictures/micronlogos/high_res_micron_logo_grey.png') }} class="top_image">
             </div>
-            <div style="display:inline-block;position:fixed;z-index:1;right:0px;top:0px;width:500px;">
+            <div style="display:inline-block;position:fixed;z-index:1000;right:0px;top:0px;width:500px;">
                 {% include "aae_navbar.html" %}
             </div>
         </span>
-        <h1 style="width:100%;">AutoBench</h1>
+        <div style="height:5px;width:100%;background-color:#bcbec0;"></div>
     </div>
     <div class="content">
         {% with messages = get_flashed_messages() %}

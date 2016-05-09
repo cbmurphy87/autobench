@@ -1,5 +1,5 @@
 {% block navbar %}
-    <nav>
+    <nav id="aae_navbar">
         <ul class="nav">
             <li><a href="/">Home</a></li>
             <li><a href="/my_info">My Info</a>
@@ -15,11 +15,18 @@
                     <li><a href="/inventory/add">Add Server</a></li>
                 </ul>
             </li>
-            <li><a href="/deploy">Deploy</a></li>
+            <li><a>Actions</a>
+                <ul>
+                    <li><a href="/deploy">Deploy</a></li>
+                    {% if user.admin == true %}
+                    <li style="background-color:red"><a href="/create_job">Create Job</a></li>
+                    {% endif %}
+                </ul>
+            </li>
             <li><a href="/jobs">Jobs</a>
             </li>
             {% if user.admin == true %}
-                <li style="background-color:yellow;"><a href="/admin">Admin</a>
+                <li style="background-color:#ffce00;color:black;"><a href="/admin">Admin</a>
                     <ul>
                         <li><a href="/admin">Admin</a>
                         <li><a href="/debug">Run Debug</a></li>

@@ -92,7 +92,8 @@ class Servers(db.Model):
     unique_drives = db.relationship('StorageDevices',
                                     secondary="server_storage")
     drives = db.relationship('ServerStorage', lazy='dynamic', backref='servers',
-                             cascade='all, delete, delete-orphan')
+                             cascade='all, delete, delete-orphan',
+                             order_by='ServerStorage.slot')
     virtual_drives = db.relationship('VirtualStorageDevices', backref='server',
                                      lazy='dynamic', cascade='all, delete')
     holder = db.relationship('Users', backref='servers')

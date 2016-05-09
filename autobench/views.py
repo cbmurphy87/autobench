@@ -15,6 +15,7 @@ from autobench.forms import *
 from models import Users, Servers
 
 # _________________________ Standard Imports __________________________
+from collections import OrderedDict
 from datetime import datetime
 import fnmatch
 from jenkins import JenkinsException
@@ -45,8 +46,8 @@ def _get_date_last_modified():
             for filename in fnmatch.filter(filenames, '*.html'):
                 matches.append(os.path.join(root, filename))
         date = datetime.fromtimestamp(
-            os.path.getctime(max(matches, key=os.path.getctime))).strftime(
-            '%b %d %Y')
+                os.path.getctime(max(matches, key=os.path.getctime))).strftime(
+                '%b %d %Y')
     except:
         date = '?'
     finally:
@@ -55,8 +56,7 @@ def _get_date_last_modified():
 
 # _______________________ Asynchronous METHODS ________________________
 # method for creating a separate process
-def _deploy_server(form):
-
+def __deploy_server(form):
     message = 'Deploying {} {} to {} with ks {}.'.format(form.os.data.flavor,
                                                          form.os.data.version,
                                                          form.target.data.id,
@@ -166,7 +166,7 @@ def _login():
             # get user from db
             user = Users.query.filter_by(email=str(form.email.data)).first()
             if not user:
-                user = Users.query.filter_by(user_name=str(form.email.data))\
+                user = Users.query.filter_by(user_name=str(form.email.data)) \
                     .first()
         except Exception as e:
             logger.error('Error fetching user: {}'.format(e))
@@ -189,7 +189,7 @@ def _login():
         for field, errors in form.errors.items():
             for error in errors:
                 flash("Error in the {} field - {}".format(
-                    getattr(form, field).label.text, error))
+                        getattr(form, field).label.text, error))
     return render_template('login.html',
                            title='Login',
                            date=_get_date_last_modified(),
@@ -265,7 +265,6 @@ def _server_info():
 @myapp.route('/inventory')
 @login_required
 def _inventory():
-
     user = g.user
     servers = get_inventory(user)
 
@@ -354,8 +353,10 @@ def _update_inventory():
         logger.info('Updating server {}.'.format(server.id))
         make = server.make or 'unknown'
         if make.lower() == 'dell':
+            print 'this server is a Dell'
             target = update_dell_server
         elif 'super' in make.lower():
+            print 'this server is a Supermicro'
             target = update_smc_server
         else:
             message = 'Could not get server make'
@@ -514,21 +515,25 @@ def _release():
 def _deploy():
     user = g.user
     form = DeployForm()
-    form.target.query_factory = models.Servers.query \
-        .filter_by(held_by=user.id).order_by('id').all
-    servers = models.Servers.query
+    user_project_ids = [x.id for x in
+                        models.Projects.query.filter_by(owner_id=user.id).all()]
+
+    query = models.Servers.query\
+        .filter(models.Servers.project_id.in_(user_project_ids)) \
+        .order_by('id').all
+    form.target.query_factory = query
     if form.validate_on_submit():
         # check that user owns server
         if not form.target.data.held_by == user.id:
             flash('You do not own this server!')
             return render_template('deploy.html', title='Tests',
                                    date=_get_date_last_modified(),
-                                   user=user, form=form, servers=servers)
+                                   user=user, form=form)
         # start subprocess to deploy system
-        p = Process(target=_deploy_server, args=(form,))
+        p = Process(target=deploy_server, args=(form, user))
         p.start()
 
-        message = 'Deploying {} {} to {}.'\
+        message = 'Deploying {} {} to {}.' \
             .format(form.os.data.flavor,
                     form.os.data.version,
                     form.target.data.id)
@@ -540,10 +545,10 @@ def _deploy():
         for field, errors in form.errors.items():
             for error in errors:
                 flash("Error in the {} field - {}".format(
-                    getattr(form, field).label.text, error))
+                        getattr(form, field).label.text, error))
     return render_template('deploy.html', title='Tests',
                            date=_get_date_last_modified(),
-                           user=user, form=form, servers=servers)
+                           user=user, form=form)
 
 
 # _______________________________ JOBS ________________________________
@@ -553,6 +558,13 @@ def _jobs():
     user = g.user
     jobs = get_all_jobs()
     return render_template('jobs.html', title='Jobs', user=user, jobs=jobs)
+
+
+@myapp.route('/create_job')
+@login_required
+def _create_job():
+    user = g.user
+    return render_template('create_job.html', title='Create Job', user=user)
 
 
 @myapp.route('/job/<_id>')
@@ -659,9 +671,9 @@ def _projects_id_edit(id_):
         if attr in form.data.keys():
             field = getattr(form, attr)
             field.data = getattr(project, attr)
-    form.primary_group.data = models.Groups.query.filter_by(id=project.gid)\
+    form.primary_group.data = models.Groups.query.filter_by(id=project.gid) \
         .first()
-    form.owner_id.data = models.Users.query.filter_by(id=project.owner_id)\
+    form.owner_id.data = models.Users.query.filter_by(id=project.owner_id) \
         .first()
 
     if form.errors:
@@ -765,6 +777,7 @@ def _projects_id_remove_status(id_):
     logger.debug(message)
     return message
 
+
 # ___________________________ JENKINS JOBS ____________________________
 @myapp.route('/build_jenkins_job/<job_name>', methods=['POST', 'GET'])
 @login_required
@@ -780,8 +793,16 @@ def _build_jenkins_job(job_name):
 def _create_jenkins_job():
     user = g.user
     form = CreateJobForm()
-    build_form = BuildStepForm()
-    servers = models.Servers.query
+
+    # set servers in form
+    user_project_ids = [x.id for x in
+                        models.Projects.query.filter_by(owner_id=user.id).all()]
+
+    query = models.Servers.query\
+        .filter(models.Servers.project_id.in_(user_project_ids)) \
+        .order_by('id').all
+    form.target.query_factory = query
+
     if form.validate_on_submit():
         make_jenkins_job(form)
         flash('Created job {}'.format(form.job_name.data))
@@ -791,8 +812,7 @@ def _create_jenkins_job():
     return render_template('create_jenkins_job.html', title='Create Job',
                            date=_get_date_last_modified(),
                            form=form,
-                           build_form=build_form,
-                           user=user, servers=servers)
+                           user=user)
 
 
 @myapp.route('/jenkins_jobs', methods=['GET', 'POST'])
@@ -822,6 +842,37 @@ def _jenkins_job_info(jobname):
                                job_info=job_info,
                                user=user)
     return redirect('/jenkins_jobs')
+
+
+# __________________________ AUTOMATION JOBS __________________________
+@myapp.route('/create_job/choices', methods=['GET', 'POST'])
+@login_required
+def _get_job_choices():
+    last_step = request.get_json().get('last_step')
+    # each entry should have a 'class' and an 'action', where 'class'
+    # is the top-most string, and 'action' is the bottom most.
+    step_map = {'OS': [{'CentOS': {'5': ['5.1', '5.2'],
+                                   '6': '6.5',
+                                   '7': ['7.0', '7.1']},
+                              'Windows': {'2012': 'R2'},
+                              'OpenSUSE': 'tumbleweed'}],
+                'CentOS': [{'MySQL': ['5.5', '5.6']},
+                           {'PostgreSQL': 'Latest'},
+                           {'fio': 'Latest'},
+                           {'IOMeter': 'Latest'}],
+                'Windows': ['MSSQL', 'Oracle'],
+                'OpenSUSE': ['MySQL', 'Hadoop'],
+                'MySQL': ['sysbench', 'hammerdb'],
+                'PostgreSQL': ['hammerdb', 'fio'],
+                'MSSQL': ['hammerdb', 'fio'],
+                'Oracle': ['hammerdb', 'fio'],
+                'hammerdb': ["TPC-C", "TPC-E"],
+                'sysbench': {'read': ['100%', '90%', '70%']},
+                'fio': [{'read': ['100%', '90%', '70%', '50%']},
+                        {'write': ['100%', '90%', '70%', '50%']}]}
+
+    return render_template('job_choices.html', last_step=last_step,
+                           step_map=step_map)
 
 
 # _______________________________ ADMIN _______________________________
@@ -913,7 +964,8 @@ def _user_info(user_name):
     if not (user.admin and user):
         return render_template('404.html', user=user), 404
 
-    return render_template('admin_users_info.html', title='User Info', user=user,
+    return render_template('admin_users_info.html', title='User Info',
+                           user=user,
                            date=_get_date_last_modified(),
                            other_user=other_user)
 
@@ -940,7 +992,8 @@ def _edit_user_info(user_name):
             field = getattr(form, attr)
             field.data = getattr(other_user, attr)
 
-    return render_template('admin_users_edit.html', title='Edit User Info', user=user,
+    return render_template('admin_users_edit.html', title='Edit User Info',
+                           user=user,
                            date=_get_date_last_modified(), form=form)
 
 
@@ -1122,6 +1175,15 @@ def internal_error(error):
     user = g.user
     db.session.rollback()
     return render_template('500.html', user=user), 500
+
+
+# _____________________________ TEST VIEWS ____________________________
+@myapp.route('/test_rows')
+def _test_rows():
+    user = g.user
+    return render_template('test_rows.html', user=user,
+                           date=_get_date_last_modified())
+
 
 if __name__ == '__main__':
     logger = customlogger.create_logger('views')

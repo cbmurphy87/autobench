@@ -113,11 +113,15 @@ class MacOrIP(object):
 
 # =========================== Generic Forms ===========================
 class CreateJobForm(Form):
+
+    def get_name(self):
+            return self.get_name()
+
     job_name = StringField('Job Name', validators=[DataRequired()])
     build = BooleanField('Build', default=True)
     target = QuerySelectField('Target', query_factory=models.Servers.query
                               .order_by('id').all,
-                              get_label='id', allow_blank=True,
+                              get_label=get_name, allow_blank=True,
                               blank_text='Select a target')
     command = StringField('Command', validators=[DataRequired()])
     args = StringField('Args')

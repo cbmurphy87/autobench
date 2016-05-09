@@ -11,17 +11,18 @@ body {
     display: block;
     width: 100%;
     position: fixed;
-    background-color: white;
+    background: white;
+    z-index: 1000;
 }
 
 .content {
     min-width: 450px;
-    margin: 120px auto auto auto;
+    margin: 90px auto auto auto;
     height: auto;
 }
 
 .top_image {
-    margin: 5px;
+    margin: 10px 10px;
     height: 60px;
 }
 
@@ -35,10 +36,11 @@ h1 {
     position: fixed;
     margin: 0;
     width:100%;
-    background-color: #3d7dca;
+    background-color: transparent;
     font-size: 25pt;
-    color: white;
     text-align: center;
+    color: white;
+    text-shadow: 1px 1px 10px #414042;
 }
 
 h2 {
@@ -66,6 +68,10 @@ a {
 
 a:visited {
     color: #414042;
+}
+
+a:hover {
+    cursor: hand;
 }
 
 .totheleft {
@@ -184,6 +190,16 @@ table.stripped tr.odd {
 
 table.stripped tr.even {
     background: #d3d5d8;
+}
+
+#aaetable tr[id$='childheader'] {
+    color: white;
+    background: #63A5FF;
+}
+
+#aaetable tr[id$='child'] {
+    color: white;
+    background: #7cbeFF;
 }
 
 div.pane-header {

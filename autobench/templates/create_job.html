@@ -1,64 +1,277 @@
 {% extends "base.html" %}
 
+{% block styles %}
+#main_box {
+    float: left;
+    background-color: darkgrey;
+    display: inline;
+    width: 70%;
+    height: 100%;
+}
+#main_header {
+    float: left;
+    background-color: lightgrey;
+    display: inline;
+    width: 70%;
+    height: 1.2em;
+    text-align: center;
+}
+#drop_box, #drop_box_bg {
+    border-radius: 10px;
+    position: relative;
+    overflow: auto;
+    top: 0px;
+    height: 100%;
+    width: 100%;
+}
+#drop_box {
+    z-index: 0;
+}
+#drop_box_bg {
+    z-index: -2;
+    text-align: center;
+    vertical-align: middle;
+}
+#choice_box {
+    background-color: lightgrey;
+    width: 30%;
+    height: 100%;
+    float: left;
+}
+#choice_header {
+    background-color: darkgrey;
+    width: 30%;
+    height: 1.2em;
+    float: left;
+    text-align: center;
+}
+#choice_box .build_step {
+    float: left;
+    margin:5px;
+    padding: 5px;
+    border-radius: 10px;
+    background-color: #45a142;
+    color: white;
+    text-shadow: 1px 1px 1px black;
+}
+.build_step_container {
+    float: left;
+    margin: 5px;
+    padding: 5px;
+    border-radius: 10px;
+}
+#drop_box .job_step {
+    padding: 5px;
+    margin: 10px;
+    border-radius: 10px;
+}
+#drop_box div:hover {
+    box-shadow: 0px 0px 0px 2px white;
+}
+.dragged {
+    background-color: #45a142;
+    outline: 5px solid white;
+}
+.job_step.clicked {
+    border: 3px solid yellow;
+}
+#drop_box.clicked {
+    box-shadow: inset 0px 0px 0px 3px yellow;
+}
+.job_step {
+    font-size: 20px;
+}
+.drop_zone > .job_step,
+#choice_box > .build_step_container {
+    background-color: #006db7;
+    color: white;
+    text-shadow: 1px 1px 1px black;
+}
+.drop_zone > .job_step > .job_step,
+#choice_box > .build_step_container > .build_step_container {
+    background-color: #a5cf46;
+    color: #414042;
+    text-shadow: 1px 1px 1px white;
+}
+.drop_zone .job_step .job_step .job_step,
+#choice_box > .build_step_container > .build_step_container {
+    background-color: #414042;
+    color: white;
+    text-shadow: 1px 1px 1px #a5cf46;
+}
+.drop_zone .job_step .job_step .job_step .job_step,
+#choice_box > .build_step_container > .build_step_container > .build_step_container{
+    background-color: #e8503e;
+    color: white;
+    text-shadow: 1px 1px 1px #414042;
+}
+.drop_zone .job_step .job_step .job_step .job_step .job_step,
+#choice_box > .build_step_container > .build_step_container > .build_step_container > .build_step_container{
+    background-color: #ffce00;
+    color: #414042;
+    text-shadow: 1px 1px 1px white;
+}
+{% endblock %}
+
 {% block scripts %}
-    {{ super() }}
-    $(document).ready(function () {
-        $("#target").change(function() {
-            var e = document.getElementById("target");
-            var server_id = e.value;
-            var xhttp = new XMLHttpRequest();
-            xhttp.onreadystatechange = function() {
-                if (xhttp.readyState == 4 && xhttp.status == 200) {
-                    document.getElementById("server_info").innerHTML = xhttp.responseText;
-                }
-            }
-            xhttp.open("POST", "server_info", true);
-            xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
-            xhttp.send(JSON.stringify({id: server_id}));
-        });
-    });
+
+// =========== GLOBAL EVENT LISTENERS ===========
+
+var dragged;
+var clicked;
+var step_count = 1;
+
+document.addEventListener("dragover", function( event ) {
+    // prevent default to allow drop
+    event.preventDefault();
+  }, false);
+
+document.addEventListener("dragstart", function( event ) {
+    // store a ref. on the dragged elem
+    dragged = event.target;
+  }, false);
+
+document.addEventListener("dragend", function( event ) {
+    console.log('dragend');
+    // reset the transparency
+    $(event.target).removeClass('dragged');
+  }, false);
+
+document.addEventListener("dragenter", function( event ) {
+    console.log('dragenter');
+    console.log(event.target.innerHTML);
+    // highlight potential drop target when the draggable element enters it
+    if ( event.target.classList.contains("drop_zone") ) {
+        $(event.target).addClass('dragged');
+    }
+  }, false);
+
+document.addEventListener("dragleave", function( event ) {
+    console.log('dragleave');
+    // reset background of potential drop target when the draggable element leaves it
+    if ( event.target.classList.contains("drop_zone") ) {
+        $(event.target).removeClass('dragged');
+    }
+    // if dragged out of drop_box, delete build step
+    if ( dragged.classList.contains('job_step') ) {
+        delete_from_job(event);
+    }
+  }, false);
+
+document.addEventListener("drop", function( event ) {
+    console.log('drop');
+    // prevent default action (open as link for some elements)
+    event.preventDefault();
+    if ( event.target.classList.contains("drop_zone") ) {
+        $(event.target).removeClass('dragged');
+    }
+  }, false);
+
+// =========== SPECIFIC FUNCTIONS ===========
+
+function drag(ev) {
+    // ev.target (dragged) is dragged dive
+    dragged = ev.target;
+    ev.dataTransfer.dropEffect = "move";
+    ev.dataTransfer.setData("text", ev.target.id);
+}
+
+function drop(ev) {
+    console.log('my drop');
+    // ev.target is the div that the dragged div is dropped into
+    ev.dropEffect = "copy";
+    ev.preventDefault();
+    var data = ev.dataTransfer.getData("text/html");
+    ev.target.appendChild(document.getElementById(data));
+}
+
+function add_to_job(ev) {
+    ev.preventDefault();
+    // get number of current steps
+    if ( dragged.classList.contains('build_step') ) {
+        var action = dragged.getAttribute('data-add_action');
+        var step_class = dragged.getAttribute('data-class');
+        if (! action) {
+            alert('Could not get action details.');
+            return;
+        } else {
+            console.log('adding ' + action + ' action');
+        }
+        // create new build step
+        var data_count = ev.target.getAttribute('data-count');
+        var parent_count = parseInt(data_count);
+        var new_div = document.createElement('div');
+        new_div.classList.add('job_step');
+        new_div.classList.add('drop_zone');
+        new_div.draggable = 'true';
+        new_div.setAttribute('data-action', action);
+        new_div.setAttribute('data-class', step_class);
+        var cnt = ev.target.childNodes.length;
+        if (action == 'None') {
+            var display_string = step_class;
+        } else if (step_class == 'None') {
+            var display_string = action;
+        } else {
+            var display_string = step_class + ' ' + action;
+        }
+        new_div.innerHTML = display_string;
+        new_div.onclick = function() {click_div(event)};
+        new_div.setAttribute('data-count', parent_count + 1);
+        // add build step to build box
+        ev.target.appendChild(new_div);
+    } else if ( dragged.classList.contains('job_step') ) {
+        // clone div and change id
+        var new_div = dragged.cloneNode(true);
+        ev.target.appendChild(new_div);
+    }
+    click_div(ev);
+    //get_choices(action);
+}
+
+function delete_from_job(ev) {
+    ev.preventDefault();
+    dragged.parentNode.removeChild(dragged);
+}
+
+function get_choices(last_step) {
+    var xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function() {
+        if (xhttp.readyState == 4 && xhttp.status == 200) {
+            var choice_box = document.getElementById('choice_box');
+            choice_box.innerHTML = xhttp.responseText;
+        }
+    }
+    xhttp.open("POST", "/create_job/choices", true);
+    xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+    xhttp.send(JSON.stringify({last_step: last_step}));
+}
+
+function click_div(ev) {
+    if ( clicked ) {
+        clicked.classList.remove('clicked');
+    }
+    clicked = ev.target;
+    clicked.classList.add('clicked');
+    var last_step = clicked.getAttribute('data-class');
+    get_choices(last_step);
+}
+
+$(document).ready(function () {
+    get_choices('OS');
+});
 {% endblock %}
 
 {% block content %}
     <h2>Create a job</h2>
-    <form action='' method='POST' name='create_job'>
-        {{ form.hidden_tag() }}
-        <p>
-            Job name:<br>
-            {{ form.job_name }}
-            {% for error in form.job_name.errors %}
-                <span style="color:red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-
-        <div class="build_step" style="border:1px solid #00447c; padding:10px;
-        height:190px;">
-            <span>
-                <div style="height:150px;margin:auto;float:left">
-                    <a style="font-weight:bold;">Build Step 1</a>
-                    {% for k, v in (('Target',form.target),
-                    ('Command', form.command),
-                    ('Args', form.args),
-                    ('Kwargs', form.kwargs)) %}
-                        <p>
-                            {{ k }}:<br>{{ v }}
-                            {% for error in v.errors %}
-                                <span style="color:red;">[{{ error }}]</span>
-                            {% endfor %}
-                        </p>
-                    {% endfor %}
-                </div>
-                {% set server = servers.order_by('id').first() %}
-                <div style="float:right">
-                    <span id="server_info"></span>
-                </div>
-            </span>
+    <h3>Click on an area in the drop zone to see the choices.</h3>
+    <span style="display:inline;">
+        <div id="main_header">DRAG STEPS BELOW</div>
+        <div id="choice_header">STEPS</div>
+    </span>
+    <span style="display:inline;">
+        <div id="main_box" draggable="false">
+            <div id="drop_box" class="drop_zone" onclick="click_div(event)" data-class="OS" data-count="0" draggable="false" ondragstart="drag(event)" ondrop="add_to_job(event)"></div>
         </div>
-
-        <p>
-            {{ form.build }} Build<br>
-        </p>
-
-        <input type="submit" value="Submit">
-    </form>
+        <div id="choice_box" draggable="false"></div>
+    </span>
 {% endblock %}

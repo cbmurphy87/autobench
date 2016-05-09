@@ -4,6 +4,7 @@ from datetime import datetime
 import re
 from subprocess import Popen, PIPE
 
+from flask import render_template
 from sqlalchemy import func, and_
 from sqlalchemy.exc import IntegrityError, InvalidRequestError
 from aaebench.testautomation.syscontrol.racadm import RacadmManager
@@ -15,6 +16,8 @@ from autobench_exceptions import *
 import requests
 
 from aaebench import customlogger
+from aaebench.testautomation.syscontrol.file_transfer import SFTPManager
+from aaebench.parents.managers import GenericManager
 
 
 # =========================== User METHODS ============================
@@ -214,6 +217,7 @@ def delete_user(user_name, user):
         db.session.delete(user_to_delete)
         db.session.commit()
     except:
+        db.session.rollback()
         return 'Could not delete user {}'.format(user_name)
 
     return 'Successfully deleted user {}.'.format(user_name)
@@ -245,6 +249,7 @@ def delete_group(gid, user):
         db.session.delete(group_to_delete)
         db.session.commit()
     except Exception as e:
+        db.session.rollback()
         return 'Could not delete group {}: {}'.format(gid, e)
 
     return 'Successfully deleted group {}.'.format(gid)
@@ -500,6 +505,7 @@ def add_interface(form, server_id, user):
     except Exception as e:
         message = 'Error adding {}: {}'.format(new_interface, e)
         logger.error(message)
+        db.session.rollback()
         fail_job(job, message=message)
 
     finish_job(job)
@@ -934,8 +940,8 @@ def update_dell_server(server, user):
     job = create_job(user, message='Update server {}'.format(server.id))
 
     # check that the mac address is associated with an ip address
+    interface = server.interfaces.filter_by(type='oob').first()
     try:
-        interface = server.interfaces.filter_by(type='oob').first()
         ip = get_ip_from_mac(interface.mac)
 
     except Exception as e:
@@ -943,7 +949,7 @@ def update_dell_server(server, user):
         logger.warning(message)
         add_job_detail(job, message=message)
         ip = interface.ip
-        message = 'Trying stored IP address.'
+        message = 'Trying stored IP address: {}'.format(ip)
         logger.debug(message)
         add_job_detail(job, message=message)
 
@@ -957,6 +963,13 @@ def update_dell_server(server, user):
     pending_job(job)
 
     logger.info('Updating server at {}'.format(ip))
+    if not server.user_name:
+        logger.info('No username in database.')
+        fail_job(job, 'No username found. Please add username to server info.')
+        return
+    if not server.password:
+        logger.info('No username in database.')
+        fail_job(job, 'No password found. Please add password to server info.')
 
     s = {
             'hostname': ip,
@@ -1094,6 +1107,7 @@ def update_server_info(server, new_info, job):
             db.session.commit()
             add_job_detail(job, 'Added {}.'.format(new_interface))
         except Exception as e:
+            db.session.rollback()
             message = 'Could not add {}: {}'.format(new_interface, e)
             logger.error(message)
             add_job_detail(job, message)
@@ -1151,10 +1165,10 @@ def delete_all_interfaces(_id, job):
         db.session.commit()
         add_job_detail(job, message='Deleted all interfaces.')
     except IntegrityError as e:
+        db.session.rollback()
         message = 'Error deleting interfaces: {}'.format(e)
         logger.error(message)
         add_job_detail(job, message=message)
-        db.session.rollback()
 
 
 def check_or_add_drives(server, drives, job):
@@ -1177,6 +1191,7 @@ def check_or_add_drives(server, drives, job):
         db.session.commit()
         add_job_detail(job, message='Deleted all drive info.')
     except Exception as e:
+        db.session.rollback()
         logger.error('Failed to delete drives for server {}: {}.'
                      .format(server.id, e))
         add_job_detail(job, message='Failed to delete drive info.')
@@ -1205,6 +1220,7 @@ def check_or_add_drives(server, drives, job):
                     add_job_detail(job, message='Added new {} {} to database.'
                                    .format(capacity, drive_model))
                 except (IntegrityError, InvalidRequestError) as e:
+                    db.session.rollback()
                     logger.debug('Drive {} already in database: {}'
                                  .format(new_drive, e))
             else:
@@ -1285,6 +1301,72 @@ def check_or_add_drives(server, drives, job):
 
 
 # ============================ JOB METHODS ============================
+def deploy_server(form, user):
+    message = 'Deploying {} {} to {} with ks {}.'.format(form.os.data.flavor,
+                                                         form.os.data.version,
+                                                         form.target.data.id,
+                                                         form.os.data.append)
+    logger.info(message)
+
+    pxe_file = render_template('pxeboot',
+                               kernel=form.os.data.kernel,
+                               initrd=form.os.data.initrd,
+                               append=form.os.data.append)
+
+    # gather data
+    server = form.target.data
+    server_type = server.make
+    interfaces = server.interfaces
+    eth0_interface = interfaces.filter_by(name='NIC.1').first()
+    eth0 = eth0_interface.mac.lower().replace(':', '-')
+    logger.debug('eth0 mac: {}'.format(eth0))
+    ipmi_int = interfaces.filter_by(name='DRAC').first() or \
+               interfaces.filter_by(name='ipmi').first()
+    if not ipmi_int:
+        raise Exception('Could not find ipmi interface!')
+    ipmi_ip = ipmi_int.ip
+
+    logger.debug('IPMI ip address is: {}'.format(ipmi_ip))
+
+    # send unique config file to pxe server
+    sftp = SFTPManager('pxe.aae.lcl')
+    client = sftp.create_sftp_client()
+    filename = '/tftpboot/pxelinux.cfg/01-{}'.format(eth0)
+    # write file
+    with client.open(filename, 'w') as f:
+        f.write(pxe_file)
+    # delete salt key
+    logger.debug(server.id)
+    salt_master_manager = GenericManager(hostname='salt-gru.aae.lcl',
+                                         username='salt',
+                                         password='Not24Get',
+                                         local=False,
+                                         ending='$')
+    command = ['salt-key', '-d', str(server.id), '-y']
+    salt_master_manager.connection.exec_command(' '.join(command))
+
+    # reboot server to PXE
+    if server_type.lower() == 'dell':
+        logger.debug('Detected server is a Dell. Using RACADM.')
+        ipmi = RacadmManager(ipmi_ip)
+    else:
+        logger.debug('Detected server is not a Dell. Using IPMI.')
+        ipmi = SMCIPMIManager(ipmi_ip)
+
+    ipmi.boot_once('PXE', reboot=True)
+
+    # make server unavailable
+    try:
+        server = models.Servers.query.filter_by(id=server.id).first()
+        server.available = False
+        server.held_by = user.id
+        db.session.commit()
+        logger.info('Server {} now unavailable.'.format(server))
+    except Exception as e:
+        logger.error('Error making server unavailable: {}'.format(e))
+        db.session.rollback()
+
+
 def create_job(user, message=''):
 
     # create job
