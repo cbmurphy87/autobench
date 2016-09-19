@@ -394,7 +394,6 @@ def _checkout_id():
     if server.available and not server.holder:
         try:
             server.available = False
-            server.held_by = user.id
             db.session.add(server)
             db.session.commit()
         except Exception as e:
@@ -450,7 +449,7 @@ def _delete_id():
         logger.error('Error deleting server {}: {}'.format(_id, e))
         db.session.rollback()
 
-    i_am_holder = (server.held_by == user.id)
+    i_am_holder = (server.project.owner == user)
     if i_am_holder:
         title = 'Release this server'
         color = 'green'

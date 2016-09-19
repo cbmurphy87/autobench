@@ -670,7 +670,7 @@ def add_dell_info(nic_info, form, user, job):
                             password=form.password.data)
     # add primary group
     if form.group.data:
-        server.groups.append(form.group.data)
+        server.group_id = form.group.data.id
     for interface in server_info.get('interfaces', tuple()):
         _i = models.NetworkDevices()
         for _k, _v in interface.items():
@@ -968,7 +968,7 @@ def update_dell_server(server, user):
         fail_job(job, 'No username found. Please add username to server info.')
         return
     if not server.password:
-        logger.info('No username in database.')
+        logger.info('No password in database.')
         fail_job(job, 'No password found. Please add password to server info.')
 
     s = {
