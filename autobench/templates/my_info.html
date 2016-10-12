@@ -79,10 +79,10 @@
                 <tr>
                 {% for k, v in project_fields %}
                     <td>
-                    {% if v == 'id' %}
+                    {% if v in ('id', 'name') %}
                         {% set project_id = project.id %}
                         <a href="/projects/{{ project_id }}">
-                        {{ project_id }}
+                        {{ project[v] }}
                         </a>
                     {% else %}
                         {{ project[v] }}
@@ -127,10 +127,10 @@
                 <tr>
                 {% for k, v in project_fields %}
                     <td>
-                    {% if v == 'id' %}
+                    {% if v in ('id', 'name') %}
                         {% set project_id = project.id %}
                         <a href="/projects/{{ project_id }}">
-                        {{ project_id }}
+                        {{ project[v] }}
                         </a>
                     {% else %}
                         {{ project[v] }}

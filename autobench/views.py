@@ -605,6 +605,8 @@ def _projects_add():
     user = g.user
     AddProjectForm = make_add_project_form(user)
     form = AddProjectForm()
+    form.start_date.data = datetime.today()
+    form.target_end_date.data = datetime.today()
     if form.validate_on_submit():
         error = add_project(form, user)
         if not error:
@@ -747,10 +749,13 @@ def _projects_id_remove_server(id_):
 @myapp.route('/projects/<id_>/add_status', methods=['GET', 'POST'])
 @login_required
 def _projects_id_add_status(id_):
+    browser = request.user_agent
     user = g.user
     project = get_project_by_id(id_)
     form = AddProjectStatusForm()
-    if not ((project.owner == user) or (user in project.members) or user.admin):
+    form.date.data = datetime.today()
+    if not ((project.owner == user) or
+            (user in project.members) or user.admin):
         flash('You are not the owner of this project!')
         return redirect('/projects/{}'.format(id_))
     if form.validate_on_submit():
@@ -759,7 +764,8 @@ def _projects_id_add_status(id_):
         flash(message)
         return redirect('/projects/{}'.format(id_))
     return render_template('project_id_add_status.html', title='Add Status',
-                           user=user, project=project, form=form)
+                           user=user, project=project, form=form,
+                           browser=browser)
 
 
 @myapp.route('/projects/<id_>/remove_status', methods=['GET', 'POST'])

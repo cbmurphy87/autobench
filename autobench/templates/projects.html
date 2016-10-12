@@ -57,8 +57,8 @@
             <tr>
             {% for k, v in field_pairs %}
                 <td>
-                {% if v == 'id'%}
-                    <a href="/projects/{{ project.id }}">{{ project.id }}</a>
+                {% if v in ('id', 'name') %}
+                    <a href="/projects/{{ project.id }}">{{ project[v] }}</a>
                 {% else %}
                     {{ project[v] }}
                 {% endif %}
