@@ -1,4 +1,8 @@
 $(document).ready(function () {
+    jQuery.expr[':'].contains = function(a, i, m) {
+      return jQuery(a).text().toUpperCase()
+          .indexOf(m[3].toUpperCase()) >= 0;
+    };
     $("input[id^='searchInput']").keyup(function () {
         // pop number off end, if present
         var tableNum = this.id.replace('searchInput', '');
@@ -8,6 +12,12 @@ $(document).ready(function () {
         var jo = $("#fbody" + tableNum).find("tr");
         if (this.value == "") {
             jo.show();
+            $("[id*='" + id + "_child']").each(
+                function() {
+                    $(this).slideToggle(0,'');
+                }
+            );
+            updateStriping();
             return;
         }
         //hide all the rows
