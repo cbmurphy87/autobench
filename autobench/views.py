@@ -32,8 +32,8 @@ from aaebench.testautomation.syscontrol.smcipmi import SMCIPMIManager
 from aaebench.parents.managers import GenericManager
 
 # ___________________________ Flask Imports ___________________________
-from scripts.jenkinsMethods import *
-from scripts.db_actions import *
+from functions.jenkinsMethods import *
+from functions.db_actions import *
 
 
 # ============================== METHODS ==============================

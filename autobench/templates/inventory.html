@@ -100,7 +100,7 @@
                                 {% set color = 'red' %}
                             {% endif %}
                             <a onclick="expand('{{ server.id }}')">
-                                <img title="{{ hover_title }}" src={{ url_for('static', filename='pictures/{}_plus.png'.format(color)) }} style="width:16px;height:16px;">
+                                <img title="{{ hover_title }}" src={{ url_for('static', filename='pictures/plus_{}.png'.format(color)) }} style="width:16px;height:16px;">
                                 <span class="custom_count" style="display:none">{{ color }}</span>
                             </a>
                         {% elif server[v] is not undefined %}

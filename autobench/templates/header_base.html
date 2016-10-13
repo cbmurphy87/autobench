@@ -6,7 +6,7 @@
 
 {% block head %}
     {% block meta %}{% endblock %}
-    {# include all links to scripts #}
+    {# include all links to functions #}
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
     <script type="text/javascript" src={{ url_for('static', filename='javascript/functions.js') }}></script>
     <script type="text/javascript" src={{ url_for('static', filename='javascript/sortable.js') }}></script>
@@ -23,7 +23,7 @@
     {% endblock %}
     <script>
     {% block scripts %}
-    <!-- No additional scripts -->
+    <!-- No additional functions -->
     {% endblock %}
     </script>
     {# include all links to styles #}

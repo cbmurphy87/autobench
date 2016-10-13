@@ -13,7 +13,7 @@ cov.start()
 from config import basedir
 from autobench import myapp, db
 from autobench.models import Servers, Users, OS
-from autobench.scripts.db_actions import get_inventory, get_ip_from_mac, \
+from autobench.functions.db_actions import get_inventory, get_ip_from_mac, \
     get_mac_from_ip
 from werkzeug.security import generate_password_hash
 

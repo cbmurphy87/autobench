@@ -115,7 +115,7 @@
             {% if (user == project.owner) or (user in project.members) or (user.admin) %}
                 <th class="sorttable_nosort" count_type="ignore">
                     <a href="/projects/{{ project.id }}/add_status">
-                        <img src="{{ url_for('static', filename='pictures/plus.png') }}"/>
+                        <img src="{{ url_for('static', filename='pictures/plus_blue.png') }}"/>
                     </a>
                 </th>
             {% endif %}
@@ -176,7 +176,7 @@
             {% if user == project.owner or user.admin %}
                 <th class="sorttable_nosort" count_type="ignore">
                     <a href="/projects/{{ project.id }}/add_member">
-                        <img src="{{ url_for('static', filename='pictures/plus.png') }}"/>
+                        <img src="{{ url_for('static', filename='pictures/plus_blue.png') }}"/>
                     </a>
                 </th>
             {% endif %}
@@ -241,7 +241,7 @@
                         {% if user == project.owner or user.admin %}
                             <th class="sorttable_nosort" count_type="ignore">
                                 <a href="/projects/{{ project.id }}/add_server">
-                                    <img src="{{ url_for('static', filename='pictures/plus.png') }}"/>
+                                    <img src="{{ url_for('static', filename='pictures/plus_blue.png') }}"/>
                                 </a>
                             </th>
                         {% endif %}
