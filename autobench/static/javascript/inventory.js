@@ -28,30 +28,39 @@ function updateStriping() {
         }
     }
 }
+function collapse(id) {
+    $("#" + id + " > td > a > img").attr('src', '/static/pictures/plus_blue.png');
+    $("#" + id + " > td > a").attr('onclick', "expand('" + id + "')");
+    $("[id*='_child']").each(
+        function() {
+            //console.log($(this));
+            $(this).hide();
+        }
+    );
+
+    $("[id*='" + id + "_child']").each(
+        function() {
+            $(this).hide();
+        }
+    );
+    updateStriping();
+}
 
 function expand(id) {
+    $("#" + id + " > td > a").attr('onclick', "collapse('" + id + "')");
+    $("#" + id + " > td > a > img").attr('src', '/static/pictures/minus_blue.png');
     $("[id*='_child']").each(
         function() {
             //console.log($(this));
             $(this).slideUp();
         }
     );
-    //console.log(children);
-    //for (var i = 0, child; child = children[i]; i++) {
-    //    child.slideUp(0,'');
-    //}
     $("[id*='" + id + "_child']").each(
         function() {
-            $(this).slideToggle(0,'');
+            $(this).show();
         }
     );
     updateStriping();
-    //var rows = document.getElementById(id + '_child');
-    //for (var i = 0, row; row = rows[i]; i++) {
-    //    console.log('showing row ' + i);
-    //    $(row).slideToggle(1,'',alert('hello!'));
-    //    //row.style.display = 'inline';
-    //}
 }
 
 $(document).ready(function () {updateStriping()});
