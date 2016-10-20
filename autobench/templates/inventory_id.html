@@ -143,7 +143,7 @@
             <br>
             <a href="/inventory/{{ server.id }}/edit">Edit Server Info</a>
         </div>
-        {% if server.held_by == user.id or user.admin %}
+        {% if user.id in server.project.members or user.admin %}
         <div style="float:right;padding:0 10px;background-color:#d3d5d8;text-align:center;border: 1px solid #414042;">
             <p>Has this server's information changed?</p>
             <p><button onclick="updateServer('{{ server.id }}','')">Update</button></p>

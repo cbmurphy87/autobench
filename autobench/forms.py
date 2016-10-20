@@ -146,11 +146,10 @@ class DeployForm(Form):
 
 class BuildStepForm(Form):
     target = QuerySelectField(query_factory=models.Servers.query
-                              .filter_by(available=True)
                               .order_by('id'))
-    target2 = QuerySelectField(query_factory=models.Servers.query
-                               .filter_by(available=True)
-                               .order_by('id'))
+    # target2 = QuerySelectField(query_factory=models.Servers.query
+    #                            .filter_by(available=True)
+    #                            .order_by('id'))
     command = StringField('Command', validators=[DataRequired()])
     args = StringField('Args', validators=[Optional()])
     kwargs = StringField('Kwargs', validators=[Optional()])

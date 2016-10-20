@@ -350,3 +350,7 @@ input#verify_new_password:disabled {
 #getFixed {
   width: 100px;
 }
+
+.hidden * {
+    display: none;
+}

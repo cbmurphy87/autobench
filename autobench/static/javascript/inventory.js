@@ -28,35 +28,61 @@ function updateStriping() {
         }
     }
 }
-function collapse(id) {
-    $("#" + id + " > td > a > img").attr('src', '/static/pictures/plus_blue.png');
-    $("#" + id + " > td > a").attr('onclick', "expand('" + id + "')");
-    $("[id*='_child']").each(
-        function() {
-            //console.log($(this));
-            $(this).hide();
-        }
-    );
-
+function collapse(parameters) {
+    var id = parameters.id;
+    console.log('Collapse ' + id);
+    if (parameters.collapseAll === undefined) {
+        parameters.collapseAll = false;
+    }
+    var el = document.getElementById(id);
+    console.log(el.classList);
+    el.classList.remove('expanded');
+    var image = el.getElementsByTagName('img')[0];
+    image.parentElement.setAttribute('onclick', "expand({id:'" + id + "'})");
+    console.log(image);
+    var image_src = image.getAttribute('src');
+    var new_image_src = image_src.replace("minus", "plus");
+    image.setAttribute('src', new_image_src);
     $("[id*='" + id + "_child']").each(
-        function() {
+        function () {
+            console.log('hiding: ' + $(this));
             $(this).hide();
         }
     );
+    if (parameters.collapseAll) {
+        $(".expanded").each(
+            function () {
+                //console.log($(this));
+                console.log($(this));
+                collapse({id:$(this).id, collapseAll:false});
+            }
+        );
+    }
     updateStriping();
 }
 
-function expand(id) {
-    $("#" + id + " > td > a").attr('onclick', "collapse('" + id + "')");
-    $("#" + id + " > td > a > img").attr('src', '/static/pictures/minus_blue.png');
-    $("[id*='_child']").each(
-        function() {
-            //console.log($(this));
-            $(this).slideUp();
-        }
-    );
+function expand(parameters) {
+    var id = parameters.id;
+    if (parameters.collapseAll === undefined) {
+        parameters.collapseAll = false;
+    }
+    var el = document.getElementById(id);
+    console.log(el);
+    el.classList.add('expanded');
+    var image = el.getElementsByTagName('img')[0];
+    console.log(image);
+    image.parentElement.setAttribute('onclick', "collapse({id:'" + id + "', collapseAll:true})");
+    var image_src = image.getAttribute('src');
+    var new_image_src = image_src.replace("plus", "minus");
+    console.log(new_image_src);
+    if (parameters.collapseAll)
+    {
+        collapse({"id":id, "collapseAll":true});
+    }
+    image.setAttribute('src', new_image_src);
     $("[id*='" + id + "_child']").each(
         function() {
+            console.log('showing: ' + $(this));
             $(this).show();
         }
     );

@@ -535,7 +535,6 @@ def add_smc_info(nic_info, form, user, job):
     server = models.Servers(rack=form.rack.data, u=form.u.data,
                             user_name=form.user_name.data,
                             password=form.password.data)
-    server.held_by = user.id
     server.make = 'Supermicro'
 
     for interface in server_info['interfaces']:
@@ -686,7 +685,6 @@ def add_dell_info(nic_info, form, user, job):
                 logger.debug('key "{}" not in server:'.format(_k))
                 logger.debug('-> {}: {}'.format(_k, _v))
 
-    server.held_by = user.id
     server.make = 'Dell'
 
     try:
@@ -1354,17 +1352,6 @@ def deploy_server(form, user):
         ipmi = SMCIPMIManager(ipmi_ip)
 
     ipmi.boot_once('PXE', reboot=True)
-
-    # make server unavailable
-    try:
-        server = models.Servers.query.filter_by(id=server.id).first()
-        server.available = False
-        server.held_by = user.id
-        db.session.commit()
-        logger.info('Server {} now unavailable.'.format(server))
-    except Exception as e:
-        logger.error('Error making server unavailable: {}'.format(e))
-        db.session.rollback()
 
 
 def create_job(user, message=''):

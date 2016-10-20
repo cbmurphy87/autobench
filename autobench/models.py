@@ -72,9 +72,7 @@ class Servers(db.Model):
     bios = db.Column(db.String(16))
     rack = db.Column(db.Integer)
     u = db.Column(db.Integer)
-    available = db.Column(db.SmallInteger, default=False)
-    held_by = db.Column(db.Integer, db.ForeignKey('users.id'))
-    dirty = db.Column(db.SmallInteger, default=False)
+    dirty = db.Column(db.SMALLINT, default=False)
     user_name = db.Column(db.String(64))
     password = db.Column(db.String(64))
     group_id = db.Column(db.Integer, db.ForeignKey('groups.id'))
@@ -96,7 +94,6 @@ class Servers(db.Model):
                              order_by='ServerStorage.slot')
     virtual_drives = db.relationship('VirtualStorageDevices', backref='server',
                                      lazy='dynamic', cascade='all, delete')
-    holder = db.relationship('Users', backref='servers')
     group = db.relationship('Groups', backref='servers')
     project = db.relationship('Projects', backref='servers')
 

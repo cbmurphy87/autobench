@@ -67,7 +67,7 @@
             {% endfor %}
             {% if (user == project.owner) or (user.admin) %}
                 <td>
-                    <img src="{{ url_for('static', filename='pictures/minus.png') }}"
+                    <img src="{{ url_for('static', filename='pictures/minus_blue.png') }}"
                          onclick="delete_project({{ project.id }})"/>
                 </td>
             {% endif %}

@@ -99,7 +99,7 @@
                                 {% set hover_title = 'This server is held by project {}'.format(server.project|string) %}
                                 {% set color = 'red' %}
                             {% endif %}
-                            <a onclick="expand('{{ server.id }}')">
+                            <a onclick="expand({id : '{{ server.id }}'})">
                                 <img title="{{ hover_title }}" src={{ url_for('static', filename='pictures/plus_{}.png'.format(color)) }} style="width:16px;height:16px;">
                                 <span class="custom_count" style="display:none">{{ color }}</span>
                             </a>

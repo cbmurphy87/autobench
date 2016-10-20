@@ -1,9 +1,11 @@
 $(document).ready(function () {
+
     // overwright contains function to make case insensitive
     jQuery.expr[':'].contains = function(a, i, m) {
       return jQuery(a).text().toUpperCase()
           .indexOf(m[3].toUpperCase()) >= 0;
     };
+
     // search text
     $("input[id^='searchInput']").keyup(function () {
         // pop number off end, if present
@@ -15,40 +17,32 @@ $(document).ready(function () {
         // if search field empty
         if (this.value == "") {
             console.log('empty search');
-            jo.show();
-            $("[id*='" + this.id + "_child']").each(
-                function () {
-                    $(this).show();
-                }
-            );
-            $("[id*='_child']").each(
-                function() {
-                    //console.log($(this));
-                    $(this).hide();
-                }
-            );
-            updateStriping();
-            return;
+            jo.each(function () {
+                jo.each(function (index, element) {
+                    element.classList.remove('hidden');
+                });
+            });
         } else {
-            //hide all the rows
-            jo.hide();
-            //Recusively filter the jquery object to get results.
+            jo.each(function (index, element) {
+                element.classList.add('hidden');
+            });
             jo.filter(function (i, v) {
-                var $t = $(this);
-                if ($t.is("[id*='_child']")) {
-                    console.log('false');
+                var t = $(this);
+                if ($(t).is("[id^='" + t.id + "']")) {
                     return false;
                 }
                 for (var d = 0; d < data.length; ++d) {
-                    if ($t.is(":contains('" + data[d] + "')")) {
+                    if ($(t).is(":contains('" + data[d] + "')")) {
                         return true;
                     }
                 }
                 return false;
-            })
-            //show the rows that match.
-                .show();
+            }).each(function () {
+                    $(this)[0].classList.remove('hidden');
+                }
+            );
         }
+        updateStriping();
     }).focus(function () {
         this.value = "";
         $(this).css({

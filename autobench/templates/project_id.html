@@ -137,7 +137,7 @@
             {% endfor %}
             {% if (user == project.owner) or (user.admin) %}
                 <td>
-                    <img src="{{ url_for('static', filename='pictures/minus.png') }}"
+                    <img src="{{ url_for('static', filename='pictures/minus_blue.png') }}"
                          onclick="remove_status({{ project.id }}, {{ status.id }})"/>
                 </td>
             {% endif %}
@@ -193,7 +193,7 @@
             {% endfor %}
             {% if user == project.owner or user.admin %}
                 <td>
-                    <img src="{{ url_for('static', filename='pictures/minus.png') }}"
+                    <img src="{{ url_for('static', filename='pictures/minus_blue.png') }}"
                          onclick="remove_member({{ project.id }}, {{ member.id }}, '{{ member.full_name() }}')"/>
                 </td>
             {% endif %}
@@ -274,7 +274,7 @@
                         {% endfor %}
                         {% if (user == project.owner) or (user.admin) %}
                         <td>
-                            <img src="{{ url_for('static', filename='pictures/minus.png') }}" onclick="remove_server({{ project.id }}, '{{ server.id }}')"/>
+                            <img src="{{ url_for('static', filename='pictures/minus_blue.png') }}" onclick="remove_server({{ project.id }}, '{{ server.id }}')"/>
                         </td>
                         {% endif %}
                     </tr>
