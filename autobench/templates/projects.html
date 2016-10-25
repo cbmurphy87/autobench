@@ -61,7 +61,7 @@
                 <td>
                     <a href="/projects/{{ project.id }}">{{ project[v] }}</a>
                 {% elif v == 'status' %}
-                {% set status_class = 'status_' + project[v].lower().replace(' ','_') %}
+                {% set status_class = 'status_' + (project[v]|string).lower().replace(' ','_') %}
                 <td class="{{ status_class }}">
                     {{ project[v] }}
                 {% else %}
