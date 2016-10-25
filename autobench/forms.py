@@ -352,6 +352,10 @@ def make_edit_project_form(project, user):
                                     .filter_by(id=project.owner.id).first())
         start_date = DateField('Start Date', format='%Y-%m-%d')
         target_end_date = DateField('Target Completion Date')
+        status = SelectField('Status', choices=map(lambda x: (x, x),
+                                                   models.Projects.status
+                                                   .property.columns[0].type
+                                                   .enums))
         description = TextAreaField('Project Description')
 
     return EditProjectForm

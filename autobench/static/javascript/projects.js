@@ -1,5 +1,5 @@
 function delete_project(project_id) {
-    if (confirm('Are you sure you want to remove project' + project_id + '?')) {
+    if (confirm('Are you sure you want to remove project ' + project_id + '?')) {
         var xhttp = new XMLHttpRequest();
         xhttp.onreadystatechange = function () {
             if (xhttp.readyState == 4) {

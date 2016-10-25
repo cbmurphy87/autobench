@@ -56,7 +56,7 @@ function counttable() {
         // loop over rows in tbody
         for (var row_num = 0, row; row = table_body.rows[row_num]; row_num++) {
             // loop over non-hidden columns in row
-            if ($(row).css('display') == 'none') {
+            if (($(row).css('display') == 'none') || row.classList.contains('hidden')) {
                 continue;
             }
             for (var col_num = 0, col; col = row.cells[col_num]; col_num++) {

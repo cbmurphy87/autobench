@@ -1,8 +1,10 @@
 from autobench import db
 import datetime
+import enum
 from sqlalchemy.dialects.sqlite import DATE
 import re
 from werkzeug.security import check_password_hash
+
 
 # ======================= Users for Flask Login =======================
 
@@ -239,6 +241,8 @@ class Projects(db.Model):
     target_end_date = db.Column(db.DATE)
     actual_end_date = db.Column(db.DATE, default=None)
     description = db.Column(db.Text())
+    status = db.Column(db.Enum("Planned", "Cancelled", "On Hold", "Blocked",
+                               "In Progress", "Completed"))
 
     owner = db.relationship('Users', backref='projects_owned')
     primary_group = db.relationship('Groups', backref='projects')

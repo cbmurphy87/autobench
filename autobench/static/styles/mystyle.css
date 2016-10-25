@@ -354,3 +354,32 @@ input#verify_new_password:disabled {
 .hidden * {
     display: none;
 }
+
+.status_in_progress {
+    background-color:#9aca3c;
+    color:#414042;
+}
+.status_cancelled {
+    background-color:#ee7624;
+    color:black;
+}
+.status_completed {
+    background-color:#45a142;
+    color:white;
+}
+.status_blocked {
+    background-color:#d02c30;
+    color:#ffb700;
+}
+.status_planned {
+    background-color:white;
+    color:#414042;
+}
+.status_on_hold {
+    background-color:#ffce00;
+    color:#cb003d;
+}
+.status_none {
+    background-color:white;
+    color:black;
+}

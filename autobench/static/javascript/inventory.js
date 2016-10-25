@@ -15,7 +15,7 @@ function updateStriping() {
     for (var i = 0, table; table = tables[i]; i++) {
         var k = 0;
         for (var j = 0, row; row = table.rows[j]; j++) {
-            if (!((row.style.display === "none"))) {
+            if (!((row.style.display === "none") || (row.classList.contains('hidden')))) {
                 if (k % 2) {
                     row.classList.remove('even');
                     row.classList.add('odd');

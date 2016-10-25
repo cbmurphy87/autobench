@@ -16,7 +16,7 @@
 
 {% set field_pairs = (('Project ID','id'),('Name','name'),
 ('Owner','owner'),('Start Date','start_date'),
-('Completion Date','target_end_date')) %}
+('Completion Date','target_end_date'),('Status','status')) %}
 
 {% block content %}
     <h2>Projects</h2>
@@ -56,10 +56,16 @@
         {% for project in projects %}
             <tr>
             {% for k, v in field_pairs %}
-                <td>
+
                 {% if v in ('id', 'name') %}
+                <td>
                     <a href="/projects/{{ project.id }}">{{ project[v] }}</a>
+                {% elif v == 'status' %}
+                {% set status_class = 'status_' + project[v].lower().replace(' ','_') %}
+                <td class="{{ status_class }}">
+                    {{ project[v] }}
                 {% else %}
+                <td>
                     {{ project[v] }}
                 {% endif %}
                 <span class="custom_count" style="display:none">{{ project[v] }}}</span>

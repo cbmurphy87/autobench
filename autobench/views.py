@@ -296,10 +296,8 @@ def _add_inventory():
 def _inventory_id(_id):
     user = g.user
     server = Servers.query.get(_id)
-    user_holding = server.holder
     return render_template('inventory_id.html', title=_id, server=server,
-                           date=_get_date_last_modified(), user=user,
-                           user_holding=user_holding)
+                           date=_get_date_last_modified(), user=user)
 
 
 @myapp.route('/inventory/<_id>/add_oob', methods=['GET', 'POST'])
@@ -376,11 +374,10 @@ def _inventory_status():
     _next = request.get_json().get('next')
     user = g.user
     server = Servers.query.filter_by(id=_id).first()
-    user_holding = server.holder
     if _next:
         return redirect(_next)
     return render_template('inventory_status.html', server=server,
-                           user=user, user_holding=user_holding)
+                           user=user)
 
 
 @myapp.route('/inventory/checkout', methods=['GET', 'POST'])
@@ -461,51 +458,6 @@ def _delete_id():
                                         'title': title,
                                         'color': color})
     return server_json
-
-
-@myapp.route('/inventory/release', methods=['GET', 'POST'])
-@login_required
-def _release():
-    _id = request.get_json().get('id')
-    _next = request.get_json().get('next')
-    user = g.user
-    logger.info('User {} releasing {}'.format(user, _id))
-    server = Servers.query.filter_by(id=_id).first()
-    user_holding = server.holder
-    try:
-        holding_user_id = user_holding.id
-        if user.id == holding_user_id:
-            server.available = True
-            server.held_by = sql.null()
-            try:
-                db.session.add(server)
-                db.session.commit()
-            except:
-                db.session.rollback()
-            title = 'Check out this server'
-            color = 'blue'
-        else:
-            title = 'Server in unknown state'
-            server.available = False
-            color = 'red'
-        if server.dirty:
-            logger.info('Server is dirty.')
-            color = 'yellow'
-        i_am_holder = False
-
-        server_json = JSONEncoder().encode({'available': server.available,
-                                            'i_am_holder': i_am_holder,
-                                            'title': title,
-                                            'color': color})
-        return server_json
-    except:
-        logger.error('Could not get user holding server.')
-    if _next:
-        return redirect(_next)
-    logger.error('Error releasing server. Server may be in unknown state.')
-    return JSONEncoder().encode({'available': server.available,
-                                 'i_am_holder': False,
-                                 'title': 'Error getting status'})
 
 
 # ______________________________ DEPLOY _______________________________

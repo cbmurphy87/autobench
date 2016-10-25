@@ -11,12 +11,11 @@ $(document).ready(function () {
         // pop number off end, if present
         var tableNum = this.id.replace('searchInput', '');
         //split the current value of searchInput
-        var data = this.value.split(" ");
+        var data = this.value.trim().split(" ");
         //create a jquery object of the rows
         var jo = $("#fbody" + tableNum).find("tr");
         // if search field empty
         if (this.value == "") {
-            console.log('empty search');
             jo.each(function () {
                 jo.each(function (index, element) {
                     element.classList.remove('hidden');
@@ -42,6 +41,7 @@ $(document).ready(function () {
                 }
             );
         }
+        counttable();
         updateStriping();
     }).focus(function () {
         this.value = "";

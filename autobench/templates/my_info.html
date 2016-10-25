@@ -5,11 +5,12 @@
 
 {% set project_fields = (('Project ID','id'),('Name','name'),
 ('Owner','owner'),('Start Date','start_date'),
-('Completion Date','target_end_date')) %}
+('Completion Date','target_end_date'),('Status','status')) %}
 
 {% block links %}
     <script type="text/javascript" src={{ url_for('static', filename='javascript/filterTable.js') }}></script>
     <script type="text/javascript" src={{ url_for('static', filename='javascript/inventory.js') }}></script>
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/projects.js') }}></script>
 {% endblock %}
 
 {% block scripts %}
@@ -78,6 +79,33 @@
             {%- for project in user.projects_owned -%}
                 <tr>
                 {% for k, v in project_fields %}
+
+                    {% if v in ('id', 'name') %}
+                    <td>
+                        <a href="/projects/{{ project.id }}">{{ project[v] }}</a>
+                    {% elif v == 'status' %}
+                    {% set status_class = 'status_' + project[v].lower().replace(' ','_') %}
+                    <td class="{{ status_class }}">
+                        {{ project[v] }}
+                    {% else %}
+                    <td>
+                        {{ project[v] }}
+                    {% endif %}
+                    <span class="custom_count" style="display:none">{{ project[v] }}}</span>
+                    </td>
+                {% endfor %}
+                {% if (user == project.owner) or (user.admin) %}
+                    <td>
+                        <img src="{{ url_for('static', filename='pictures/minus_blue.png') }}"
+                             onclick="delete_project({{ project.id }})"/>
+                    </td>
+                {% endif %}
+                </tr>
+            {% endfor %}
+            {#
+            {%- for project in user.projects_owned -%}
+                <tr>
+                {% for k, v in project_fields %}
                     <td>
                     {% if v in ('id', 'name') %}
                         {% set project_id = project.id %}
@@ -97,6 +125,7 @@
                     {% endif %}
                 </tr>
             {% endfor %}
+            #}
             </tbody>
         </table>
     </div>
