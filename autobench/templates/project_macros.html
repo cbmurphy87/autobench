@@ -61,6 +61,8 @@
                 <img src="{{ url_for('static', filename='pictures/minus_blue.png') }}"
                      onclick="delete_project({{ project.id }})"/>
             </td>
+        {% else %}
+            <td></td>
         {% endif %}
         </tr>
     {% endfor %}

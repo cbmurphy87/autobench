@@ -1428,12 +1428,20 @@ def fail_job(job, message=''):
         db.session.rollback()
 
 
-def get_all_jobs():
-
-    all_jobs = models.Jobs.query.order_by(models.Jobs.id.desc()).all()
-    if all_jobs:
-        return all_jobs
-    return []
+def get_all_jobs(user=None):
+    if not user or user.admin:
+        jobs = models.Jobs.query.order_by(models.Jobs.id.desc()).all()
+    else:
+        group_members = []
+        for group in user.groups:
+            group_members.extend(group.members)
+        group_members = set(group_members)
+        # group_members = [group.members for group in user.groups]
+        group_member_ids = [gm.id for gm in group_members]
+        jobs = models.Jobs.query.filter(models.Jobs.owner_id
+                                        .in_(group_member_ids)) \
+            .order_by(models.Jobs.id.desc()).all()
+    return jobs
 
 
 def get_job(id_):
@@ -1458,13 +1466,19 @@ def delete_all_jobs():
 
 
 # ========================== PROJECT METHODS ==========================
-def get_all_projects():
+def get_all_projects(group_ids=None):
+    if not group_ids:
+        projects = models.Projects.query \
+            .order_by(models.Projects.id.desc()).all()
+    elif not hasattr(group_ids, '__iter__'):
+        projects = models.Projects.query.filter_by(gid=group_ids) \
+            .order_by(models.Projects.id.desc()).all()
+    else:
+        projects = models.Projects.query \
+            .filter(models.Projects.gid.in_(group_ids)) \
+            .order_by(models.Projects.id.desc()).all()
 
-    all_projects = models.Projects.query \
-        .order_by(models.Projects.id.desc()).all()
-    if all_projects:
-        return all_projects
-    return []
+    return projects
 
 
 def get_project_by_id(id_):

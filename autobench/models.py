@@ -88,6 +88,14 @@ class Racks(db.Model):
     )
 
 
+class RackUnitNumber(db.Model):
+
+    # parameters
+    id = db.Column(db.Integer, primary_key=True)
+    rack_id = db.Column(db.Integer, db.ForeignKey('rack.id'))
+    unit_number = db.Column(db.Integer)
+
+
 class Servers(db.Model):
 
     # parameters
@@ -100,19 +108,12 @@ class Servers(db.Model):
     cpu_model = db.Column(db.String(16))
     memory_capacity = db.Column(db.Integer)
     bios = db.Column(db.String(16))
-    room = db.Column(db.String(32))
-    rack = db.Column(db.Integer)
-    u = db.Column(db.Integer)
+    u = db.Column(db.Integer, db.ForeignKey('rack_unit_number.id'))
     dirty = db.Column(db.SmallInteger, default=False)
     user_name = db.Column(db.String(64))
     password = db.Column(db.String(64))
     group_id = db.Column(db.Integer, db.ForeignKey('groups.id'))
     project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
-
-    # constraints
-    __table_args__ = (
-        db.UniqueConstraint('rack', 'u'),
-    )
 
     # relationships
     interfaces = db.relationship('NetworkDevices', cascade='all, delete',

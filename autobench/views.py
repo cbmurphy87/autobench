@@ -522,7 +522,7 @@ def _deploy():
 @login_required
 def _jobs():
     user = g.user
-    jobs = get_all_jobs()
+    jobs = get_all_jobs(user)
     return render_template('jobs.html', title='Jobs', user=user, jobs=jobs)
 
 
@@ -561,7 +561,11 @@ def _jobs_delete():
 @login_required
 def _projects():
     user = g.user
-    projects = get_all_projects()
+    if user.admin:
+        projects = get_all_projects()
+    else:
+        gids = [group.id for group in user.groups]
+        projects = get_all_projects(gids)
     return render_template('projects.html', title='Projects', user=user,
                            projects=projects)
 
