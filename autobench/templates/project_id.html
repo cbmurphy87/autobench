@@ -32,9 +32,10 @@
 
 {% set project_fields = (('Project ID','id'),('Name','name'),
 ('Primary Group','primary_group'),('Owner','owner'),('Status','status'),
-('Start Date','start_date'),('Completion Date','target_end_date')) %}
+('Start Date','start_date'),('Completion Date','target_end_date'),
+('Archived','archived')) %}
 
-{% set status_fields = (('Date','date'),('Engineer','engineer'),
+{% set status_fields = (('Date','datetime'),('Engineer','engineer'),
 ('Message','message')) %}
 
 {% set member_fields = (('First Name','first_name'),('Last Name','last_name'),
@@ -49,6 +50,9 @@
 {# =============================================================== #}
 
 {% block content %}
+    {% if project.archived %}
+    <div style="padding:10px;border-radius: 10px;background-color:#d02c30;color:white;font-size:20px;text-align:center;">This project is archived!</div>
+    {% endif %}
     <!-- Basic project info -->
     <h2 style="padding-bottom: 10px;">Basic Info</h2>
     <div style="display:inline-block;width:100%;">
@@ -83,17 +87,27 @@
                         {# loop over field values for each parame #}
                         {% for k, v in project_fields %}
                         <tr>
-                            <td style="text-align:right;">
+                            <td class="project_basic_info_key">
                                 {{ k }}:
                             </td>
-                            {% if v == 'status' %}
-                            {% set status_class = 'status_' + (project[v]|string).lower().replace(' ','_') %}
-                            <td class="{{ status_class }}" style="text-align:left;padding-left:5px;">
-                            {% else %}
-                            <td style="text-align:left;padding-left:5px;">
-                            {% endif %}
-                                <i>{{ project[v] }}</i>
+                            {% if v == 'archived' %}
+                            <td class="project_basic_info_value">
+                                {% if project.archived %}
+                                Yes
+                                {% else %}
+                                No
+                                {% endif %}
                             </td>
+                            {% else %}
+                                {% if v == 'status' %}
+                                {% set status_class = 'status_' + (project[v]|string).lower().replace(' ','_') %}
+                                <td class="{{ status_class }} project_basic_info_value">
+                                {% else %}
+                                <td class="project_basic_info_value">
+                                {% endif %}
+                                    <i>{{ project[v] }}</i>
+                                </td>
+                            {% endif %}
                         </tr>
                     {% endfor %}
                     </tbody>
@@ -135,7 +149,7 @@
                     {{ status.engineer.full_name() }}
                     <span class="custom_count" style="display:none">{{ status.engineer.full_name() }}</span>
                 {% else %}
-                    {{ status[v] }}
+                    <div>{{ status[v]|safe }}</div>
                     <span class="custom_count" style="display:none">{{ status[v] }}</span>
                 {% endif %}
                 </td>

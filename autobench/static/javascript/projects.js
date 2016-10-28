@@ -1,3 +1,5 @@
+$(document).ready(function () {toggle_archived()});
+
 function delete_project(project_id) {
     if (confirm('Are you sure you want to remove project ' + project_id + '?')) {
         var xhttp = new XMLHttpRequest();
@@ -72,4 +74,18 @@ function remove_status(project_id, status_id) {
         xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
         xhttp.send(JSON.stringify({status_id: status_id}));
     }
+}
+
+function toggle_archived() {
+    var cb_val = document.getElementById('archive_checkbox');
+    $("[class*=archived]").each(function() {
+        var tr = $(this)[0];
+        console.log('hidden: ' + tr.classList.contains('hidden'));
+        if (cb_val.checked) {
+            tr.classList.remove('archive_hidden');
+        } else {
+            tr.classList.add('archive_hidden');
+        }
+    });
+    updateStriping();
 }

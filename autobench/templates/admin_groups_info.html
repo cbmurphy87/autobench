@@ -113,7 +113,7 @@
                 </td>
             {% endfor %}
                 <td>
-                    <img src="{{ url_for('static', filename='pictures/minus.png') }}"
+                    <img src="{{ url_for('static', filename='pictures/minus_blue.png') }}"
                          onclick="remove_group_member({{ group.id }}, '{{ m.user_name }}')"/>
                 </td>
             </tr>
@@ -182,7 +182,7 @@
                         </td>
                         {% endfor %}
                         <td>
-                            <img src="{{ url_for('static', filename='pictures/minus.png') }}"
+                            <img src="{{ url_for('static', filename='pictures/minus_blue.png') }}"
                                  onclick="remove_group_server({{ group.id }}, '{{ server.id }}')"/>
                         </td>
                     </tr>

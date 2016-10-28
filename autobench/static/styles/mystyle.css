@@ -351,7 +351,7 @@ input#verify_new_password:disabled {
   width: 100px;
 }
 
-.hidden * {
+[class*='hidden'] {
     display: none;
 }
 
@@ -382,4 +382,22 @@ input#verify_new_password:disabled {
 .status_none {
     background-color:white;
     color:black;
+}
+
+.archived {
+    color:white;
+    background-color: blue;
+    border:10px blue;
+    opacity: 0.75;
+    font-style: italic;
+    box-shadow: inset 0 0 0 1px red;
+}
+
+.project_basic_info_key {
+    text-align:right;
+}
+
+.project_basic_info_value {
+    text-align:left;
+    padding-left:5px;
 }

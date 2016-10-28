@@ -18,12 +18,12 @@ $(document).ready(function () {
         if (this.value == "") {
             jo.each(function () {
                 jo.each(function (index, element) {
-                    element.classList.remove('hidden');
+                    element.classList.remove('filter_hidden');
                 });
             });
         } else {
             jo.each(function (index, element) {
-                element.classList.add('hidden');
+                element.classList.add('filter_hidden');
             });
             jo.filter(function (i, v) {
                 var t = $(this);
@@ -37,7 +37,7 @@ $(document).ready(function () {
                 }
                 return false;
             }).each(function () {
-                    $(this)[0].classList.remove('hidden');
+                    $(this)[0].classList.remove('filter_hidden');
                 }
             );
         }

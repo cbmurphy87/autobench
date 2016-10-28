@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% import 'project_macros.html' as project_macros %}
 
 {% set user_fields = (('First Name','first_name'),('Last Name','last_name'),
 ('E-mail','email'),('Username','user_name')) %}
@@ -54,124 +55,18 @@
     <div style="padding-top:5px;">
         <a href="/my_info/edit">Edit My Info</a>
     </div>
-
-    <h2>My Projects</h2>
-    {% if user.projects_owned %}
-    <div class="pane-frame" style="width:100%;">
-        <table id="aaetable" class="sortable pane bigtable stripped count">
-            <thead>
-                <tr class="header">
-                {# create header for inventory table #}
-                    {% for k, v in project_fields %}
-                    <th>
-                        {{ k }}
-                    </th>
-                    {% endfor %}
-                    <th class="sorttable_nosort" count_type="ignore">
-                        <a href="/projects/add">
-                            <img src="{{ url_for('static', filename='pictures/plus_blue.png') }}"/>
-                        </a>
-                    </th>
-                </tr>
-            </thead>
-            <tbody>
-            {# loop over servers in inventory #}
-            {%- for project in user.projects_owned -%}
-                <tr>
-                {% for k, v in project_fields %}
-
-                    {% if v in ('id', 'name') %}
-                    <td>
-                        <a href="/projects/{{ project.id }}">{{ project[v] }}</a>
-                    {% elif v == 'status' %}
-                    {% set status_class = 'status_' + project[v].lower().replace(' ','_') %}
-                    <td class="{{ status_class }}">
-                        {{ project[v] }}
-                    {% else %}
-                    <td>
-                        {{ project[v] }}
-                    {% endif %}
-                    <span class="custom_count" style="display:none">{{ project[v] }}}</span>
-                    </td>
-                {% endfor %}
-                {% if (user == project.owner) or (user.admin) %}
-                    <td>
-                        <img src="{{ url_for('static', filename='pictures/minus_blue.png') }}"
-                             onclick="delete_project({{ project.id }})"/>
-                    </td>
-                {% endif %}
-                </tr>
-            {% endfor %}
-            {#
-            {%- for project in user.projects_owned -%}
-                <tr>
-                {% for k, v in project_fields %}
-                    <td>
-                    {% if v in ('id', 'name') %}
-                        {% set project_id = project.id %}
-                        <a href="/projects/{{ project_id }}">
-                        {{ project[v] }}
-                        </a>
-                    {% else %}
-                        {{ project[v] }}
-                    {% endif %}
-                    </td>
-                    {% endfor %}
-                    {% if (user == project.owner) or (user.admin) %}
-                    <td>
-                        <img src="{{ url_for('static', filename='pictures/minus_blue.png') }}"
-                             onclick="delete_project({{ project.id }})"/>
-                    </td>
-                    {% endif %}
-                </tr>
-            {% endfor %}
-            #}
-            </tbody>
-        </table>
-    </div>
-    {% else %}
-        You have no projects yet.
-    {% endif %}
+    <h2>Projects</h2>
+    <p><span><input id="searchInput" placeholder="Filter"> <input type="checkbox" id="archive_checkbox" value="show_archived" onclick="toggle_archived()">Show archived projects.</span></p>
+    <h3>My Projects</h3>
+    {% set alternate = 'You have no projects yet.
     <p>
         <a href="/projects/add">Add Project</a>
-    </p>
+    </p>' %}
+    {{ project_macros.table(user.projects_owned,user,'aaetable',alternate) }}
 
-    <h2>Other Projects</h2>
-    {% if user.member_of_projects %}
-    <div class="pane-frame" style="width:100%;">
-        <table id="aaetable" class="sortable pane bigtable stripped count">
-            <thead>
-                <tr class="header">
-                {# create header for inventory table #}
-                    {% for k, v in project_fields %}
-                    <th>
-                        {{ k }}
-                    </th>
-                    {% endfor %}
-                </tr>
-            </thead>
-            <tbody>
-            {# loop over servers in inventory #}
-            {%- for project in user.member_of_projects -%}
-                <tr>
-                {% for k, v in project_fields %}
-                    <td>
-                    {% if v in ('id', 'name') %}
-                        {% set project_id = project.id %}
-                        <a href="/projects/{{ project_id }}">
-                        {{ project[v] }}
-                        </a>
-                    {% else %}
-                        {{ project[v] }}
-                    {% endif %}
-                    </td>
-                    {% endfor %}
-                </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% else %}
-        You are not a member of any other projects.
-    {% endif %}
+
+    <h3>Other Projects</h3>
+    {% set alternate = 'You are not a member of any other projects.' %}
+    {{ project_macros.table(user.member_of_projects,user,'aaetable',alternate) }}
+
 {% endblock %}

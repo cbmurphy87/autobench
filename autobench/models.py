@@ -1,7 +1,8 @@
 from autobench import db
 import datetime
+from datetime import datetime
 import enum
-from sqlalchemy.dialects.sqlite import DATE
+from sqlalchemy.dialects.sqlite import DATE, DATETIME
 import re
 from werkzeug.security import check_password_hash
 
@@ -57,7 +58,34 @@ class Users(db.Model):
     def __str__(self):
         return '{} {}'.format(self.first_name, self.last_name)
 
+
 # ========================= Server Inventory ==========================
+class Rooms(db.Model):
+
+    # parameters
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String(32))
+    type = db.Column(db.Enum("Lab", "Storage", "Cubical"))
+    description = db.Column(db.String(128))
+
+    # relationships
+    racks = db.relationship('Racks', backref='room', lazy='dynamic',
+                            order_by='Racks.number')
+
+
+class Racks(db.Model):
+
+    # parameters
+    id = db.Column(db.Integer, primary_key=True)
+    room_id = db.Column(db.Integer, db.ForeignKey('rooms.id'))
+    number = db.Column(db.Integer)
+    minimum_u = db.Column(db.Integer)
+    maximum_u = db.Column(db.Integer)
+
+    # constraints
+    __table_args__ = (
+        db.UniqueConstraint('room_id', 'number'),
+    )
 
 
 class Servers(db.Model):
@@ -72,9 +100,10 @@ class Servers(db.Model):
     cpu_model = db.Column(db.String(16))
     memory_capacity = db.Column(db.Integer)
     bios = db.Column(db.String(16))
+    room = db.Column(db.String(32))
     rack = db.Column(db.Integer)
     u = db.Column(db.Integer)
-    dirty = db.Column(db.SMALLINT, default=False)
+    dirty = db.Column(db.SmallInteger, default=False)
     user_name = db.Column(db.String(64))
     password = db.Column(db.String(64))
     group_id = db.Column(db.Integer, db.ForeignKey('groups.id'))
@@ -250,7 +279,8 @@ class Projects(db.Model):
                               backref='member_of_projects', lazy='dynamic')
     statuses = db.relationship('ProjectStatus', backref='project',
                                cascade='all, delete, delete-orphan',
-                               order_by='desc(ProjectStatus.date)')
+                               order_by='desc(ProjectStatus.datetime)')
+    archived = db.Column(db.SmallInteger, default=False)
 
     def __repr__(self):
         return '<Projects {}>'.format(self.id)
@@ -264,6 +294,7 @@ class ProjectStatus(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     pid = db.Column(db.Integer, db.ForeignKey('projects.id'))
     date = db.Column(db.DATE)
+    datetime = db.Column(db.DATETIME)
     engineer_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     message = db.Column(db.String(128))
 

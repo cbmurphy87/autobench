@@ -4,7 +4,7 @@ from wtforms import StringField, BooleanField, TextAreaField, PasswordField, \
     SelectField, IntegerField
 from wtforms.ext.sqlalchemy.fields import QuerySelectField, \
     QuerySelectMultipleField
-from wtforms.fields.html5 import DateField, EmailField
+from wtforms.fields.html5 import DateField, DateTimeField, EmailField
 from wtforms.validators import DataRequired, Length, Optional, NumberRange, \
     required, IPAddress, EqualTo, Regexp, email
 from wtforms import widgets
@@ -163,7 +163,7 @@ class LoginForm(Form):
 
 def make_add_inventory_form(group_ids):
     class AddInventoryForm(Form):
-        network_address = StringField('iDRAC/IPMI Mac/IP Address',
+        network_address = StringField('Management Mac/IP Address',
                                       validators=[DataRequired(), MacOrIP()])
         user_name = StringField('Username', default='root')
         password = StringField('Password', default='Not24Get')
@@ -172,6 +172,29 @@ def make_add_inventory_form(group_ids):
                                  blank_text='Select Group',
                                  query_factory=models.Groups.query
                                  .filter(models.Groups.id.in_(group_ids)).all)
+        rack = IntegerField('Rack', validators=[DataRequired(),
+                                                NumberRange(min=1, max=15)])
+        u = IntegerField('U', validators=[DataRequired(),
+                                          NumberRange(min=1, max=42)])
+
+    return AddInventoryForm
+
+
+def make_add_inventory_manual_form(group_ids):
+    class AddInventoryForm(Form):
+        network_address = StringField('Management Mac Address',
+                                      validators=[DataRequired(),
+                                                  MacAddress()])
+        service_tag = StringField('Service Tag', validators=[DataRequired()])
+        server_model = StringField('Model')
+        user_name = StringField('Username', default='root')
+        password = StringField('Password', default='Not24Get')
+        group = QuerySelectField('Group', allow_blank=True,
+                                 get_label='group_name',
+                                 blank_text='Select Group',
+                                 query_factory=models.Groups.query
+                                 .filter(models.Groups.id.in_(group_ids)).all)
+        room = StringField()
         rack = IntegerField('Rack', validators=[DataRequired(),
                                                 NumberRange(min=1, max=15)])
         u = IntegerField('U', validators=[DataRequired(),
@@ -357,13 +380,14 @@ def make_edit_project_form(project, user):
                                                    .property.columns[0].type
                                                    .enums))
         description = TextAreaField('Project Description')
+        archived = BooleanField('Archived')
 
     return EditProjectForm
 
 
 class AddProjectStatusForm(Form):
 
-    date = DateField('Date', validators=[DataRequired()])
+    datetime = DateTimeField('Date', validators=[DataRequired()])
     message = TextAreaField('Message', validators=[DataRequired()])
 
 

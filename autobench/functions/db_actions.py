@@ -11,7 +11,7 @@ from aaebench.testautomation.syscontrol.racadm import RacadmManager
 from aaebench.testautomation.syscontrol.smcipmi import SMCIPMIManager
 from werkzeug.security import generate_password_hash
 
-from autobench import myapp, db, models
+from autobench import myapp, db, models, forms
 from autobench_exceptions import *
 import requests
 
@@ -131,7 +131,8 @@ def edit_server_info(form, _id):
                 message = 'Setting other field {} to None.'.format(field)
                 setattr(server, field, None)
             else:
-                message = 'Setting other field {} to {}.'.format(field, data.id)
+                message = 'Setting other field {} to {}.'.format(field,
+                                                                 data.id)
                 setattr(server, field, data.id)
             logger.debug(message)
 
@@ -657,7 +658,8 @@ def add_dell_info(nic_info, form, user, job):
         fail_job(job, message=message)
         raise IOError(message)
 
-    if 'drac' not in [x['name'].lower() for x in server_info.get('interfaces')]:
+    if 'drac' not in [x['name'].lower()
+                      for x in server_info.get('interfaces')]:
         message = 'Error getting server drac info.'
         logger.error(message)
         fail_job(job, message)
@@ -1087,8 +1089,8 @@ def update_server_info(server, new_info, job):
             logger.debug('Interface {} exists.'.format(exists))
             new_interface = exists
         else:
-            logger.debug('Interface {} does not exist; creating new interface.'\
-                .format(interface.get('mac')))
+            logger.debug('Interface {} does not exist; creating new '
+                         'interface.'.format(interface.get('mac')))
             new_interface = models.NetworkDevices()
         logger.debug('Setting attrs for interface {}.'.format(new_interface))
         for _k, _v in interface.items():
@@ -1222,7 +1224,8 @@ def check_or_add_drives(server, drives, job):
                     logger.debug('Drive {} already in database: {}'
                                  .format(new_drive, e))
             else:
-                logger.debug('Drive {} already in database.'.format(drive_model))
+                logger.debug('Drive {} already in database.'
+                             .format(drive_model))
 
         except InvalidRequestError as e:
             db.session.rollback()
@@ -1238,8 +1241,8 @@ def check_or_add_drives(server, drives, job):
                               'Check that server is powered on.'.format(slot)
                     logger.warning(message)
                 device_id = models.StorageDevices.query.\
-                    filter_by(model=drive['model'], capacity=drive['capacity'])\
-                    .first()
+                    filter_by(model=drive['model'],
+                              capacity=drive['capacity']).first()
                 if not device_id:
                     message = 'No info found for drive in slot {}. ' \
                               'Not adding drive to inventory.'\
@@ -1393,7 +1396,8 @@ def pending_job(job):
         db.session.add(job)
         db.session.commit()
     except Exception as e:
-        logger.error('Could not set job to pending. Rolling back: {}'.format(e))
+        logger.error('Could not set job to pending. Rolling back: {}'
+                     .format(e))
         db.session.rollback()
 
 
@@ -1522,11 +1526,37 @@ def edit_project(project_id, user, form):
     if not ((project.owner == user) or user.admin):
         return 'You do not own this project!'
 
+    print form.data.items()
     for field, data in form.data.items():
-        if hasattr(project, field) and data:
+        if hasattr(project, field) and (data is not None):
             if field == 'owner_id':
                 data = data.id
+            current_value = getattr(project, field)
+            if field == 'archived':
+               current_value = True if current_value == 1 else False
             setattr(project, field, data)
+
+            # insert status update message
+            if current_value != data:
+                logger.debug("CHANGED PROJECT STATUS: {} changed from {} "
+                             "to {}".format(field, current_value, data))
+                status_form = forms.AddProjectStatusForm()
+                status_form.datetime.data = datetime.today()
+                old = None
+                new = None
+                if field == 'owner_id':
+                    old_user = models.Users.query \
+                        .filter_by(id=current_value).first()
+                    old = old_user.full_name()
+                    new = form.owner_id.data.full_name()
+                else:
+                    old = current_value
+                    new = data
+                    print dir(getattr(form, field))
+                label = getattr(form, field).label.text
+                status_form.message.data = 'Changed {} from {} to {}.' \
+                    .format(label, old, new)
+                add_project_status(status_form, user, project_id)
 
     try:
         db.session.add(project)
@@ -1620,11 +1650,12 @@ def add_project_status(form, user, project_id):
 
     project = models.Projects.query.filter_by(id=project_id).first()
 
-    if not ((user == project.owner) or (user in project.members) or user.admin):
+    if not ((user == project.owner) or (user in project.members) or
+                user.admin):
         return 'You are not the project owner!'
 
     new_status = models.ProjectStatus(pid=project.id,
-                                      date=form.date.data,
+                                      datetime=form.datetime.data,
                                       engineer_id=user.id,
                                       message=form.message.data)
     project.statuses.append(new_status)

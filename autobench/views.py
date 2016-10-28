@@ -291,6 +291,21 @@ def _add_inventory():
                            form=form)
 
 
+@myapp.route('/inventory/add_manual', methods=['GET', 'POST'])
+@login_required
+def _add_inventory_manual():
+    user = g.user
+    group_ids = [group.id for group in user.groups]
+    AddInventoryManualForm = make_add_inventory_manual_form(group_ids)
+    form = AddInventoryManualForm()
+    if form.validate_on_submit():
+        return redirect('/inventory')
+
+    return render_template('inventory_add_manual.html', title='Add Inventory',
+                           date=_get_date_last_modified(), user=user,
+                           form=form)
+
+
 @myapp.route('/inventory/<_id>')
 @login_required
 def _inventory_id(_id):
@@ -705,7 +720,7 @@ def _projects_id_add_status(id_):
     user = g.user
     project = get_project_by_id(id_)
     form = AddProjectStatusForm()
-    form.date.data = datetime.today()
+    form.datetime.data = datetime.today()
     if not ((project.owner == user) or
             (user in project.members) or user.admin):
         flash('You are not the owner of this project!')
@@ -724,7 +739,8 @@ def _projects_id_add_status(id_):
 @login_required
 def _projects_id_remove_status(id_):
     status_id = request.get_json().get('status_id')
-    status = models.Users.query.filter_by(id=status_id).first()
+    status = models.ProjectStatus.query.filter_by(id=status_id).first()
+    print "Found status: {}".format(status)
     user = g.user
     project = get_project_by_id(id_)
     if not ((project.owner == user) or user.admin):

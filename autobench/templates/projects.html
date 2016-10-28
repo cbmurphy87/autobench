@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import 'project_macros.html' as project_macros %}
 
 {# =============================================================== #}
 {# set head data #}
@@ -14,78 +15,12 @@
 {# set body data #}
 {# =============================================================== #}
 
-{% set field_pairs = (('Project ID','id'),('Name','name'),
-('Owner','owner'),('Start Date','start_date'),
-('Completion Date','target_end_date'),('Status','status')) %}
-
 {% block content %}
     <h2>Projects</h2>
-    {% if projects %}
-    <p><input id="searchInput" placeholder="Filter"></p>
-    <table id="aaetable" class="sortable pane bigtable stripped count">
-        <thead>
-            <tr class="header">
-            {# create header for inventory table #}
-            {% for k, v in field_pairs %}
-                {# set count types for columns #}
-                {% if k.lower() in ['start', 'end'] %}
-                    {% set count_type = 'ignore' %}
-                    {% set units = 'none' %}
-                {% elif k.lower() =='owner' %}
-                    {% set count_type = 'unique' %}
-                    {% set units = 'none' %}
-                {% else %}
-                    {% set count_type = 'count' %}
-                    {% set units = 'none' %}
-                {% endif %}
-                {% if  v == None %}
-                    {% set class = " class=sorttable_nosort" %}
-                {% endif %}
-                <th{{ class }} unit="{{ units }}" count_type="{{ count_type }}">
-                    {{ k }}
-                </th>
-            {% endfor %}
-                <th class="sorttable_nosort" count_type="ignore">
-                    <a href="/projects/add">
-                        <img src="{{ url_for('static', filename='pictures/plus_blue.png') }}"/>
-                    </a>
-                </th>
-            </tr>
-        </thead>
-        <tbody id="fbody">
-        {% for project in projects %}
-            <tr>
-            {% for k, v in field_pairs %}
-
-                {% if v in ('id', 'name') %}
-                <td>
-                    <a href="/projects/{{ project.id }}">{{ project[v] }}</a>
-                {% elif v == 'status' %}
-                {% set status_class = 'status_' + (project[v]|string).lower().replace(' ','_') %}
-                <td class="{{ status_class }}">
-                    {{ project[v] }}
-                {% else %}
-                <td>
-                    {{ project[v] }}
-                {% endif %}
-                <span class="custom_count" style="display:none">{{ project[v] }}}</span>
-                </td>
-            {% endfor %}
-            {% if (user == project.owner) or (user.admin) %}
-                <td>
-                    <img src="{{ url_for('static', filename='pictures/minus_blue.png') }}"
-                         onclick="delete_project({{ project.id }})"/>
-                </td>
-            {% endif %}
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-        No Projects yet.
+    <p><span><input id="searchInput" placeholder="Filter"> <input type="checkbox" id="archive_checkbox" value="show_archived" onclick="toggle_archived()">Show archived projects.</span></p>
+    {% set alternate = 'There are no projects yet.
     <p>
         <a href="/projects/add">Add Project</a>
-    </p>
-    {% endif %}
-
+    </p>' %}
+    {{ project_macros.table(projects,user,table_id,alternate) }}
 {% endblock %}

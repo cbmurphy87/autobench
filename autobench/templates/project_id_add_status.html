@@ -13,7 +13,7 @@
 {# set variables #}
 {# =============================================================== #}
 
-{% set status_fields = (form.date, form.message) %}
+{% set status_fields = (form.datetime, form.message) %}
 
 {# =============================================================== #}
 {# set body data #}
@@ -29,7 +29,7 @@
                 {% for field in status_fields %}
                     <p>
                         {{ field.label.text }}:<br>
-                        {% if field.label.text.lower() == 'date' %}
+                        {% if field.label.text.lower() == 'datetime' %}
                         {{ field(autofocus=true, class='datepicker') }}
                         {% else %}
                         {{ field }}
