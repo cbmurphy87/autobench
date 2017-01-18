@@ -2,9 +2,9 @@
 {# set variables #}
 {# =============================================================== #}
 
-{% set server_fields = (('ID', 'id'),('Name','name'),('Host Name','host_name'),
-('Model','model'),('CPU Count','cpu_count'),('CPU Model','cpu_model'),
-('Memory','memory_capacity'),('Rack','rack'),('U','u'),('Groups','groups')) %}
+{% set server_fields = (('ID', 'id'),('Name','name'),
+('Host Name','host_name'),('Model','model'),('CPU Count','cpu_count'),
+('CPU Model','cpu_model'),('Memory','memory_capacity')) %}
 
 {# =============================================================== #}
 {# set data #}
@@ -25,10 +25,10 @@
             {# loop over field values for each parame #}
             {% for k, v in server_fields %}
                 <tr>
-                    <td>
-                        {{ k }}
+                    <td style="text-align:right;font-style:italic bold;">
+                        {{ k }}:
                     </td>
-                    <td>
+                    <td style="text-align:left;">
                         {% if v == 'groups'%}
                             {{ server.groups|join(',') }}
                         {% else %}

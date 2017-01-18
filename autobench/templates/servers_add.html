@@ -1,0 +1,74 @@
+{% extends '/base.html' %}
+
+{% block scripts %}
+    {{ super() }}
+    $(document).ready(function () {
+        $("#network_address").on('change paste input', function(){
+            var mac = this.value;
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function() {
+                var vi = document.getElementById("vendor_info");
+                var vim = document.getElementById("vendor_info_manufacturer");
+                if (xhttp.readyState == 4 && xhttp.status == 200) {
+                    vendor = xhttp.responseText;
+                    vi.style.visibility = 'visible';
+                    vim.innerHTML = vendor;
+                    un = document.getElementById('user_name');
+                    pw = document.getElementById('password');
+                    if (vendor.toLowerCase().startsWith('super')) {
+                        console.log('Got a Super Micro.');
+                        un.value = 'ADMIN';
+                        pw.value = 'ADMIN';
+                    } else {
+                        console.log('Got a something else.');
+                        un.value = 'root';
+                        pw.value = 'Not24Get';
+                    }
+                } else if (xhttp.readyState == 4) {
+                    vi.style.visibility = 'hidden';
+                    vim.innerHTML = '';
+                }
+            }
+            xhttp.open("GET", 'http://api.macvendors.com/' + mac, true);
+            xhttp.send();
+        });
+    });
+{% endblock %}
+
+{% block content %}
+    <h2>Add Server</h2>
+    <div style="display:inline-block;width:100%;">
+        <div style="float:left;">
+            <form action="" method="POST" name="add_inventory">
+                {{ form.hidden_tag() }}
+                <div class="add_inventory">
+                {% for field in (form.network_address, form.room,
+                form.user_name, form.password, form.group) %}
+                    <p>
+                        {{ field.label.text }}:<br>
+                        {% if field.label.text.lower().startswith('management') %}
+                        {{ field(autofocus=true) }}
+                        {% else %}
+                        {{ field }}
+                        {% endif %}
+                        {% for error in field.errors %}
+                            <span style="color:red;">[{{ error }}]</span>
+                        {% endfor %}
+                    </p>
+                {% endfor %}
+
+                </div>
+                <input type="submit" value="submit">
+            </form>
+        </div>
+        <div id="vendor_info">
+            <div style="outline:1px solid black;">
+                <div id="vendor_info_header">Manufacturer:</div>
+                <div id="vendor_info_manufacturer">...</div>
+            </div>
+        </div>
+    </div>
+    <div>
+        <a href="/servers/add/manual">Add a server manually</a>
+    </div>
+{% endblock %}

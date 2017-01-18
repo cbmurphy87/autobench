@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{# =============================================================== #}
+{# set head data #}
+{# =============================================================== #}
+
+{% block links %}
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/filterTable.js') }}></script>
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/inventory.js') }}></script>
+{% endblock %}
+
+{% block scripts %}
+function deleteAllJobs(id, next) {
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+            if (xhttp.readyState == 4 && xhttp.status == 200) {
+                alert(xhttp.responseText);
+                location.reload();
+            }
+        };
+        xhttp.open("GET", "/jobs/delete", true);
+        xhttp.send();
+    }
+    $(document).ready(function () {
+        $("#searchInput").keyup(
+            function () {
+                counttable();
+                updateStriping();
+            }
+        )
+    });
+{% endblock %}
+
+{# =============================================================== #}
+{# set body data #}
+{# =============================================================== #}
+
+{% set field_pairs = (('Job ID','mongo_id'),('Message','message'),
+('Creator','creator'),('Start','start_time'),('End','end_time'),
+('Status','status')) %}
+
+{% block content %}
+    <h2>Jobs</h2>
+    {% if jobs %}
+    <p>Jobs are shown newest to oldest.</p>
+    <p><input id="searchInput" placeholder="Filter"></p>
+    <table id="aaetable" class="sortable pane bigtable stripped count">
+        <thead>
+            <tr class="header">
+            {# create header for inventory table #}
+            {% for k, v in field_pairs %}
+                {# set count types for columns #}
+                {% if k.lower() in ['start', 'end'] %}
+                    {% set count_type = 'ignore' %}
+                    {% set units = 'none' %}
+                {% elif k.lower() in ['message', 'creator'] %}
+                    {% set count_type = 'unique' %}
+                    {% set units = 'none' %}
+                {% else %}
+                    {% set count_type = 'count' %}
+                    {% set units = 'none' %}
+                {% endif %}
+                {% if  v == None %}
+                    {% set class = " class=sorttable_nosort" %}
+                {% endif %}
+                <th{{ class }} unit="{{ units }}" count_type="{{ count_type }}">
+                    {{ k }}
+                </th>
+            {% endfor %}
+            </tr>
+        </thead>
+        <tbody id="fbody">
+        {% for job in jobs %}
+            <tr>
+            {% for k, v in field_pairs %}
+                <td>
+                {% if v == 'status'%}
+                    <a href="/job/{{ job.mongo_id }}">{{ job.status }}</a>
+                {% else %}
+                    {{ job[v] }}
+                {% endif %}
+                <span class="custom_count" style="display:none">{{ job[v] }}}</span>
+                </td>
+            {% endfor %}
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% if user.admin %}
+    <p>
+        <button onclick="deleteAllJobs()">
+        Delete all jobs
+        </button>
+    </p>
+    {% endif %}
+    {% else %}
+        No jobs yet.
+    {% endif %}
+
+{% endblock %}

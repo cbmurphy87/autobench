@@ -16,7 +16,6 @@ function updateStriping() {
         var k = 0;
         for (var j = 0, row; row = table.rows[j]; j++) {
             if (!((row.style.display === "none") || row.matches("[class*='hidden']"))) {
-                console.log('has class: ' + row.matches("[class*='hidden']"));
                 if (k % 2) {
                     row.classList.remove('even');
                     row.classList.add('odd');
@@ -90,4 +89,49 @@ function expand(parameters) {
     updateStriping();
 }
 
-$(document).ready(function () {updateStriping()});
+$(document).ready(function () {
+        updateStriping();
+        $("#room_input").change(function () {
+            console.log('changed room');
+            var selection = this.options[this.selectedIndex].value;
+            if (selection == '__None') {
+                document.getElementById("rack_input").disabled = true;
+                document.getElementById("rack_input").value = '__None';
+            } else {
+                document.getElementById("rack_input").disabled = false;
+            }
+            var e = document.getElementById("room_input");
+            var room_id = e.value;
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function () {
+                if (xhttp.readyState == 4 && xhttp.status == 200) {
+                    document.getElementById("rack_input").innerHTML = xhttp.responseText;
+                }
+            };
+            xhttp.open("POST", "/admin/racks/get", true);
+            xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+            xhttp.send(JSON.stringify({room_id: room_id}));
+        });
+        $("#rack_input").change(function () {
+            console.log('changed rack');
+            var selection = this.options[this.selectedIndex].value;
+            if (selection == '__None') {
+                document.getElementById("u_input").disabled = true;
+                document.getElementById("u_input").value = '__None';
+            } else {
+                document.getElementById("u_input").disabled = false;
+            }
+            var e = document.getElementById("rack_input");
+            var rack_id = e.value;
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function () {
+                if (xhttp.readyState == 4 && xhttp.status == 200) {
+                    document.getElementById("u_input").innerHTML = xhttp.responseText;
+                }
+            };
+            xhttp.open("POST", "/admin/rack_units/get", true);
+            xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+            xhttp.send(JSON.stringify({rack_id: rack_id}));
+        });
+    }
+);

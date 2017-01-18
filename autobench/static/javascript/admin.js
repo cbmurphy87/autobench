@@ -62,3 +62,45 @@ function remove_group_server(group_id, server_id) {
         xhttp.send(JSON.stringify({server_id: server_id}));
     }
 }
+
+function delete_group(gid) {
+    if (confirm("Delete group " + gid + "?") == true) {
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+            if (xhttp.readyState == 4 && xhttp.status == 200) {
+                window.location = "/admin";
+            }
+        };
+        xhttp.open("POST", "/admin/groups/delete", true);
+        xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+        xhttp.send(JSON.stringify({gid: gid}));
+    }
+}
+
+function delete_room(id) {
+    if (confirm("Delete room " + id + "?") == true) {
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+            if (xhttp.readyState == 4 && xhttp.status == 200) {
+                window.location = "/admin";
+            }
+        };
+        xhttp.open("POST", "/admin/rooms/delete", true);
+        xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+        xhttp.send(JSON.stringify({id: id}));
+    }
+}
+
+function delete_rack(id,next) {
+    if (confirm("Delete rack " + id + "?") == true) {
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+            if (xhttp.readyState == 4 && xhttp.status == 200) {
+                window.location = next;
+            }
+        };
+        xhttp.open("POST", "/admin/racks/delete", true);
+        xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+        xhttp.send(JSON.stringify({id: id}));
+    }
+}

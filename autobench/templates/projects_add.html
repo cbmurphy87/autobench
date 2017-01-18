@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "/base.html" %}
 
 {# =============================================================== #}
 {# set head data #}
@@ -13,7 +13,7 @@
 {# set body data #}
 {# =============================================================== #}
 
-{% set project_fields = (form.name,form.primary_group,form.start_date,
+{% set project_fields = (form.name,form.group,form.start_date,
 form.target_end_date,form.description) %}
 
 {% block content %}

@@ -1,5 +1,4 @@
-import re
-from flask.ext.wtf import Form
+from flask_wtf import Form
 from wtforms import StringField, BooleanField, TextAreaField, PasswordField, \
     SelectField, IntegerField
 from wtforms.ext.sqlalchemy.fields import QuerySelectField, \
@@ -9,8 +8,8 @@ from wtforms.validators import DataRequired, Length, Optional, NumberRange, \
     required, IPAddress, EqualTo, Regexp, email
 from wtforms import widgets
 from wtforms.validators import ValidationError
-from sqlalchemy import collate
-from autobench import models
+from sqlalchemy import collate, or_
+from autobench import mysql_models, mongo_models
 
 
 # =========================== Custom Fields ===========================
@@ -89,7 +88,7 @@ class MacAddress(Regexp):
         pattern = r'^(?:[0-9a-fA-F]{2}[:-]?){5}[0-9a-fA-F]{2}$'
         super(MacAddress, self).__init__(pattern, message=message)
 
-    def __call__(self, form, field, **kwargs):
+    def __call__(self, form, field):
         message = self.message
         if message is None:
             message = field.gettext('Invalid Mac address.')
@@ -118,8 +117,8 @@ class CreateJobForm(Form):
             return self.get_name()
 
     job_name = StringField('Job Name', validators=[DataRequired()])
-    build = BooleanField('Build', default=True)
-    target = QuerySelectField('Target', query_factory=models.Servers.query
+    build = BooleanField('Build', default='checked')
+    target = QuerySelectField('Target', query_factory=mysql_models.Servers.query
                               .order_by('id').all,
                               get_label=get_name, allow_blank=True,
                               blank_text='Select a target')
@@ -129,23 +128,27 @@ class CreateJobForm(Form):
 
 
 class DeployForm(Form):
-    def make_name(self):
-        return '{} {}'.format(getattr(self, 'flavor'), getattr(self, 'version'))
 
+    # helper methods
+    def make_name(self):
+        return '{} {}'.format(getattr(self, 'flavor'),
+                              getattr(self, 'version'))
+
+    # fields
     target = QuerySelectField('Target', get_label='id', allow_blank=True,
                               blank_text='Select a target',
                               validators=[required()])
-    os = QuerySelectField('OS', query_factory=models.OS.query
+    os = QuerySelectField('OS', query_factory=mysql_models.OS.query
                           .filter_by(validated=True)
-                          .order_by(models.OS.flavor,
-                                    models.OS.version.desc()).all,
+                          .order_by(mysql_models.OS.flavor,
+                                    mysql_models.OS.version.desc()).all,
                           get_label=make_name, allow_blank=True,
                           blank_text='Select an OS',
                           validators=[required()])
 
 
 class BuildStepForm(Form):
-    target = QuerySelectField(query_factory=models.Servers.query
+    target = QuerySelectField(query_factory=mysql_models.Servers.query
                               .order_by('id'))
     # target2 = QuerySelectField(query_factory=models.Servers.query
     #                            .filter_by(available=True)
@@ -170,12 +173,14 @@ def make_add_inventory_form(group_ids):
         group = QuerySelectField('Group', allow_blank=True,
                                  get_label='group_name',
                                  blank_text='Select Group',
-                                 query_factory=models.Groups.query
-                                 .filter(models.Groups.id.in_(group_ids)).all)
-        rack = IntegerField('Rack', validators=[DataRequired(),
-                                                NumberRange(min=1, max=15)])
-        u = IntegerField('U', validators=[DataRequired(),
-                                          NumberRange(min=1, max=42)])
+                                 query_factory=mysql_models.Groups.query
+                                 .filter(mysql_models.Groups.id.in_(group_ids)).all)
+        room = QuerySelectField('Room', allow_blank=False,
+                                query_factory=mysql_models.Rooms.query.all)
+        container = QuerySelectField('Container', allow_blank=False,
+                                     query_factory=mysql_models.Containers.query.all)
+        slot = QuerySelectField('Slot', allow_blank=False,
+                                query_factory=mysql_models.ContainerSlots.query.all)
 
     return AddInventoryForm
 
@@ -192,13 +197,8 @@ def make_add_inventory_manual_form(group_ids):
         group = QuerySelectField('Group', allow_blank=True,
                                  get_label='group_name',
                                  blank_text='Select Group',
-                                 query_factory=models.Groups.query
-                                 .filter(models.Groups.id.in_(group_ids)).all)
-        room = StringField()
-        rack = IntegerField('Rack', validators=[DataRequired(),
-                                                NumberRange(min=1, max=15)])
-        u = IntegerField('U', validators=[DataRequired(),
-                                          NumberRange(min=1, max=42)])
+                                 query_factory=mysql_models.Groups.query
+                                 .filter(mysql_models.Groups.id.in_(group_ids)).all)
 
     return AddInventoryForm
 
@@ -232,22 +232,43 @@ class AddInterfaceForm(Form):
 class ChangeServerOwnerForm(Form):
     server = QuerySelectField('Server', get_label='id', allow_blank=True,
                               blank_text='Select a server',
-                              query_factory=models.Servers.query.all)
-    owner = QuerySelectField('Owner', query_factory=models.Users.query.all,
+                              query_factory=mysql_models.Servers.query.all)
+    owner = QuerySelectField('Owner', query_factory=mysql_models.Users.query.all,
                              get_label='email')
 
 
-def make_edit_form(current_server):
+def make_edit_inventory_form(current_server):
     class EditInventoryForm(Form):
-        rack = StringField('Rack', validators=[DataRequired()])
-        u = StringField('U', validators=[DataRequired()])
+        try:
+            room_id = current_server.room.id
+        except:
+            room_id = None
+        try:
+            c_id = current_server.container.id
+        except:
+            c_id = None
+        try:
+            s_id = current_server.u.id
+        except:
+            s_id = None
+        room = QuerySelectField('Room', id='room_input', get_label='name',
+                                query_factory=mysql_models.Rooms.query.all,
+                                default=mysql_models.Rooms.query
+                                .filter(or_(mysql_models.Rooms.id == room_id,
+                                            mysql_models.Rooms.id.is_(None))),
+                                allow_blank=True, blank_text='Select a room')
+        location = QuerySelectField('Location', id='location_input',
+                                    get_label='location',
+                                    query_factory=mongo_models.Location
+                                    .query.all)
         name = StringField('Name')
         user_name = StringField('Username')
         password = StringField('Password')
         project_id = QuerySelectField('Project', get_label='name',
                                       allow_blank=True, blank_text='None',
-                                      query_factory=models.Projects.query.all,
-                                      default=models.Projects.query
+                                      query_factory=mysql_models.Projects
+                                      .query.all,
+                                      default=mysql_models.Projects.query
                                       .filter_by(id=current_server.project_id)
                                       .first())
 
@@ -286,7 +307,7 @@ class AddUserForm(Form):
 class DeleteUser(Form):
     user = QuerySelectField('User', get_label='email', allow_blank=True,
                             blank_text='Select User To Delete',
-                            query_factory=models.Users.query
+                            query_factory=mysql_models.Users.query
                             .order_by('email').all, validators=[DataRequired()])
 
 
@@ -300,9 +321,38 @@ class EditGroupForm(Form):
     description = TextAreaField('Description', validators=[DataRequired()])
 
 
+class AddEditRoomForm(Form):
+    name = StringField('Room Name', validators=[DataRequired()])
+    type = QuerySelectField('Room Type', get_label='type', allow_blank=False,
+                            query_factory=mysql_models.RoomTypes.query.all)
+    description = TextAreaField('Description', validators=[DataRequired()])
+
+
+def make_add_edit_rack_form(room=None):
+    try:
+        r_id = room.id
+    except:
+        r_id = None
+
+    class AddEditRackForm(Form):
+        room_id = QuerySelectField('Room Name', get_label='name',
+                                   allow_blank=True,
+                                   blank_text='Select Room',
+                                   query_factory=mysql_models.Rooms.query.all,
+                                   default=mysql_models.Rooms.query
+                                   .filter_by(id=r_id))
+        number = IntegerField('Rack Number', validators=[DataRequired()])
+        min_u = IntegerField('Minimum U Number',
+                             validators=[DataRequired()])
+        max_u = IntegerField('Maximum U Number',
+                             validators=[DataRequired()])
+
+    return AddEditRackForm
+
+
 def make_add_group_member_form(gid):
     # get list of user ids in group
-    group = models.Groups.query.filter_by(id=gid).first()
+    group = mysql_models.Groups.query.filter_by(id=gid).first()
     members = group.members
     member_list = [member.id for member in members]
 
@@ -310,8 +360,8 @@ def make_add_group_member_form(gid):
         member = QuerySelectField('Member', get_label='user_name',
                                   allow_blank=True,
                                   blank_text='Select Member',
-                                  query_factory=models.Users.query
-                                  .filter(~models.Users.id.in_(member_list))
+                                  query_factory=mysql_models.Users.query
+                                  .filter(~mysql_models.Users.id.in_(member_list))
                                   .all, validators=[DataRequired()])
 
     return AddGroupMember
@@ -319,7 +369,7 @@ def make_add_group_member_form(gid):
 
 def make_add_group_server_form(gid):
     # get list of user ids in group
-    group = models.Groups.query.filter_by(id=gid).first()
+    group = mysql_models.Groups.query.filter_by(id=gid).first()
     servers = group.servers
     server_list = [server.id for server in servers]
 
@@ -330,8 +380,8 @@ def make_add_group_server_form(gid):
         server = QuerySelectField('Server', get_label=get_name,
                                   allow_blank=True,
                                   blank_text='Select Server',
-                                  query_factory=models.Servers.query
-                                  .filter(~models.Servers.id.in_(server_list))
+                                  query_factory=mysql_models.Servers.query
+                                  .filter(~mysql_models.Servers.id.in_(server_list))
                                   .all, validators=[DataRequired()])
 
     return AddGroupServerForm
@@ -341,7 +391,7 @@ def make_add_group_server_form(gid):
 def make_add_project_form(user):
 
     if user.admin:
-        groups = models.Groups.query.all
+        groups = mysql_models.Groups.query.all
     else:
         groups = user.groups.all
 
@@ -361,7 +411,7 @@ def make_add_project_form(user):
 def make_edit_project_form(project, user):
 
     if user.admin:
-        groups = models.Groups.query.all
+        groups = mysql_models.Groups.query.all
     else:
         groups = user.groups.all
 
@@ -370,13 +420,13 @@ def make_edit_project_form(project, user):
         name = StringField('Project Name', validators=[DataRequired()])
         primary_group = QuerySelectField('Primary group',
                                          query_factory=groups)
-        owner_id = QuerySelectField('Owner', query_factory=models.Users.query
-                                    .all, default=models.Users.query
+        owner_id = QuerySelectField('Owner', query_factory=mysql_models.Users.query
+                                    .all, default=mysql_models.Users.query
                                     .filter_by(id=project.owner.id).first())
         start_date = DateField('Start Date', format='%Y-%m-%d')
         target_end_date = DateField('Target Completion Date')
         status = SelectField('Status', choices=map(lambda x: (x, x),
-                                                   models.Projects.status
+                                                   mysql_models.Projects.status
                                                    .property.columns[0].type
                                                    .enums))
         description = TextAreaField('Project Description')
@@ -394,7 +444,7 @@ class AddProjectStatusForm(Form):
 def make_add_project_member_form(project):
 
     # get list of user ids in group
-    group = models.Groups.query.filter_by(id=project.gid).first()
+    group = mysql_models.Groups.query.filter_by(id=project.gid).first()
     members = group.members
     member_list = [member.id for member in members
                    if not ((member in project.members) or
@@ -404,8 +454,8 @@ def make_add_project_member_form(project):
 
         member = QuerySelectField('Member', allow_blank=True,
                                   blank_text='Select member',
-                                  query_factory=models.Users.query
-                                  .filter(models.Users.id.in_(member_list))
+                                  query_factory=mysql_models.Users.query
+                                  .filter(mysql_models.Users.id.in_(member_list))
                                   .all, validators=[DataRequired()])
 
     return AddProjectMemberForm
@@ -414,7 +464,7 @@ def make_add_project_member_form(project):
 def make_add_project_server_form(project):
 
     # get list of user ids in group
-    group = models.Groups.query.filter_by(id=project.gid).first()
+    group = mysql_models.Groups.query.filter_by(id=project.gid).first()
     servers = group.servers
     server_list = [server.id for server in servers
                    if not ((server in project.servers) or
@@ -425,8 +475,9 @@ def make_add_project_server_form(project):
         server = QuerySelectField('Server', allow_blank=True,
                                   blank_text='Select server',
                                   get_label='id',
-                                  query_factory=models.Servers.query
-                                  .filter(models.Servers.id.in_(server_list))
+                                  query_factory=mysql_models.Servers.query
+                                  .filter(mysql_models.Servers.id.in_(server_list))
                                   .all, validators=[DataRequired()])
 
     return AddProjectServerForm
+

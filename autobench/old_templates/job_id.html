@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{# =============================================================== #}
+{# set body data #}
+{# =============================================================== #}
+
+{% set field_pairs = (('Time','time'),('Message','message')) %}
+
+{% block content %}
+    <h2>Job {{ job.id }} Details</h2>
+    <p>Details are shown newest to oldest.</p>
+    {% set details = job.details.all() %}
+    {% if details %}
+    <table id="aaetable" class="sortable pane bigtable stripped">
+        <thead>
+            <tr class="header">
+            {# create header for inventory table #}
+            {% for k, v in field_pairs %}
+                <th>
+                    {{ k }}
+                </th>
+            {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+        {% for detail in details %}
+            <tr>
+            {% for k, v in field_pairs %}
+                <td>
+                    {{ detail[v] }}
+                </td>
+            {% endfor %}
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+        No details for this JID.
+    {% endif %}
+{% endblock %}

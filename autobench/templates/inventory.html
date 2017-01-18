@@ -1,12 +1,12 @@
 {% extends "base.html" %}
+{% import "inventory_macros.html" as inventory_macros %}
 
 {# =============================================================== #}
 {# set variables #}
 {# =============================================================== #}
 
-{% set field_pairs = (('S', 'available'),('Rack','rack'),('U','u'),('ID', 'id'),
-('Group','group'),('Name','get_name'),('Model','model'),
-('Memory','memory_capacity')) %}
+{% set field_pairs = (('Name','name'),('Group','group'),
+('Location','location')) %}
 
 {% block links %}
     <script type="text/javascript" src={{ url_for('static', filename='javascript/filterTable.js') }}></script>
@@ -34,135 +34,20 @@
 {# =============================================================== #}
 
 {% block content %}
-    <h2 id="testelement">Inventory</h2>
+    <h2>Inventory</h2>
     <div>
         <h3>Machines available for testing:</h3>
     </div>
-    <p><input id="searchInput" placeholder="Filter"></p>
-    <div class="pane-frame" style="width:100%;min-width:800px;">
-        <table id="aaetable" class="sortable pane bigtable stripped count">
-            <thead>
-                <tr class="header">
-                {# create header for inventory table #}
-                {% for k, v in field_pairs %}
-                    {# set count types for columns #}
-                    {% if k in ['S', 'Update'] %}
-                        {% set count_type = 'ignore' %}
-                        {% set units = 'none' %}
-                    {% elif k in ['Memory','Capacity'] %}
-                        {% set count_type = 'sum' %}
-                        {% set units = 'GB' %}
-                    {% elif k in ['Count'] %}
-                        {% set count_type = 'sum' %}
-                        {% set units = 'none' %}
-                    {% elif k in ['ID', 'Model', 'Drives', 'CPUs', 'SKU', 'Rack', 'U'] %}
-                        {% set count_type = 'unique' %}
-                        {% set units = 'none' %}
-                    {% else %}
-                        {% set count_type = 'count' %}
-                        {% set units = 'none' %}
-                    {% endif %}
-                    {% if  v == None %}
-                        {% set class = " class=sorttable_nosort" %}
-                    {% endif %}
-                    <th{{ class }} unit="{{ units }}" count_type="{{ count_type }}">
-                        {{ k }}
-                    </th>
-                {% endfor %}
-                </tr>
-            </thead>
-            <tbody id="fbody">
-            {# loop over servers in inventory #}
-            {% set col_counts = [] %}
-            {% for server in servers %}
-                {% if user.id in server.project.members %}
-                    {% set class = "heldserver" %}
-                {% else %}
-                    {% set class = '' %}
-                {% endif %}
-                <tr id="{{ server.id }}" class="{{ class }}">
-                {# loop over field values for each server #}
-                {% for k, v in field_pairs %}
-                    <td>
-                    {% set count = 1 %}
-                    {# if field is not None, populate k:v #}
-                    {% if v!= None %}
-                        {% if v == 'available' %}
-                            {# set row color #}
-                            {% if not server.project %}
-                                {% set hover_title = 'This server is not part of a project.' %}
-                                {% set color = 'blue' %}
-                            {% elif server.project.owner == user %}
-                                {% set hover_title = 'This server is part of your project {}'.format(server.project) %}
-                                {% set color = 'green' %}
-                            {% else %}
-                                {% set hover_title = 'This server is held by project {}'.format(server.project|string) %}
-                                {% set color = 'red' %}
-                            {% endif %}
-                            <a onclick="expand({id : '{{ server.id }}'})">
-                                <img title="{{ hover_title }}" src={{ url_for('static', filename='pictures/plus_{}.png'.format(color)) }} style="width:16px;height:16px;">
-                                <span class="custom_count" style="display:none">{{ color }}</span>
-                            </a>
-                        {% elif server[v] is not undefined %}
-                            {% if k == 'ID' %}
-                            <a href="/inventory/{{ server[v] }}">{{ server[v] }}</a>
-                            <span class="custom_count" style="display:none">{{ server[v] }}</span>
-                            {% else %}
-                            {% if k == 'Memory' %}
-                            {% set count = server[v]|split(0)|int %}
-                            {% endif %}
-                            {% if v == 'get_name' %}
-                            {{ server.get_name() }}
-                            {% else %}
-                            {{ server[v] }}
-                            {% endif %}
-                            {% if k in ['Model', 'CPUs', 'SKU'] %}
-                            <span class="custom_count" style="display:none">{{ server[v] }}</span>
-                            {% else %}
-                            <span class="custom_count" style="display:none">{{ count }}</span>
-                            {# end not undefined key check #}
-                            {% endif %}
-                        {# end server key key check #}
-                        {% endif %}
-                        {% endif %}
-                    {# else (field is None), try key v #}
-                    {% else %}
-                        {{ server[v] }}
-                    {% endif %}
-                    </td>
-                {% endfor %}
-                </tr>
-                {% if server.drives.all()|length > 0 %}
-                <tr id="{{ server.id }}_childheader" style="display:none;">
-                    <td>Slot</td>
-                    <td colspan="2">Make</td>
-                    <td colspan="2">Model</td>
-                    <td>Capacity</td>
-                    <td colspan="2">Serial Number</td>
-                </tr>
-                {% for drive in server.drives %}
-                <tr id="{{ server.id }}_child" style="display:none;">
-                    <td>{{ drive.slot }}</td>
-                    <td colspan="2">{{ drive.info.manufacturer }}</td>
-                    <td colspan="2">{{ drive.info.model }}</td>
-                    <td>{{ drive.info.capacity }}</td>
-                    <td colspan="2">{{ drive.serial_number }}</td>
-                </tr>
-                {# end looping over drives in server #}
-                {% endfor %}
-                {% else %}
-                <tr id="{{ server.id }}_child" style="display:none;">
-                    <td colspan="8">No drives detected in this server.</td>
-                </tr>
-                {% endif %}
-
-            {# end looping over servers #}
-            {% endfor %}
-            </tbody>
-        </table>
-    </div>
+    <h2>Servers</h2>
+    {{ inventory_macros.servers_table(servers,user) }}
     {# add link to create inventory at bottom of inventory list #}
     <div style="padding-top: 10px;">
-        <a href="/inventory/add">Add inventory</a>
+        <a href="/inventory/servers/add">Add server</a>
+    </div>
+    <h2>Switches</h2>
+    {{ inventory_macros.switches_table(switches,user,table_num=2) }}
+    {# add link to create inventory at bottom of inventory list #}
+    <div style="padding-top: 10px;">
+        <a href="/inventory/switches/add">Add switch</a>
     </div>
 {% endblock %}

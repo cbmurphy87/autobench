@@ -1,5 +1,5 @@
 #!/usr/bin/python
-from autobench import db, models
+from autobench import db, mysql_models
 from werkzeug.security import generate_password_hash
 
 
@@ -37,7 +37,7 @@ def load_users():
          'password': 'CrAzYlOnGpAsSwOrDfOrLoCkAcCoUnT'}
     ]
 
-    existing_users = models.Users.query
+    existing_users = mysql_models.Users.query
 
     for user in users:
         existing_user = existing_users.filter_by(email=user['email']).first()
@@ -47,10 +47,10 @@ def load_users():
                 setattr(existing_user, k, v)
         else:
             password = generate_password_hash(user.get('password', 'Not24Get'))
-            new_user = models.Users(first_name=user['first_name'],
-                                    last_name=user['last_name'],
-                                    user_name=user['email'].split('@')[0],
-                                    email=user['email'], password=password)
+            new_user = mysql_models.Users(first_name=user['first_name'],
+                                          last_name=user['last_name'],
+                                          user_name=user['email'].split('@')[0],
+                                          email=user['email'], password=password)
             db.session.add(new_user)
 
     db.session.commit()

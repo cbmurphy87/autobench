@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{# =============================================================== #}
+{# set head data #}
+{# =============================================================== #}
+
+{% block scripts %}
+    {{ super() }}
+    <script>
+    {{ super() }}
+    function python(link) {
+        var form = document.createElement('form');
+        form.setAttribute('method', 'post');
+        form.setAttribute('value', link);
+        form.style.display = 'hidden';
+        document.body.appendChild(form);
+        form.submit();
+    }
+    </script>
+{% endblock %}
+
+{# =============================================================== #}
+{# set body data #}
+{# =============================================================== #}
+
+{% block content %}
+    <h2>Jobs</h2>
+    <div class="pane-frame"  style="min-width: 300px; width:50%;">
+        <table id="aaetable" class="sortable pane bigtable stripped">
+            <tbody>
+            <tr class="header">
+            {% for field in ('S', 'Name', 'Last Build', '') %}
+                {% if field == '' %}
+                        {% set class = " class='sorttable_nosort'" %}
+                    {% endif %}
+                <th{{ class }}>{{ field }}</th>
+            {% endfor %}
+            </tr>
+            {% for job in jobs %}
+                {% if job['color'].endswith('anime') %}
+                    {% set ext = 'gif' %}
+                {% else %}
+                    {% set ext = 'png' %}
+                {% endif %}
+                <tr>
+                    <td>
+                        <img src={{ url_for('static', filename='pictures/{}.{}'.format(job['color'], ext)) }} style="width:16px;height:16px;">
+                    </td>
+                    <td>
+                        <a href='/jobs/{{ job['displayName'] }}'>
+                            {{ job['displayName'] }}
+                        </a>
+                    </td>
+                    <td>{{ result(job['displayName']) }}</td>
+                    <td>
+                        <a href='/build_jenkins_job/{{ job['displayName'] }}'>
+                            <img src={{ url_for('static', filename='pictures/clock.png') }}>
+                        </a>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

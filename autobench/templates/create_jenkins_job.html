@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "/base.html" %}
 
 {% block scripts %}
     {{ super() }}
@@ -42,7 +42,7 @@
                         ('Args', form.args),
                         ('Kwargs', form.kwargs)) %}
                             <p>
-                                {{ k }}:<br>{{ v }} <img src="../static/pictures/help.png">
+                                {{ k }}:<br>{{ v }} <img src="static/pictures/help.png">
                                 {% for error in v.errors %}
                                     <span style="color:red;">[{{ error }}]</span>
                                 {% endfor %}

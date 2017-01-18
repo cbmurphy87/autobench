@@ -1,0 +1,72 @@
+{% extends 'mongo/../templates/base.html' %}
+{% import 'project_macros.html' as project_macros %}
+
+{% set user_fields = (('First Name','first_name'),('Last Name','last_name'),
+('E-mail','email'),('Username','user_name')) %}
+
+{% set project_fields = (('Project ID','id'),('Name','name'),
+('Owner','owner'),('Start Date','start_date'),
+('Completion Date','target_end_date'),('Status','status')) %}
+
+{% block links %}
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/filterTable.js') }}></script>
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/inventory.js') }}></script>
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/projects.js') }}></script>
+{% endblock %}
+
+{% block scripts %}
+    $(document).ready(function () {
+        $("#searchInput").keyup(
+            function () {
+                counttable();
+                updateStriping();
+            }
+        )
+    });
+{% endblock %}
+
+{% block content %}
+    <h2>My Info</h2>
+    <div class="pane-frame">
+        <table class="pane bigtable stripped">
+            <thead>
+                <tr class="header">
+                {# create header for inventory table #}
+                    <th colspan="2" style="text-align:center;">
+                        User Info
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+            {# loop over servers in inventory #}
+            {% for k, v in user_fields %}
+                <tr>
+                    <td style="text-align:right;">
+                        {{ k }}:
+                    </td>
+                    <td>
+                        <i>{{ user[v] }}</i>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div style="padding-top:5px;">
+        <a href="/my_info/edit">Edit My Info</a>
+    </div>
+    <h2>Projects</h2>
+    <p><span><input id="searchInput" placeholder="Filter"> <input type="checkbox" id="archive_checkbox" value="show_archived" onclick="toggle_archived()">Show archived projects.</span></p>
+    <h3>My Projects</h3>
+    {% set alternate = 'You have no projects yet.
+    <p>
+        <a href="/projects/add">Add Project</a>
+    </p>' %}
+    {{ project_macros.table(user.projects_owned,user,'aaetable',alternate) }}
+
+
+    <h3>Other Projects</h3>
+    {% set alternate = 'You are not a member of any other projects.' %}
+    {{ project_macros.table(user.member_of_projects,user,'aaetable',alternate) }}
+
+{% endblock %}

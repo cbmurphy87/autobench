@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{# =============================================================== #}
+{# set body data #}
+{# =============================================================== #}
+
+{% block content %}
+    <h2>Home</h2>
+    <div class="container">
+        <div style="text-align:center;font-size:25px;font-weight:bold;margin-bottom:10px;background-color:#58595b;color:white;">
+            THIS is Otto AND a Bench
+        </div>
+        <div style="text-align:center;background:rgba(200,200,200,0.5);">
+            <span style="display:block;">
+            <img id="otto" src={{ url_for('static', filename='pictures/otto.png') }}>
+            <img id="bench" src={{ url_for('static', filename='pictures/bench-flipped.png') }}>
+            </span>
+        </div>
+    </div>
+    <h3>Explore Autobench</h3>
+    <div class="container" style="background:rgba(200,200,200,0.5);">
+        <h4>Welcome to Autobench!</h4>
+        <ul>
+            <li>
+                Autobench is a tool developed by the Storage Solutions Engineering team at Micron.<br>
+            </li>
+            <li>
+                Autobench is an inventory management and test automation utility. Here are a few of the things you can do:
+            </li>
+        </ul>
+        <div class="container" style="background-color:#1c7cc1;color:white;">
+            Click the "<a href="/my_info" style="color:#bcbec0">My Info</a>" tab to see information about yourself, and projects that you are associated with.
+        </div>
+        <div class="container" style="background-color:#00a8e2;">
+            Hover over or click the "<a href="/inventory" style="color:#414042">Inventory</a>" tab to see servers and projects that you can access.
+        </div>
+        <div class="container" style="background-color:#54c9e8;">
+            Hover over the "Actions" tab to see what actions you can perform.
+        </div>
+        <div class="container" style="background-color:#8cbae4;">
+            Click the "<a href="/jobs" style="color:#58595b">Jobs</a>" tab to see jobs that you've scheduled.
+        </div>
+        <div class="note">Most tables are searchable and sortable. You can filter search results by typing in the filter box, or sort by clicking on a column header.</div>
+    </div>
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% import "inventory_macros.html" as inventory_macros %}
+
+{# =============================================================== #}
+{# set variables #}
+{# =============================================================== #}
+
+{% set field_pairs = (('S', 'available'),('Room','room'),('Rack','rack'),
+('U','u'),('ID', 'id'),('Group','group'),('Name','get_name'),('Model','model'),
+('Memory','memory_capacity')) %}
+
+{% block links %}
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/filterTable.js') }}></script>
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/inventory.js') }}></script>
+{% endblock %}
+
+{% block scripts %}
+    $(document).ready(function () {
+        $("#searchInput").keyup(
+            function () {
+                counttable();
+                updateStriping();
+            }
+        );
+        $("th").click(
+            function () {
+                updateStriping();
+            }
+        );
+    });
+{% endblock %}
+
+{# =============================================================== #}
+{# set body data #}
+{# =============================================================== #}
+
+{% block content %}
+    <h2 id="testelement">Inventory</h2>
+    <div>
+        <h3>Machines available for testing:</h3>
+    </div>
+    <h2>Servers</h2>
+    {{ inventory_macros.servers_table(servers,user) }}
+    {# add link to create inventory at bottom of inventory list #}
+    <div style="padding-top: 10px;">
+        <a href="/inventory/add">Add inventory</a>
+    </div>
+{% endblock %}

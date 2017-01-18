@@ -1,0 +1,5 @@
+<select {{ "disabled " if disabled }} id="{{ id }}" name="{{ name }}">
+    {% for option in options %}
+    <option value="{{ option.mongo_id }}">{{ option.name }}</option>
+    {% endfor %}
+</select>

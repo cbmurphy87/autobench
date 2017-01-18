@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% set room_fields = (('Room ID','mongo_id'),('Name','name'),
+('Description','description')) %}
+
+{% block content %}
+    <!-- Rooms -->
+    <h2>Rooms</h2>
+    {% if rooms %}
+        <p><input id="searchInput4" placeholder="Filter"></p>
+        <table class="sortable pane bigtable stripped count">
+            <thead>
+                <tr class="header">
+                {% for k, v in room_fields %}
+                    {# set count types for columns #}
+                    {% set count_type = 'count' %}
+                    {% set units = 'none' %}
+                    {% if  v == None %}
+                        {% set class = " class=sorttable_nosort" %}
+                    {% endif %}
+                    <th{{ class }} unit="{{ units }}" count_type="{{ count_type }}">
+                        {{ k }}
+                    </th>
+                {% endfor %}
+                {% if user.admin %}
+                    <th class="sorttable_nosort" count_type="ignore">
+                        <a href="/admin/rooms/add">
+                            <img src="{{ url_for('static', filename='pictures/plus_blue.png') }}"/>
+                        </a>
+                    </th>
+                {% endif %}
+                </tr>
+            </thead>
+            <tbody id="fbody4">
+            {% for room in rooms %}
+                <tr>
+                {% for k, v in room_fields %}
+                    <td>
+                    {% if v == 'name' %}
+                        {{ room.render|safe }}
+                    {% else %}
+                        {{ room[v] }}
+                    {% endif %}
+                    <span class="custom_count" style="display:none">{{ room[v] }}}</span>
+                    </td>
+                {% endfor %}
+                {% if user.admin %}
+                    <td>
+                        <img src="{{ url_for('static', filename='pictures/minus_blue.png') }}"
+                             onclick="delete_room('{{ room.mongo_id }}')"/>
+                    </td>
+                {% endif %}
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        No rooms
+        <p>
+            <a href="/admin/rooms/add">Add Room</a>
+        </p>
+    {% endif %}
+{% endblock %}

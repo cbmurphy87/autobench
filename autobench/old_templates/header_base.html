@@ -1,0 +1,40 @@
+{% extends "root.html" %}
+
+{# =============================================================== #}
+{# set head data #}
+{# =============================================================== #}
+
+{% block head %}
+    {% block meta %}{% endblock %}
+    {# include all links to functions #}
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/functions.js') }}></script>
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/sortable.js') }}></script>
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/countTable.js') }}></script>
+    <link rel="stylesheet" href={{ url_for('static', filename='styles/mystyle.css') }}>
+    <link rel="stylesheet" href={{ url_for('static', filename='styles/aaenavbar.css') }}>
+    <link href="https://fonts.googleapis.com/css?family=Corben:bold" rel="stylesheet" type="text/css">
+    <link href="https://fonts.googleapis.com/css?family=Nobile" rel="stylesheet" type="text/css">
+    <link href="https://fonts.googleapis.com/css?family=Droid+Serif" rel="stylesheet" type="text/css">
+    <link href="https://fonts.googleapis.com/css?family=Droid+Sans" rel="stylesheet" type="text/css">
+    <link href="https://fonts.googleapis.com/css?family=Nobile" rel="stylesheet" type="text/css">
+    {% block links %}
+    <!-- No additional links -->
+    {% endblock %}
+    <script>
+    {% block scripts %}
+    <!-- No additional functions -->
+    {% endblock %}
+    </script>
+    {# include all links to styles #}
+    <style>
+    {% block styles %}
+    <!-- No additional styles -->
+    {% endblock %}
+    </style>
+    {% if title %}
+    <title>{{ title }} - AutoBench</title>
+    {% else %}
+    <title>AutoBench</title>
+    {% endif %}
+{% endblock %}

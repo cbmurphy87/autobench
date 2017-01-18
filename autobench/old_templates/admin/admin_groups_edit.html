@@ -1,0 +1,48 @@
+{% extends '../../old_templates/base.html' %}
+
+{% set group_fields = ('group_name','description') %}
+
+{% block content %}
+    <h2>Group Info</h2>
+    <form action="" method="POST" name="edit_group_info">
+        <div class="edit_info">
+            <table class="edit_info bigtable pane bigtable stripped" style="width:auto;">
+                <thead>
+                    <tr>
+                        <th colspan="2">
+                            Group Info
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                {# loop over servers in inventory #}
+                {% for field_name in group_fields %}
+                    <tr>
+                    {% set field = form[field_name] %}
+                        <td style="text-align:right;">
+                        {{ field.label.text }}:
+                        </td>
+                        <td style="text-align:left;">
+                        {% if field_name == 'verify_new_password' %}
+                            {{ field(disabled=True) }}
+                        {% else %}
+                        {{ field }}
+                        {% endif %}
+                        </td>
+                        {% if field.errors %}
+                            <td>
+                            {% for error in field.errors %}
+                                <span style="color:red;">[{{ error }}]</span>
+                            {% endfor %}
+                            </td>
+                        {% endif %}
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div style="padding-top:5px;">
+            <input type="submit" value="Submit">
+        </div>
+    </form>
+{% endblock %}

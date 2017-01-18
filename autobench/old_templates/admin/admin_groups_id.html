@@ -1,0 +1,198 @@
+{% extends '../../old_templates/base.html' %}
+
+{% block scripts %}
+    function delete_group(gid) {
+        if (confirm("Delete group " + gid + "?") == true) {
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function() {
+                if (xhttp.readyState == 4 && xhttp.status == 200) {
+                    window.location = "/admin";
+                }
+            };
+            xhttp.open("POST", "/admin/groups/delete", true);
+            xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+            xhttp.send(JSON.stringify({gid: gid}));
+        }
+    }
+    $(document).ready(function () {
+        $("input[id^='searchInput']").keyup(
+            function () {
+                counttable();
+                updateStriping();
+            }
+        )
+    });
+{% endblock %}
+
+{% block links %}
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/filterTable.js') }}></script>
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/inventory.js') }}></script>
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/admin.js') }}></script>
+{% endblock %}
+
+{% set group_fields = (('Group ID','id'),('Group Name','group_name'),
+('DescriptionD','description')) %}
+{% set member_fields = (('Name','user_name'),('Groups','groups')) %}
+{% set server_fields = (('ID', 'id'),('Rack','rack'),('U','u'),
+('Name','get_name'),('Model','model'),('CPU Count','cpu_count'),
+('CPU Model','cpu_model'),('Memory','memory_capacity'))%}
+
+{% block content %}
+    {# ================= #}
+    {#    Group Info     #}
+    {# ================= #}
+    <h2>Group Info</h2>
+    <div class="pane-frame">
+        <table class="pane bigtable stripped">
+            <thead>
+                <tr class="header">
+                {# create header for inventory table #}
+                    <th colspan="2" style="text-align:center;">
+                        Group Info
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+            {# loop over servers in inventory #}
+            {% for k, v in group_fields %}
+                <tr>
+                    <td style="text-align:right;">
+                        {{ k }}:
+                    </td>
+                    <td>
+                        <i>{{ group[v] }}</i>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div style="padding-top:5px;">
+        <a href="/admin/groups/{{ group.id }}/edit">Edit Group Info</a>
+    </div>
+    {# ================= #}
+    {# Group Member List #}
+    {# ================= #}
+    <h2>Members</h2>
+    {% if group.members %}
+    <p><input id="searchInput1" placeholder="Filter"></p>
+    <table class="sortable pane bigtable stripped count">
+        <thead>
+            <tr class="header">
+            {% for k, v in member_fields %}
+                {# set count types for columns #}
+                {% set units = 'none' %}
+                {% set count_type = 'unique' %}
+                <th{{ class }} unit="{{ units }}" count_type="{{ count_type }}">
+                    {{ k }}
+                </th>
+            {% endfor %}
+                <th class="sorttable_nosort" count_type="ignore">
+                    <a href="/admin/groups/{{ group.id }}/add_member">
+                        <img src="{{ url_for('static', filename='pictures/plus_blue.png') }}"/>
+                    </a>
+                </th>
+            </tr>
+        </thead>
+        <tbody id="fbody1">
+        {% for m in group.members %}
+            <tr>
+            {% for k, v in member_fields %}
+                <td>
+                <div>
+                    {% if v == 'groups' %}
+                        {% set group_string = m[v]|join(',') %}
+                        {{ group_string }}
+                        <span class="custom_count" style="display:none">{{ group_string }}</span>
+                    {% else %}
+                        {{ m[v] }}
+                        <span class="custom_count" style="display:none">{{ m[v] }}</span>
+                    {% endif %}
+
+                </div>
+                </td>
+            {% endfor %}
+                <td>
+                    <img src="{{ url_for('static', filename='pictures/minus_blue.png') }}"
+                         onclick="remove_group_member({{ group.id }}, '{{ m.user_name }}')"/>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+        No members
+        <p><a href="/admin/groups/{{ group.id }}/add_member">Add Member</a></p>
+    {% endif %}
+
+    {# ================= #}
+    {# Group Server List #}
+    {# ================= #}
+    <h2>Servers</h2>
+    {% if group.servers %}
+    <p><input id="searchInput2" placeholder="Filter"></p>
+    <div id="group_servers">
+        <div class="pane-frame" style="width:100%;">
+            <table id="aaetable" class="sortable pane bigtable stripped count">
+                <thead>
+                    <tr class="header">
+                    {# create header for inventory table #}
+                        {% for k, v in server_fields %}
+                            {# set count types for columns #}
+                            {% if k in ['S', 'Remove'] %}
+                                {% set units = 'none' %}
+                                {% set count_type = 'ignore' %}
+                                {% set class = " class=sorttable_nosort" %}
+                            {% elif k in ['Memory', 'Capacity'] %}
+                                {% set count_type = 'sum' %}
+                                {% set units = 'GB' %}
+                            {% else %}
+                                {% set units = 'none' %}
+                                {% set count_type = 'unique' %}
+                            {% endif %}
+                            <th{{ class }} unit="{{ units }}" count_type="{{ count_type }}">
+                                {{ k }}
+                            </th>
+                        {% endfor %}
+                            <th class="sorttable_nosort" count_type="ignore">
+                                <a href="/admin/groups/{{ group.id }}/add_server">
+                                    <img src="{{ url_for('static', filename='pictures/plus_blue.png') }}"/>
+                                </a>
+                            </th>
+                    </tr>
+                </thead>
+                <tbody id="fbody2">
+                {# loop over servers in inventory #}
+                {%- for server in group.servers -%}
+                    <tr id="{{ server.id }}">
+                    {% for k, v in server_fields %}
+                        <td>
+                        {% if v == 'id' %}
+                            <a href="/inventory/{{ server.id }}">
+                            {{ server.id }}
+                            </a>
+                        {% else %}
+                            {% if v == 'get_name' %}
+                            {{ server.get_name() }}
+                            {% else %}
+                            {{ server[v] }}
+                            {% endif %}
+                            <span class="custom_count" style="display:none">{{ server[v] }}</span>
+                        {% endif %}
+                        </td>
+                        {% endfor %}
+                        <td>
+                            <img src="{{ url_for('static', filename='pictures/minus_blue.png') }}"
+                                 onclick="remove_group_server({{ group.id }}, '{{ server.id }}')"/>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+        No Servers
+        <p><a href="/admin/groups/{{ group.id }}/add_server">Add Server</a></p>
+    {% endif %}
+{% endblock %}

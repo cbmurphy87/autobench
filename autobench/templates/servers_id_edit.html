@@ -1,0 +1,64 @@
+{% extends '/base.html' %}
+
+{% block links %}
+    {{ super() }}
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/filterTable.js') }}></script>
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/inventory.js') }}></script>
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/admin.js') }}></script>
+{% endblock %}
+
+{% set server_fields = ('name','user_name','password','group','project') %}
+
+{# if user.admin #}
+{# //RE-ENABLE FOR ADMIN// set server_fields = server_fields + ('project_id',) #}
+{# endif #}
+
+{% block content %}
+    <h2>Server Info</h2>
+    <h3>Edit info for server {{ server.id }}</h3>
+    <form action="" method="POST" name="edit_my_info">
+        <div class="edit_info">
+            <table class="edit_info bigtable pane bigtable stripped" style="width:auto;">
+                <thead>
+                    <tr>
+                        <th colspan="2">
+                            Server Info
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                {# loop over servers in inventory #}
+                {% for field_name in server_fields %}
+                    <tr>
+                    {% set field = form[field_name] %}
+                        <td style="text-align:right;">
+                        {{ field.label.text }}:
+                        </td>
+                        <td style="text-align:left;">
+                        {% if field_name in ('rack','u') %}
+                            {% if field.data == '__None' %}
+                            {{ field(disabled=True) }}
+                            {% else %}
+                            {{ field }}
+                            {% endif %}
+                        {% else %}
+                        {{ field }}
+                        {% endif %}
+                        </td>
+                        {% if field.errors %}
+                            <td>
+                            {% for error in field.errors %}
+                                <span style="color:red;">[{{ error }}]</span>
+                            {% endfor %}
+                            </td>
+                        {% endif %}
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div style="padding-top:5px;">
+            <input type="submit" value="Submit">
+        </div>
+    </form>
+{% endblock %}

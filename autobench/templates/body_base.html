@@ -1,4 +1,4 @@
-{% extends "header_base.html" %}
+{% extends "/header_base.html" %}
 
 {% block body %}
     <div class="top_header">
@@ -7,7 +7,7 @@
                 <img src={{ url_for('static', filename='pictures/micronlogos/high_res_micron_logo_grey.png') }} class="top_image">
             </div>
             <div style="display:inline-block;position:fixed;z-index:1000;right:0px;top:0px;width:500px;">
-                {% include "aae_navbar.html" %}
+                {% include "/aae_navbar.html" %}
             </div>
         </span>
         <div style="height:5px;width:100%;background-color:#bcbec0;"></div>

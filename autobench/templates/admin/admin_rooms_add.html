@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% set add_room_fields = ('name','type','description') %}
+
+{% block content %}
+    <h2>Add Room</h2>
+    <div>
+        <form action="" method="POST" name="add_room">
+            {{ form.hidden_tag() }}
+            <div style="height:150px;margin:auto;float:left;">
+                <table class="edit_info bigtable pane bigtable stripped" style="width:auto;">
+                    <thead>
+                        <tr>
+                            <th colspan="2">
+                                Room Info
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {# loop over servers in inventory #}
+                    {% for field_name in add_room_fields %}
+                        <tr>
+                        {% set field = form[field_name] %}
+                            <td style="text-align:right;">
+                            {{ field.label.text }}:
+                            </td>
+                            <td style="text-align:left;">
+                            {{ field }}
+                            </td>
+                            {% if field.errors %}
+                                <td>
+                                {% for error in field.errors %}
+                                    <span style="color:red;">[{{ error }}]</span>
+                                {% endfor %}
+                                </td>
+                            {% endif %}
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                <input type="submit" value="Submit" style="margin-top:10px;">
+            </div>
+        </form>
+    </div>
+{% endblock %}

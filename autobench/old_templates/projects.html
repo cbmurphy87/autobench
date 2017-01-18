@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% import 'project_macros.html' as project_macros %}
+
+{# =============================================================== #}
+{# set head data #}
+{# =============================================================== #}
+
+{% block links %}
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/filterTable.js') }}></script>
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/inventory.js') }}></script>
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/projects.js') }}></script>
+{% endblock %}
+
+{# =============================================================== #}
+{# set body data #}
+{# =============================================================== #}
+
+{% block content %}
+    <h2>Projects</h2>
+    <p><span><input id="searchInput" placeholder="Filter"> <input type="checkbox" id="archive_checkbox" value="show_archived" onclick="toggle_archived()">Show archived projects.</span></p>
+    {% set alternate = 'There are no projects yet.
+    <p>
+        <a href="/projects/add">Add Project</a>
+    </p>' %}
+    {{ project_macros.table(projects,user,table_id,alternate) }}
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% set user_fields = ('first_name', 'last_name', 'user_name', 'email',
+'new_password','verify_new_password', 'password') %}
+
+{% block scripts %}
+    $(document).ready(function () {
+        $("#new_password").on('change keydown paste input', function(){
+            var np = document.getElementById("verify_new_password")
+            if (document.getElementById("new_password").value == '') {
+                np.disabled = true;
+                np.value = '';
+            } else {
+                np.disabled = false;
+            }
+        });
+    });
+{% endblock %}
+
+{% block content %}
+    <h2>My Info</h2>
+    <form action="" method="POST" name="edit_my_info">
+        <div class="edit_info">
+            <table class="edit_info bigtable pane bigtable stripped" style="width:auto;">
+                <thead>
+                    <tr>
+                        <th colspan="2">
+                            My Info
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                {# loop over servers in inventory #}
+                {% for field_name in user_fields %}
+                    <tr>
+                    {% set field = form[field_name] %}
+                        <td style="text-align:right;">
+                        {{ field.label.text }}:
+                        </td>
+                        <td style="text-align:left;">
+                        {% if field_name == 'verify_new_password' %}
+                            {{ field(disabled=True) }}
+                        {% else %}
+                        {{ field }}
+                        {% endif %}
+                        </td>
+                        {% if field.errors %}
+                            <td>
+                            {% for error in field.errors %}
+                                <span style="color:red;">[{{ error }}]</span>
+                            {% endfor %}
+                            </td>
+                        {% endif %}
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div style="padding-top:5px;">
+            <input type="submit" value="Submit">
+        </div>
+    </form>
+{% endblock %}

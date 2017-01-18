@@ -4,137 +4,30 @@
 # ___________________________ Flask Imports ___________________________
 from flask import render_template, flash, redirect, session, url_for, \
     request, g, abort, send_from_directory
-from flask.ext.login import login_user, logout_user, current_user, \
+from flask_login import login_user, logout_user, current_user, \
     login_required
-from sqlalchemy import sql, desc
-from wtforms.ext.sqlalchemy.fields import QuerySelectField
+from sqlalchemy import desc
 
 # ____________________________ App Imports ____________________________
-from autobench import myapp, lm
+from autobench import lm, pymongo, mongo_alchemy
 from autobench.forms import *
-from models import Users, Servers
+from autobench.mongo_forms import *
+from functions.jenkinsMethods import *
+from functions.db_actions import *
+from functions.mongo_actions import *
+from mysql_models import Users, Servers
 
 # _________________________ Standard Imports __________________________
-from collections import OrderedDict
-from datetime import datetime
-import fnmatch
+from bson import DBRef, ObjectId
 from jenkins import JenkinsException
 from json import JSONEncoder
 from multiprocessing import Process
-import os
-from subprocess import Popen, PIPE
 
 # _________________________ AAEBench Imports __________________________
 from aaebench import customlogger
-from aaebench.testautomation.syscontrol.file_transfer import SFTPManager
-from aaebench.testautomation.syscontrol.racadm import RacadmManager
-from aaebench.testautomation.syscontrol.smcipmi import SMCIPMIManager
-from aaebench.parents.managers import GenericManager
-
-# ___________________________ Flask Imports ___________________________
-from functions.jenkinsMethods import *
-from functions.db_actions import *
 
 
 # ============================== METHODS ==============================
-
-# ___________________________ HELPER METHODS __________________________
-def _get_date_last_modified():
-    try:
-        matches = []
-        for root, dirnames, filenames in os.walk(os.getcwd()):
-            for filename in fnmatch.filter(filenames, '*.html'):
-                matches.append(os.path.join(root, filename))
-        date = datetime.fromtimestamp(
-                os.path.getctime(max(matches, key=os.path.getctime))).strftime(
-                '%b %d %Y')
-    except:
-        date = '?'
-    finally:
-        return date
-
-
-# _______________________ Asynchronous METHODS ________________________
-# method for creating a separate process
-def __deploy_server(form):
-    message = 'Deploying {} {} to {} with ks {}.'.format(form.os.data.flavor,
-                                                         form.os.data.version,
-                                                         form.target.data.id,
-                                                         form.os.data.append)
-    logger.info(message)
-
-    pxe_file = render_template('pxeboot',
-                               kernel=form.os.data.kernel,
-                               initrd=form.os.data.initrd,
-                               append=form.os.data.append)
-
-    # gather data
-    server = form.target.data
-    server_type = server.make
-    interfaces = server.interfaces
-    eth0_interface = interfaces.filter_by(name='NIC.1').first()
-    eth0 = eth0_interface.mac.lower().replace(':', '-')
-    logger.debug('eth0 mac: {}'.format(eth0))
-    ipmi_int = interfaces.filter_by(name='DRAC').first() or \
-               interfaces.filter_by(name='ipmi').first()
-    if not ipmi_int:
-        raise Exception('Could not find ipmi interface!')
-    ipmi_ip = ipmi_int.ip
-
-    logger.debug('IPMI ip address is: {}'.format(ipmi_ip))
-
-    # send unique config file to pxe server
-    sftp = SFTPManager('pxe.aae.lcl')
-    client = sftp.create_sftp_client()
-    filename = '/tftpboot/pxelinux.cfg/01-{}'.format(eth0)
-    # write file
-    with client.open(filename, 'w') as f:
-        f.write(pxe_file)
-    # delete salt key
-    logger.debug(server.id)
-    salt_master_manager = GenericManager(hostname='salt-gru.aae.lcl',
-                                         username='salt',
-                                         password='Not24Get',
-                                         local=False,
-                                         ending='$')
-    command = ['salt-key', '-d', str(server.id), '-y']
-    salt_master_manager.connection.exec_command(' '.join(command))
-
-    # reboot server to PXE
-    if server_type.lower() == 'dell':
-        logger.debug('Detected server is a Dell. Using RACADM.')
-        ipmi = RacadmManager(ipmi_ip)
-    else:
-        logger.debug('Detected server is not a Dell. Using IPMI.')
-        ipmi = SMCIPMIManager(ipmi_ip)
-
-    ipmi.boot_once('PXE', reboot=True)
-
-    # make server unavailable
-    try:
-        user = g.user
-        server = models.Servers.query.filter_by(id=server.id).first()
-        server.available = False
-        server.held_by = user.id
-        db.session.commit()
-        logger.info('Server {} now unavailable.'.format(server))
-    except Exception as e:
-        logger.error('Error making server unavailable: {}'.format(e))
-        db.session.rollback()
-
-
-# method to run new debug
-def _run_debug():
-    test_path = os.path.join(os.getcwd(), 'unit_tests.py')
-    p = Popen(test_path, stdout=PIPE, stderr=PIPE)
-    response, err = p.communicate()
-    with open(os.path.join(os.getcwd(), 'last_debug.out'), 'w+') as f:
-        f.write(response)
-        if err:
-            f.write('\n\nErrors:\n')
-            f.write(err)
-
-
 # ___________________________ LOGIN METHODS ___________________________
 @lm.user_loader
 def load_user(id):
@@ -192,7 +85,7 @@ def _login():
                         getattr(form, field).label.text, error))
     return render_template('login.html',
                            title='Login',
-                           date=_get_date_last_modified(),
+                           date=get_date_last_modified(),
                            form=form)
 
 
@@ -210,7 +103,7 @@ def _root():
     user = g.user
     return render_template('index.html',
                            title='Home',
-                           date=_get_date_last_modified(),
+                           date=get_date_last_modified(),
                            user=user)
 
 
@@ -222,7 +115,7 @@ def _my_info():
     user = g.user
     return render_template('my_info.html',
                            title='My Info',
-                           date=_get_date_last_modified(),
+                           date=get_date_last_modified(),
                            user=user)
 
 
@@ -248,7 +141,7 @@ def _edit_my_info():
 
     return render_template('my_info_edit.html',
                            title='Edit About Me',
-                           date=_get_date_last_modified(),
+                           date=get_date_last_modified(),
                            user=user, form=form)
 
 
@@ -257,7 +150,7 @@ def _edit_my_info():
 def _server_info():
     server_id = request.get_json().get('id')
     return render_template('server_info.html',
-                           server=models.Servers.query
+                           server=mysql_models.Servers.query
                            .filter_by(id=server_id).first())
 
 
@@ -269,7 +162,7 @@ def _inventory():
     servers = get_inventory(user)
 
     return render_template('inventory.html', title='Inventory',
-                           date=_get_date_last_modified(),
+                           date=get_date_last_modified(),
                            user=user, servers=servers)
 
 
@@ -286,8 +179,8 @@ def _add_inventory():
         p.start()
         return redirect('/inventory')
 
-    return render_template('inventory_add.html', title='Add Inventory',
-                           date=_get_date_last_modified(), user=user,
+    return render_template('servers_add.html', title='Add Inventory',
+                           date=get_date_last_modified(), user=user,
                            form=form)
 
 
@@ -301,8 +194,8 @@ def _add_inventory_manual():
     if form.validate_on_submit():
         return redirect('/inventory')
 
-    return render_template('inventory_add_manual.html', title='Add Inventory',
-                           date=_get_date_last_modified(), user=user,
+    return render_template('servers_add_manual.html', title='Add Inventory',
+                           date=get_date_last_modified(), user=user,
                            form=form)
 
 
@@ -311,8 +204,8 @@ def _add_inventory_manual():
 def _inventory_id(_id):
     user = g.user
     server = Servers.query.get(_id)
-    return render_template('inventory_id.html', title=_id, server=server,
-                           date=_get_date_last_modified(), user=user)
+    return render_template('servers_id.html', title=_id, server=server,
+                           date=get_date_last_modified(), user=user)
 
 
 @myapp.route('/inventory/<_id>/add_oob', methods=['GET', 'POST'])
@@ -323,18 +216,20 @@ def _inventory_id_add_oob(_id):
     if form.validate_on_submit():
         add_interface(form, _id, user)
         return redirect('/inventory/{}'.format(_id))
-    return render_template('inventory_add_oob.html',
+    return render_template('servers_id_add_oob.html',
                            title='Add Out of Band Interface', form=form,
-                           date=_get_date_last_modified(), user=user)
+                           date=get_date_last_modified(), user=user)
 
 
 @myapp.route('/inventory/<_id>/edit', methods=['GET', 'POST'])
 @login_required
-def _inventory_edit_id(_id):
+def _inventory_id_edit(_id):
     user = g.user
     server = Servers.query.get(_id)
-    ChangeForm = make_edit_form(current_server=server)
+    ChangeForm = make_edit_inventory_form(current_server=server)
     form = ChangeForm()
+    dirs = dir(form.room)
+    loc_dirs = dir(locations)
     if form.validate_on_submit():
         message = edit_server_info(form, _id)
         flash(message)
@@ -351,8 +246,9 @@ def _inventory_edit_id(_id):
                 continue
             field = getattr(form, attr)
             field.data = getattr(server, attr)
-    return render_template('inventory_edit_id.html', title=_id, server=server,
-                           date=_get_date_last_modified(), user=user, form=form)
+    return render_template('servers_id_edit.html', title=_id, server=server,
+                           date=get_date_last_modified(), user=user,
+                           form=form)
 
 
 @myapp.route('/inventory/update', methods=['GET', 'POST'])
@@ -391,55 +287,8 @@ def _inventory_status():
     server = Servers.query.filter_by(id=_id).first()
     if _next:
         return redirect(_next)
-    return render_template('inventory_status.html', server=server,
+    return render_template('servers_status.html', server=server,
                            user=user)
-
-
-@myapp.route('/inventory/checkout', methods=['GET', 'POST'])
-@login_required
-def _checkout_id():
-    _id = request.get_json().get('id')
-    _next = request.get_json().get('next')
-    user = g.user
-    logger.info('User {} checking out {}'.format(user, _id))
-    server = Servers.query.filter_by(id=_id).first()
-    if server.available and not server.holder:
-        try:
-            server.available = False
-            db.session.add(server)
-            db.session.commit()
-        except Exception as e:
-            'Exception in checkout: {}'.format(e)
-            db.session.rollback()
-    if _next:
-        return redirect(_next)
-    # check status of server
-    server = Servers.query.filter_by(id=_id).first()
-    try:
-        if server.held_by == user.id:
-            i_am_holder = True
-            title = 'Release this server'
-            color = 'green'
-        else:
-            i_am_holder = False
-            holder_name = str(server.holder)
-            title = 'This server is held by {}'.format(holder_name)
-            color = 'red'
-        if server.dirty:
-            logger.info('Server is dirty.')
-            color = 'yellow'
-        server_json = JSONEncoder().encode({'available': server.available,
-                                            'i_am_holder': i_am_holder,
-                                            'title': title,
-                                            'color': color})
-        return server_json
-    except Exception as e:
-        logger.error("Couldn't encode server: {}".format(e))
-    return JSONEncoder().encode({'available': False,
-                                 'i_am_holder': False,
-                                 'held_by': 'unknown',
-                                 'title': 'Server state is unknown',
-                                 'color': 'red'})
 
 
 @myapp.route('/inventory/delete', methods=['GET', 'POST'])
@@ -482,10 +331,11 @@ def _deploy():
     user = g.user
     form = DeployForm()
     user_project_ids = [x.id for x in
-                        models.Projects.query.filter_by(owner_id=user.id).all()]
+                        mysql_models.Projects.query.filter_by(owner_id=user.id)
+                        .all()]
 
-    query = models.Servers.query\
-        .filter(models.Servers.project_id.in_(user_project_ids)) \
+    query = mysql_models.Servers.query\
+        .filter(mysql_models.Servers.project_id.in_(user_project_ids)) \
         .order_by('id').all
     form.target.query_factory = query
     if form.validate_on_submit():
@@ -493,7 +343,7 @@ def _deploy():
         if not form.target.data.held_by == user.id:
             flash('You do not own this server!')
             return render_template('deploy.html', title='Tests',
-                                   date=_get_date_last_modified(),
+                                   date=get_date_last_modified(),
                                    user=user, form=form)
         # start subprocess to deploy system
         p = Process(target=deploy_server, args=(form, user))
@@ -513,7 +363,7 @@ def _deploy():
                 flash("Error in the {} field - {}".format(
                         getattr(form, field).label.text, error))
     return render_template('deploy.html', title='Tests',
-                           date=_get_date_last_modified(),
+                           date=get_date_last_modified(),
                            user=user, form=form)
 
 
@@ -602,7 +452,7 @@ def _projects_add():
 def _projects_delete():
     user = g.user
     project_id = request.get_json().get('project_id')
-    project = models.Projects.query.filter_by(id=project_id).first()
+    project = mysql_models.Projects.query.filter_by(id=project_id).first()
     if user != project.owner:
         return 'You do not own this project!'
     return delete_project(project, user)
@@ -643,9 +493,9 @@ def _projects_id_edit(id_):
         if attr in form.data.keys():
             field = getattr(form, attr)
             field.data = getattr(project, attr)
-    form.primary_group.data = models.Groups.query.filter_by(id=project.gid) \
+    form.primary_group.data = mysql_models.Groups.query.filter_by(id=project.gid) \
         .first()
-    form.owner_id.data = models.Users.query.filter_by(id=project.owner_id) \
+    form.owner_id.data = mysql_models.Users.query.filter_by(id=project.owner_id) \
         .first()
 
     if form.errors:
@@ -676,7 +526,7 @@ def _projects_id_add_member(id_):
 @login_required
 def _projects_id_remove_member(id_):
     member_id = request.get_json().get('member_id')
-    member = models.Users.query.filter_by(id=member_id).first()
+    member = mysql_models.Users.query.filter_by(id=member_id).first()
     user = g.user
     project = get_project_by_id(id_)
     if not ((project.owner == user) or user.admin):
@@ -707,7 +557,7 @@ def _projects_id_add_server(id_):
 @login_required
 def _projects_id_remove_server(id_):
     server_id = request.get_json().get('server_id')
-    server = models.Servers.query.filter_by(id=server_id).first()
+    server = mysql_models.Servers.query.filter_by(id=server_id).first()
     user = g.user
     project = get_project_by_id(id_)
     if not ((project.owner == user) or user.admin):
@@ -743,7 +593,7 @@ def _projects_id_add_status(id_):
 @login_required
 def _projects_id_remove_status(id_):
     status_id = request.get_json().get('status_id')
-    status = models.ProjectStatus.query.filter_by(id=status_id).first()
+    status = mysql_models.ProjectStatus.query.filter_by(id=status_id).first()
     print "Found status: {}".format(status)
     user = g.user
     project = get_project_by_id(id_)
@@ -773,10 +623,10 @@ def _create_jenkins_job():
 
     # set servers in form
     user_project_ids = [x.id for x in
-                        models.Projects.query.filter_by(owner_id=user.id).all()]
+                        mysql_models.Projects.query.filter_by(owner_id=user.id).all()]
 
-    query = models.Servers.query\
-        .filter(models.Servers.project_id.in_(user_project_ids)) \
+    query = mysql_models.Servers.query\
+        .filter(mysql_models.Servers.project_id.in_(user_project_ids)) \
         .order_by('id').all
     form.target.query_factory = query
 
@@ -787,7 +637,7 @@ def _create_jenkins_job():
     elif request.method == 'POST':
         flash("Invalid entries.")
     return render_template('create_jenkins_job.html', title='Create Job',
-                           date=_get_date_last_modified(),
+                           date=get_date_last_modified(),
                            form=form,
                            user=user)
 
@@ -801,7 +651,7 @@ def _jenkins_jobs():
     except JenkinsException:
         return render_template('500.html'), 500
     return render_template('jenkins_jobs.html', title='Jenkins Jobs',
-                           date=_get_date_last_modified(),
+                           date=get_date_last_modified(),
                            jobs=get_all_jenkins_info(),
                            result=lambda x: get_last_jenkins_result(x),
                            user=user)
@@ -815,7 +665,7 @@ def _jenkins_job_info(jobname):
     if job_info:
         return render_template('jenkins_job_info.html',
                                title='Job Info',
-                               date=_get_date_last_modified(),
+                               date=get_date_last_modified(),
                                job_info=job_info,
                                user=user)
     return redirect('/jenkins_jobs')
@@ -860,13 +710,14 @@ def _admin():
     if not user.admin:
         print 'not admin'
         abort(401)
-    users = models.Users.query.order_by('email').all()
-    groups = models.Groups.query.order_by('id').all()
-    projects = models.Projects.query.order_by(desc('id')).all()
+    users = mysql_models.Users.query.order_by('email').all()
+    groups = mysql_models.Groups.query.order_by('id').all()
+    projects = mysql_models.Projects.query.order_by(desc('id')).all()
+    rooms = mysql_models.Rooms.query.order_by(desc('id')).all()
 
-    return render_template('admin.html', title='Admin', user=user,
+    return render_template('admin/admin.html', title='Admin', user=user,
                            groups=groups, users=users, projects=projects,
-                           date=_get_date_last_modified())
+                           rooms=rooms, date=get_date_last_modified())
 
 
 @myapp.route('/admin/group/add', methods=['GET', 'POST'])
@@ -881,8 +732,8 @@ def _admin_group_add():
         flash(add_group(form, user))
         return redirect('/admin')
 
-    return render_template('admin_group_add.html', title='Admin', user=user,
-                           form=form, date=_get_date_last_modified())
+    return render_template('admin/admin_groups_add.html', title='Admin', user=user,
+                           form=form, date=get_date_last_modified())
 
 
 @myapp.route('/admin/groups/delete', methods=['GET', 'POST'])
@@ -912,8 +763,8 @@ def _admin_user_add():
         flash(add_user(form, user))
         return redirect('/admin')
 
-    return render_template('admin_user_add.html', title='Admin', user=user,
-                           form=form, date=_get_date_last_modified())
+    return render_template('admin/admin_user_add.html', title='Admin', user=user,
+                           form=form, date=get_date_last_modified())
 
 
 @myapp.route('/admin/users/delete', methods=['GET', 'POST'])
@@ -937,13 +788,13 @@ def _user_info(user_name):
     if not user.admin:
         print 'not admin'
         abort(401)
-    other_user = models.Users.query.filter_by(user_name=user_name).first()
+    other_user = mysql_models.Users.query.filter_by(user_name=user_name).first()
     if not (user.admin and user):
         return render_template('404.html', user=user), 404
 
-    return render_template('admin_users_info.html', title='User Info',
+    return render_template('admin/admin_users_id.html', title='User Info',
                            user=user,
-                           date=_get_date_last_modified(),
+                           date=get_date_last_modified(),
                            other_user=other_user)
 
 
@@ -953,7 +804,7 @@ def _edit_user_info(user_name):
     user = g.user
     if not user.admin:
         abort(401)
-    other_user = models.Users.query.filter_by(user_name=user_name).first()
+    other_user = mysql_models.Users.query.filter_by(user_name=user_name).first()
     form = EditUserInfoForm()
     if not other_user:
         abort(401)
@@ -969,22 +820,22 @@ def _edit_user_info(user_name):
             field = getattr(form, attr)
             field.data = getattr(other_user, attr)
 
-    return render_template('admin_users_edit.html', title='Edit User Info',
+    return render_template('admin/admin_users_edit.html', title='Edit User Info',
                            user=user,
-                           date=_get_date_last_modified(), form=form)
+                           date=get_date_last_modified(), form=form)
 
 
 @myapp.route('/admin/groups/<_id>', methods=['GET', 'POST'])
 @login_required
 def _groups_info(_id):
     user = g.user
-    group = models.Groups.query.filter_by(id=_id).first()
+    group = mysql_models.Groups.query.filter_by(id=_id).first()
     if not (user.admin and group):
         return render_template('404.html', user=user), 404
 
-    return render_template('admin_groups_info.html', title='Group Info',
+    return render_template('admin/groups_id.html', title='Group Info',
                            user=user, group=group,
-                           date=_get_date_last_modified())
+                           date=get_date_last_modified())
 
 
 @myapp.route('/admin/groups/<_id>/edit', methods=['GET', 'POST'])
@@ -992,7 +843,7 @@ def _groups_info(_id):
 def _groups_info_edit(_id):
     user = g.user
     form = EditGroupForm()
-    group = models.Groups.query.filter_by(id=_id).first()
+    group = mysql_models.Groups.query.filter_by(id=_id).first()
     if not (user.admin and group):
         return render_template('404.html', user=user), 404
 
@@ -1007,16 +858,16 @@ def _groups_info_edit(_id):
             field = getattr(form, attr)
             field.data = getattr(group, attr)
 
-    return render_template('admin_groups_edit.html', title='Edit Group Info',
+    return render_template('admin/admin_groups_edit.html', title='Edit Group Info',
                            user=user, group=group, form=form,
-                           date=_get_date_last_modified())
+                           date=get_date_last_modified())
 
 
 @myapp.route('/admin/groups/<_id>/add_member', methods=['GET', 'POST'])
 @login_required
 def _groups_add_member(_id):
     user = g.user
-    group = models.Groups.query.filter_by(id=_id).first()
+    group = mysql_models.Groups.query.filter_by(id=_id).first()
     if not (user.admin and group):
         return render_template('404.html', user=user), 404
 
@@ -1029,21 +880,21 @@ def _groups_add_member(_id):
         logger.debug(message)
         return redirect('/admin/groups/{}'.format(group.id))
 
-    return render_template('admin_groups_add_member.html',
+    return render_template('admin/admin_groups_add_member.html',
                            title='Add Group Member',
                            user=user, group=group, form=form,
-                           date=_get_date_last_modified())
+                           date=get_date_last_modified())
 
 
 @myapp.route('/admin/groups/<gid>/remove_member', methods=['GET', 'POST'])
 @login_required
 def _groups_remove_member(gid):
     user = g.user
-    group = models.Groups.query.filter_by(id=gid).first()
+    group = mysql_models.Groups.query.filter_by(id=gid).first()
     if not (user.admin and group):
         return render_template('404.html', user=user), 404
     user_name = request.get_json().get('user_name')
-    u = models.Users.query.filter_by(user_name=user_name).first()
+    u = mysql_models.Users.query.filter_by(user_name=user_name).first()
 
     message = remove_group_member(gid, u.id, user)
 
@@ -1054,7 +905,7 @@ def _groups_remove_member(gid):
 @login_required
 def _groups_remove_server(gid):
     user = g.user
-    group = models.Groups.query.filter_by(id=gid).first()
+    group = mysql_models.Groups.query.filter_by(id=gid).first()
     if not (user.admin and group):
         return render_template('404.html', user=user), 404
     server_id = request.get_json().get('server_id')
@@ -1068,7 +919,7 @@ def _groups_remove_server(gid):
 @login_required
 def _groups_add_server(_id):
     user = g.user
-    group = models.Groups.query.filter_by(id=_id).first()
+    group = mysql_models.Groups.query.filter_by(id=_id).first()
     if not (user.admin and group):
         return render_template('404.html', user=user), 404
 
@@ -1086,12 +937,205 @@ def _groups_add_server(_id):
             field = getattr(form, attr)
             field.data = getattr(group, attr)
 
-    return render_template('admin_groups_add_server.html',
+    return render_template('admin/admin_groups_add_server.html',
                            title='Add Group Server',
                            user=user, group=group, form=form,
-                           date=_get_date_last_modified())
+                           date=get_date_last_modified())
 
 
+@myapp.route('/admin/rooms/<_id>', methods=['GET', 'POST'])
+@login_required
+def _rooms_id(_id):
+    user = g.user
+    room = mysql_models.Rooms.query.filter_by(id=_id).first()
+    racks = mysql_models.Racks.query.filter_by(room_id=room.id)\
+        .order_by('number').all()
+    print 'racks: {}'.format(racks)
+    if not (user.admin and room):
+        return render_template('404.html', user=user), 404
+
+    return render_template('admin/rooms_id.html', title='Room Info',
+                           user=user, room=room, racks=racks,
+                           date=get_date_last_modified())
+
+
+@myapp.route('/admin/rooms/add', methods=['GET', 'POST'])
+@login_required
+def _admin_rooms_add():
+    user = g.user
+    if not user.admin:
+        print 'not admin'
+        abort(401)
+    form = AddEditRoomForm()
+    #print dir(pymongo.db.locations)
+    #print pymongo.db.collection_names()
+    #pymongo.db.locations.insert({'room1': 'this is room 1'})
+    print session
+    if form.validate_on_submit():
+        flash(add_room(form, user))
+        return redirect('/admin')
+
+    return render_template('admin/admin_rooms_add.html', title='Admin', user=user,
+                           form=form, date=get_date_last_modified())
+
+
+@myapp.route('/admin/rooms/delete', methods=['GET', 'POST'])
+@login_required
+def _admin_rooms_delete():
+    id_ = request.get_json().get('id')
+    user = g.user
+    if not user.admin:
+        print 'You are not admin'
+        abort(401)
+    message = delete_room(id_, user)
+    flash(message)
+    logger.debug(message)
+
+    return JSONEncoder().encode({'success': 1})
+
+
+@myapp.route('/admin/rooms/<id_>/edit', methods=['GET', 'POST'])
+@login_required
+def _admin_rooms_id_edit(id_):
+    user = g.user
+    form = AddEditRoomForm()
+    room = mysql_models.Rooms.query.filter_by(id=id_).first()
+    racks = mysql_models.Racks.query.filter_by(room_id=room.id)
+    if not (user.admin and room):
+        return render_template('404.html', user=user), 404
+
+    if form.validate_on_submit():
+        message = edit_room_id(form, room.id, user)
+        flash(message)
+        logger.debug(message)
+        return redirect('/admin/rooms/{}'.format(room.id))
+
+    for attr in room.__dict__.keys():
+        if attr in form.data.keys():
+            field = getattr(form, attr)
+            field.data = getattr(room, attr)
+
+    return render_template('admin/admin_rooms_edit.html',
+                           title='Edit Room Info',
+                           user=user, room=room, form=form,
+                           racks=racks,
+                           date=get_date_last_modified())
+
+
+@myapp.route('/admin/racks/<id_>', methods=['GET', 'POST'])
+@login_required
+def _admin_racks_id(id_):
+    user = g.user
+    rack = mysql_models.Racks.query.filter_by(id=id_).order_by('number') \
+        .first()
+    rack_units = [u.id for u in rack.units]
+    # ##################################################
+    #                  !!! FIX THIS !!!                #
+    ####################################################
+    servers = mysql_models.Servers.query.filter(mysql_models.Servers.id
+                                                .in_(rack_units)).all()
+
+    if not (user.admin and rack):
+        return render_template('404.html', user=user), 404
+
+    return render_template('admin/racks_id.html', title='Rack Info',
+                           user=user, rack=rack, servers=servers,
+                           date=get_date_last_modified())
+
+
+@myapp.route('/admin/racks/get', methods=['GET', 'POST'])
+@login_required
+def _admin_racks_get():
+    room_id = request.get_json().get('room_id')
+    user = g.user
+    if not user.admin:
+        print 'not admin'
+        flash('You are not admin!')
+        abort(401)
+
+    racks = mysql_models.Racks.query.filter_by(room_id=room_id).all()
+    print racks
+    return render_template('admin/rack_form.html', options=racks,
+                           disabled=False, id='rack_input', name='rack')
+
+
+@myapp.route('/admin/racks/add', methods=['GET', 'POST'])
+@login_required
+def _admin_racks_add():
+    user = g.user
+    if not user.admin:
+        print 'not admin'
+        abort(401)
+    AddEditRackForm = make_add_edit_rack_form()
+    form = AddEditRackForm()
+    if form.validate_on_submit():
+        flash(add_rack(form, user))
+        return redirect('/admin')
+
+    return render_template('admin/admin_racks_add.html', title='Admin',
+                           user=user, form=form,
+                           date=get_date_last_modified())
+
+
+@myapp.route('/admin/racks/<id_>/edit', methods=['GET', 'POST'])
+@login_required
+def _admin_racks_id_edit(id_):
+    user = g.user
+    rack = mysql_models.Racks.query.filter_by(id=id_).first()
+    AddEditRackForm = make_add_edit_rack_form(rack.room)
+    form = AddEditRackForm()
+    if not (user.admin and rack):
+        return render_template('404.html', user=user), 404
+
+    if form.validate_on_submit():
+        message = edit_rack_id(form, rack.id, user)
+        flash(message)
+        logger.debug(message)
+        return redirect('/admin/rooms/{}'.format(rack.id))
+
+    for attr in rack.__dict__.keys():
+        if attr in form.data.keys():
+            field = getattr(form, attr)
+            field.data = getattr(rack, attr)
+
+    return render_template('admin/admin_racks_id_edit.html',
+                           title='Edit Rack Info',
+                           user=user, form=form, rack=rack,
+                           date=get_date_last_modified())
+
+
+@myapp.route('/admin/racks/delete', methods=['GET', 'POST'])
+@login_required
+def _admin_racks_delete():
+    id_ = request.get_json().get('id')
+    user = g.user
+    if not user.admin:
+        print 'You are not admin'
+        abort(401)
+    message = delete_rack(id_, user)
+    flash(message)
+    logger.debug(message)
+
+    return JSONEncoder().encode({'success': 1})
+
+
+@myapp.route('/admin/rack_units/get', methods=['GET', 'POST'])
+@login_required
+def _admin_rack_units_get():
+    rack_id = request.get_json().get('rack_id')
+    user = g.user
+    if not user.admin:
+        print 'not admin'
+        flash('You are not admin!')
+        abort(401)
+
+    rack_units = mysql_models.RackUnits.query.filter_by(rack_id=rack_id).all()
+    print 'rack units: {}'.format(rack_units)
+    return render_template('admin/rack_unit_form.html', options=rack_units,
+                           disabled=False, id='u_input', name='u')
+
+
+# ______________________________ DEBUG ________________________________
 @myapp.route('/debug', methods=['GET'])
 @login_required
 def _debug():
@@ -1105,7 +1149,7 @@ def _debug():
 def _last_debug():
     user = g.user
     return render_template('last_debug.html', title='Debug', user=user,
-                           date=_get_date_last_modified())
+                           date=get_date_last_modified())
 
 
 @myapp.route('/last_debug_raw/<path>', methods=['GET'])
@@ -1129,7 +1173,7 @@ def _last_debug_out():
         text = f.read()
     if text:
         return render_template('last_debug_out.html', title='Debug', user=user,
-                               date=_get_date_last_modified(), text=text)
+                               date=get_date_last_modified(), text=text)
     flash('Could not get last debug output.')
     return redirect(url_for('_last_debug'))
 
@@ -1155,11 +1199,27 @@ def internal_error(error):
 
 
 # _____________________________ TEST VIEWS ____________________________
-@myapp.route('/test_rows')
-def _test_rows():
+@myapp.route('/admin/test_mongo', methods=['GET', 'POST'])
+def _test_mongo():
+    # add object to location document
     user = g.user
-    return render_template('test_rows.html', user=user,
-                           date=_get_date_last_modified())
+
+    # create form and set choices
+    form = MongoForm()
+    choices = [(str(x.mongo_id), str(x.id))
+               for x in mongo_models.Servers.query.all()]
+    form.device_ref.choices = choices
+
+    # get all device locations
+    dev_locs = mongo_models.DeviceLocations.query.all()
+
+    if form.validate_on_submit():
+        mongo_upsert_device_location(form)
+        return redirect('/admin/test_mongo')
+
+    return render_template('admin/admin_mongo_test.html',
+                           user=user, form=form, dev_locs=dev_locs,
+                           date=get_date_last_modified())
 
 
 if __name__ == '__main__':

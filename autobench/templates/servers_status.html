@@ -1,0 +1,5 @@
+{% if not server.project %}
+    <h3>This Server is available.</h3>
+{% else %}
+    <p>This server is part of {{ "your" if server.project.owner.mongo_id == user.mongo_id }} project <b><a href="/projects/{{ server.project.mongo_id }}">{{ server.project }}</a>.</b></p>
+{% endif %}

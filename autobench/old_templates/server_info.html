@@ -1,0 +1,45 @@
+{# =============================================================== #}
+{# set variables #}
+{# =============================================================== #}
+
+{% set server_fields = (('ID', 'id'),('Name','name'),('Host Name','host_name'),
+('Model','model'),('CPU Count','cpu_count'),('CPU Model','cpu_model'),
+('Memory','memory_capacity'),('Rack','rack'),('U','u'),('Groups','groups')) %}
+
+{# =============================================================== #}
+{# set data #}
+{# =============================================================== #}
+
+{% if server is defined and server != None %}
+    <div id="moreinfo" class="pane-frame">
+        <table id="server_info" class="pane bigtable stripped">
+            <thead>
+                <tr class="header">
+                    {# create header for table #}
+                    <th colspan="2">
+                        Server Info
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+            {# loop over field values for each parame #}
+            {% for k, v in server_fields %}
+                <tr>
+                    <td>
+                        {{ k }}
+                    </td>
+                    <td>
+                        {% if v == 'groups'%}
+                            {{ server.groups|join(',') }}
+                        {% else %}
+                        {{ server[v] }}
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <!-- no data -->
+{% endif %}

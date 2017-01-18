@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{# =============================================================== #}
+{# set head data #}
+{# =============================================================== #}
+
+{% block links %}
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/filterTable.js') }}></script>
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/inventory.js') }}></script>
+{% endblock %}
+
+{# =============================================================== #}
+{# set body data #}
+{# =============================================================== #}
+
+{% set project_fields = (form.name,form.primary_group,form.start_date,
+form.target_end_date,form.description) %}
+
+{% block content %}
+    <h2>Add Project</h2>
+    <div style="display:inline-block;width:100%;">
+        <div style="float:left;">
+            <form action="" method="POST" name="add_project">
+                {{ form.hidden_tag() }}
+                <div class="add_project">
+                {% for field in project_fields %}
+                    <p>
+                        {{ field.label.text }}:<br>
+                        {% if field.label.text.lower() == 'name' %}
+                        {{ field(autofocus=true) }}
+                        {% elif field.label.text.lower().endswith('date') %}
+                        {{ field(class='datepicker') }}
+                        {% else %}
+                        {{ field }}
+                        {% endif %}
+                        {% for error in field.errors %}
+                            <span style="color:red;">[{{ error }}]</span>
+                        {% endfor %}
+                    </p>
+                {% endfor %}
+
+                </div>
+                <input type="submit" value="submit">
+            </form>
+        </div>
+    </div>
+{% endblock %}

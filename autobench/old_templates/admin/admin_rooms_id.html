@@ -1,0 +1,99 @@
+{% extends '../../old_templates/base.html' %}
+
+{% block links %}
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/filterTable.js') }}></script>
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/inventory.js') }}></script>
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/admin.js') }}></script>
+{% endblock %}
+
+{% set room_fields = (('Room ID','id'),('Room Name','name'),
+('Room Type','type'),('Description','description')) %}
+{% set rack_fields = (('ID','id'),('Number','number'),('Servers','servers')) %}
+
+{% block content %}
+    <!-- Basic Info -->
+    <h2>Room Info</h2>
+    <div class="pane-frame">
+        <table class="pane bigtable stripped">
+            <thead>
+                <tr class="header">
+                {# create header for inventory table #}
+                    <th colspan="2" style="text-align:center;">
+                        Room Info
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+            {# loop over servers in inventory #}
+            {% for k, v in room_fields %}
+                <tr>
+                    <td style="text-align:right;">
+                        {{ k }}:
+                    </td>
+                    <td>
+                        <i>{{ room[v] }}</i>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div style="padding-top:5px;">
+        <a href="/admin/rooms/{{ room.id }}/edit">Edit room Info</a>
+    </div>
+
+    <!-- containers -->
+    <h2>Racks</h2>
+    {% if racks|length > 0 %}
+        <p><input id="searchInput1" placeholder="Filter"></p>
+        <table class="sortable pane bigtable stripped count">
+            <thead>
+                <tr class="header">
+                {% for k, v in rack_fields %}
+                    {# set count types for columns #}
+                    {% set count_type = 'count' %}
+                    {% set units = 'none' %}
+                    {% if  v == None %}
+                        {% set class = " class=sorttable_nosort" %}
+                    {% endif %}
+                    <th{{ class }} unit="{{ units }}" count_type="{{ count_type }}">
+                        {{ k }}
+                    </th>
+                {% endfor %}
+                    <th class="sorttable_nosort" count_type="ignore">
+                        <a href="/admin/racks/add">
+                            <img src="{{ url_for('static', filename='pictures/plus_blue.png') }}"/>
+                        </a>
+                    </th>
+                </tr>
+            </thead>
+            <tbody id="fbody1">
+            {% for rack in racks %}
+                <tr>
+                {% for k, v in rack_fields %}
+                    <td>
+                    {% if v == 'number' %}
+                        <a href="/admin/racks/{{ rack.id }}">{{ rack[v] }}</a>
+                    {% elif v == 'servers' %}
+                        {{ rack[v]|length }}
+                    {% else %}
+                        {{ rack[v] }}
+                    {% endif %}
+                    <span class="custom_count" style="display:none">{{ rack[v] }}}</span>
+                    </td>
+                {% endfor %}
+                    <td>
+                        <img src="{{ url_for('static', filename='pictures/minus_blue.png') }}"
+                             onclick="delete_rack({{ rack.id }},'/admin/rooms/{{ room.id }}')"/>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        No racks in this room yet.
+        <p>
+            <a href="/admin/racks/add">Add rack</a>
+        </p>
+    {% endif %}
+{% endblock %}

@@ -1,20 +1,20 @@
 #!/usr/bin/python
 
-from autobench import db, models
+from autobench import db, mysql_models
 from sqlalchemy.orm import subqueryload
 from sqlalchemy import func
 
 
 def get_all_server_info():
-    servers = models.Servers.query\
-        .options(subqueryload(models.DeviceAddress.ip_address)).all()
+    servers = mysql_models.Servers.query\
+        .options(subqueryload(mysql_models.DeviceAddress.ip_address)).all()
     for server in servers:
         print server
 
 
 def test_relationships():
 
-    servers = models.Servers.query.all()
+    servers = mysql_models.Servers.query.all()
     for server in servers:
         devs = server.network_devs.all()
         for dev in devs:
@@ -23,8 +23,8 @@ def test_relationships():
 
 def delete_drives():
 
-    server = models.Servers.query.filter_by(id='79RNR52').first()
-    old_entries = models.ServerStorage.query\
+    server = mysql_models.Servers.query.filter_by(id='79RNR52').first()
+    old_entries = mysql_models.ServerStorage.query\
         .filter_by(server_id=server.id).all()
     print old_entries
     for entry in old_entries:
@@ -32,7 +32,7 @@ def delete_drives():
 
 
 def get_drives():
-    server = models.Servers.query.filter_by(id='HZKDR22').first()
+    server = mysql_models.Servers.query.filter_by(id='HZKDR22').first()
     #for drive in server.unique_drives:
     #    print drive.model, drive.capacity
     #for drive in server.drives.order_by('slot'):

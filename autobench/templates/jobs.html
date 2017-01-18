@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "/base.html" %}
 
 {# =============================================================== #}
 {# set head data #}
@@ -35,8 +35,8 @@ function deleteAllJobs(id, next) {
 {# set body data #}
 {# =============================================================== #}
 
-{% set field_pairs = (('Job ID','id'),('Message','message'),
-('Creator','creator'),('Start','start_time'),('End','end_time'),
+{% set field_pairs = (('Job ID','mongo_id'),('Description','description'),
+('Creator','user'),('Start','start_time'),('End','end_time'),
 ('Status','status')) %}
 
 {% block content %}
@@ -75,7 +75,9 @@ function deleteAllJobs(id, next) {
             {% for k, v in field_pairs %}
                 <td>
                 {% if v == 'status'%}
-                    <a href="/job/{{ job.id }}">{{ job.get_status() }}</a>
+                    <a href="/job/{{ job.mongo_id }}">{{ job.status }}</a>
+                {% elif v.endswith('time') %}
+                    {{ job[v]|datetime_format() }}
                 {% else %}
                     {{ job[v] }}
                 {% endif %}

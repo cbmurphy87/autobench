@@ -1,0 +1,39 @@
+{% extends '/base.html' %}
+
+{% block content %}
+    <h2>Add Switch</h2>
+    <div style="display:inline-block;width:100%;">
+        <div style="float:left;">
+            <form action="" method="POST" name="add_inventory">
+                {{ form.hidden_tag() }}
+                <div class="add_inventory">
+                {% for field in (form.id, form.model,
+                form.group, form.location) %}
+                    <p>
+                        {{ field.label.text }}:<br>
+                        {% if field.label.text.lower().startswith('management') %}
+                        {{ field(autofocus=true) }}
+                        {% else %}
+                        {{ field }}
+                        {% endif %}
+                        {% for error in field.errors %}
+                            <span style="color:red;">[{{ error }}]</span>
+                        {% endfor %}
+                    </p>
+                {% endfor %}
+
+                </div>
+                <input type="submit" value="submit">
+            </form>
+        </div>
+        <div id="vendor_info">
+            <div style="outline:1px solid black;">
+                <div id="vendor_info_header">Manufacturer:</div>
+                <div id="vendor_info_manufacturer">...</div>
+            </div>
+        </div>
+    </div>
+    <div>
+        <a href="/inventory/switches/models/add">Add New Switch Model</a>
+    </div>
+{% endblock %}

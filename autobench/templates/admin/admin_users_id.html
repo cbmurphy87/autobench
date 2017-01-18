@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+{% import '/project_macros.html' as project_macros %}
+
+{% set user_fields = (('First Name','first_name'),('Last Name','last_name'),
+('E-mail','email'),('Username','user_name'),('Admin','admin')) %}
+
+{% set server_fields = (('ID', 'id'),('Rack','rack'),('U','u'),
+('Name','get_name'),('Model','model'),('CPU Count','cpu_count'),
+('CPU Model','cpu_model'),('Memory','memory_capacity'))%}
+
+{% set groups_fields = (('GID','mongo_id'),('Name','name'),
+('Members','members'),('Servers','servers'),('Description','description')) %}
+
+{% block links %}
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/filterTable.js') }}></script>
+{% endblock %}
+
+{% block scripts %}
+
+    $(document).ready(function () {
+        $("#searchInput").keyup(
+            function () {
+                counttable();
+                updateStriping();
+            }
+        )
+    });
+{% endblock %}
+
+{% block content %}
+    <h2>User's Info</h2>
+    <div class="pane-frame">
+        <table class="pane bigtable stripped">
+            <thead>
+                <tr class="header">
+                {# create header for inventory table #}
+                    <th colspan="2" style="text-align:center;">
+                        User Info
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+            {# loop over servers in inventory #}
+            {% for k, v in user_fields %}
+                <tr>
+                    <td style="text-align:right;">
+                        {{ k }}:
+                    </td>
+                    <td>
+                        <i>{{ other_user[v] }}</i>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div style="padding-top:5px;">
+        <a href="/admin/users/{{ other_user.user_name }}/edit">Edit User's Info</a>
+    </div>
+
+    <!-- Groups -->
+    <h2>Groups</h2>
+    {% if user.groups %}
+        <p><input id="searchInput1" placeholder="Filter"></p>
+        <table class="sortable pane bigtable stripped count">
+            <thead>
+                <tr class="header">
+                {% for k, v in groups_fields %}
+                    {# set count types for columns #}
+                    {% if k.lower() in ['start', 'end'] %}
+                        {% set count_type = 'ignore' %}
+                        {% set units = 'none' %}
+                    {% elif k.endswith('name') %}
+                        {% set count_type = 'unique' %}
+                        {% set units = 'none' %}
+                    {% else %}
+                        {% set count_type = 'count' %}
+                        {% set units = 'none' %}
+                    {% endif %}
+                    {% if  v == None %}
+                        {% set class = " class=sorttable_nosort" %}
+                    {% endif %}
+                    <th{{ class }} unit="{{ units }}" count_type="{{ count_type }}">
+                        {{ k }}
+                    </th>
+                {% endfor %}
+                    <th class="sorttable_nosort" count_type="ignore">
+                        <a href="/admin/groups/add">
+                            <img src="{{ url_for('static', filename='pictures/plus_blue.png') }}"/>
+                        </a>
+                    </th>
+                </tr>
+            </thead>
+            <tbody id="fbody1">
+            {% for group in user.groups %}
+                <tr>
+                {% for k, v in groups_fields %}
+                    <td>
+                    {% if v == 'name' %}
+                        <a href="/admin/groups/{{ group.mongo_id }}">{{ group[v] }}</a>
+                    {% elif v in ('members','servers') %}
+                        {{ group[v]|list|length }}
+                    {% else %}
+                        {{ group[v] }}
+                    {% endif %}
+                    <span class="custom_count" style="display:none">{{ group[v] }}}</span>
+                    </td>
+                {% endfor %}
+                    <td>
+                        <img src="{{ url_for('static', filename='pictures/minus_blue.png') }}"
+                             onclick="delete_group({{ group.id }})"/>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        No groups
+    {% endif %}
+
+    <!-- User projects -->
+    <h2>User's Projects</h2>
+    <p><input id="searchInput2" placeholder="Filter"></p>
+    {{ project_macros.table(user.projects_owned,user,2,"No user projects") }}
+
+    <!-- Other users' projects -->
+    <h2>Member of Projects</h2>
+    <p><input id="searchInput3" placeholder="Filter"></p>
+    {{ project_macros.table(user.member_of_projects,user,3,"Not a member of any projects.") }}
+
+{% endblock %}

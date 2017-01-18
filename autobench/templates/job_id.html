@@ -1,15 +1,15 @@
-{% extends "base.html" %}
+{% extends "/base.html" %}
 
 {# =============================================================== #}
 {# set body data #}
 {# =============================================================== #}
 
-{% set field_pairs = (('Time','time'),('Message','message')) %}
+{% set field_pairs = (('Time','datetime'),('Message','message')) %}
 
 {% block content %}
     <h2>Job {{ job.id }} Details</h2>
     <p>Details are shown newest to oldest.</p>
-    {% set details = job.details.all() %}
+    {% set details = job.details %}
     {% if details %}
     <table id="aaetable" class="sortable pane bigtable stripped">
         <thead>
@@ -27,7 +27,11 @@
             <tr>
             {% for k, v in field_pairs %}
                 <td>
+                {% if v.endswith('time') %}
+                    {{ detail[v]|datetime_format() }}
+                {% else %}
                     {{ detail[v] }}
+                {% endif %}
                 </td>
             {% endfor %}
             </tr>

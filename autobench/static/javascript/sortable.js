@@ -94,6 +94,7 @@ sorttable = {
                 headrow[i].sorttable_columnindex = i;
                 headrow[i].sorttable_tbody = table.tBodies[0];
                 dean_addEvent(headrow[i], "click", sorttable.innerSortFunction = function (e) {
+                    console.log('clicked ' + this.innerHTML);
 
                     if (this.className.search(/\bsorttable_sorted\b/) != -1) {
                         // if we're already sorted by this column, just
@@ -184,7 +185,7 @@ sorttable = {
             text = sorttable.getInnerText(table.tBodies[0].rows[i].cells[column]);
             if (text != '' && text != 'None') {
                 // check for currency
-                if (text.match(/^-?[£$¤]?[\d,.]+%?$/)) {
+                if (text.match(/^-?[Â£$â‚¬]?[\d,.]+%?$/)) {
                     return sorttable.sort_numeric;
                 }
                 // check for numbers
@@ -222,33 +223,35 @@ sorttable = {
         // for example, you can override the cell text with a customkey attribute.
         // it also gets .value for <input> fields.
 
-        if (!node) return "";
+        var inner_text = "";
+        if (!node) return inner_text;
+
 
         hasInputs = (typeof node.getElementsByTagName == 'function') &&
             node.getElementsByTagName('input').length;
 
         if (node.getAttribute("sorttable_customkey") != null) {
-            return node.getAttribute("sorttable_customkey");
+            inner_text = node.getAttribute("sorttable_customkey");
         }
         else if (typeof node.textContent != 'undefined' && !hasInputs) {
-            return node.textContent.replace(/^\s+|\s+$/g, '');
+            inner_text = node.textContent.replace(/^\s+|\s+$/g, '');
         }
         else if (typeof node.innerText != 'undefined' && !hasInputs) {
-            return node.innerText.replace(/^\s+|\s+$/g, '');
+            inner_text = node.innerText.replace(/^\s+|\s+$/g, '');
         }
         else if (typeof node.text != 'undefined' && !hasInputs) {
-            return node.text.replace(/^\s+|\s+$/g, '');
+            inner_text = node.text.replace(/^\s+|\s+$/g, '');
         }
         else {
             switch (node.nodeType) {
                 case 3:
                     console.log('node' + node + 'is case 3');
                     if (node.nodeName.toLowerCase() == 'input') {
-                        return node.value.replace(/^\s+|\s+$/g, '');
+                        inner_text = node.value.replace(/^\s+|\s+$/g, '');
                     }
                 case 4:
                     console.log('node' + node + 'is case 4');
-                    return node.nodeValue.replace(/^\s+|\s+$/g, '');
+                    inner_text = node.nodeValue.replace(/^\s+|\s+$/g, '');
                     break;
                 case 1:
                 case 11:
@@ -257,13 +260,15 @@ sorttable = {
                     for (var i = 0; i < node.childNodes.length; i++) {
                         innerText += sorttable.getInnerText(node.childNodes[i]);
                     }
-                    return innerText.replace(/^\s+|\s+$/g, '');
+                    inner_text = innerText.replace(/^\s+|\s+$/g, '');
                     break;
                 default:
                     console.log('node' + node + 'is case default');
-                    return '';
+                    inner_text = '';
             }
         }
+        //console.log(inner_text + ":" + $.trim(inner_text.split(' ')[0]));
+        return $.trim(inner_text).split(' ')[0].toLowerCase();
     },
 
     reverse: function (tbody) {

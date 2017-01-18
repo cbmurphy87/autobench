@@ -1,5 +1,5 @@
 #!/usr/bin/python
-from autobench import db as _db, models
+from autobench import db as _db, mysql_models
 
 
 def load_oses(db):
@@ -41,14 +41,14 @@ def load_oses(db):
              'append': ''}]
 
     # delete all oses in database, if any
-    all_oses = models.OS.query.all()
+    all_oses = mysql_models.OS.query.all()
     for os in all_oses:
         db.session.delete(os)
     db.session.commit()
 
     # add all oses
     for os in oses:
-        s = models.OS(**os)
+        s = mysql_models.OS(**os)
         db.session.add(s)
     db.session.commit()
 

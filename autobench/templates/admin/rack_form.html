@@ -1,0 +1,6 @@
+<select {{ "disabled " if disabled }} id="{{ id }}" name="{{ name }}">
+    <option selected value="__None">Select a Rack</option>
+    {% for option in options %}
+    <option value="{{ option.id }}">{{ option.number }}</option>
+    {% endfor %}
+</select>

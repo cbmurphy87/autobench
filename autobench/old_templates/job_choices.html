@@ -1,0 +1,39 @@
+{% macro recurse_dict(obj, step_name=none, depth=0) %}
+    {% if obj is mapping %}
+        {% for k, v in obj.items() %}
+            <div class="build_step_container">
+            {% if depth == 0 %}
+                {% set step_name = k %}
+            {% else %}
+                {% set step_name = step_name + '_' + k %}
+            {% endif %}
+            <div style="width:100%;">{{ k }}</div>
+            {{ recurse_dict(v, step_name, depth + 1) }}
+            </div>
+        {% endfor %}
+    {% elif obj is string %}
+        {% if depth == 0 %}
+            {% set step_name = obj %}
+        {% else %}
+            {% set step_name = step_name + '_' + obj %}
+        {% endif %}
+        {% set step_list = step_name.split('_') %}
+        {% set step_string = step_list[0] %}
+        {% if step_list|length < 2 %}
+            {% set step_list = step_list + [None] %}
+        {% endif %}
+        <div draggable="true" class="build_step" data-class="{{ step_list[0] }}" data-add_action='{{ step_list[-1] }}'>
+        {{ obj }}
+        </div>
+    {% elif obj is sequence %}
+        {% for item in obj %}
+            {{ recurse_dict(item, step_name, depth) }}
+        {% endfor %}
+    {% else %}
+        OOPS!
+    {% endif %}
+{% endmacro %}
+
+{% block try %}
+    {{ recurse_dict(step_map[last_step]) }}
+{% endblock %}

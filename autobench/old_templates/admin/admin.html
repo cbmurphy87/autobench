@@ -1,0 +1,218 @@
+{% extends '../../old_templates/base.html' %}
+{% import '../../old_templates/project_macros.html' as project_macros %}
+
+{% set users_fields = (('First Name','first_name'),('Last Name','last_name'),
+('User Name','user_name'),('E-mail','email'),('Admin','admin'),
+('Groups','groups')) %}
+{% set groups_fields = (('GID','id'),('Name','group_name'),
+('Members','members'),('Servers','servers'),('Description','description')) %}
+{% set project_fields = (('Project ID','id'),('Name','name'),
+('Owner','owner'),('Start Date','start_date'),
+('Completion Date','target_end_date')) %}
+{% set room_fields = (('Room ID','id'),('Name','name'),('Description','description')) %}
+
+{% block links %}
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/filterTable.js') }}></script>
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/inventory.js') }}></script>
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/admin.js') }}></script>
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/projects.js') }}></script>
+{% endblock %}
+
+{% block scripts %}
+    $(document).ready(function () {
+        $("#searchInput").keyup(
+            function () {
+                counttable();
+                updateStriping();
+            }
+        );
+        $("th").click(
+            function () {
+                updateStriping();
+            }
+        );
+    });
+{% endblock %}
+
+{% block content %}
+    <!-- Users -->
+    <h2>Users</h2>
+    <p><input id="searchInput1" placeholder="Filter"></p>
+    <table class="sortable pane bigtable stripped count">
+        <thead>
+            <tr class="header">
+            {% for k, v in users_fields %}
+                {# set count types for columns #}
+                {% if k.endswith('name') %}
+                    {% set count_type = 'unique' %}
+                    {% set units = 'none' %}
+                {% elif k.lower() == 'admin' %}
+                    {% set count_type = 'sum' %}
+                    {% set units = 'none' %}
+                {% else %}
+                    {% set count_type = 'count' %}
+                    {% set units = 'none' %}
+                {% endif %}
+                <th{{ class }} unit="{{ units }}" count_type="{{ count_type }}">
+                    {{ k }}
+                </th>
+            {% endfor %}
+                <th class="sorttable_nosort" count_type="ignore">
+                    <a href="/admin/user/add">
+                        <img src="{{ url_for('static', filename='pictures/plus_blue.png') }}"/>
+                    </a>
+                </th>
+            </tr>
+        </thead>
+        <tbody id="fbody1">
+        {% for u in users %}
+            <tr>
+            {% for k, v in users_fields %}
+                <td>
+                {% if v == 'user_name' %}
+                    <a href="/admin/users/{{ u.user_name }}" title="Edit user">{{ u[v] }}</a>
+                {% elif v == 'groups' %}
+                    {{ u.groups|join(',') }}
+                {% else %}
+                    {{ u[v] }}
+                {% endif %}
+                <span class="custom_count" style="display:none">{{ u[v] }}}</span>
+                </td>
+            {% endfor %}
+                <td>
+                    <img src="{{ url_for('static', filename='pictures/minus_blue.png') }}"
+                         onclick="delete_user('{{ u.user_name }}')"/>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Groups -->
+    <h2>Groups</h2>
+    {% if groups %}
+        <p><input id="searchInput2" placeholder="Filter"></p>
+        <table class="sortable pane bigtable stripped count">
+            <thead>
+                <tr class="header">
+                {% for k, v in groups_fields %}
+                    {# set count types for columns #}
+                    {% if k.lower() in ['start', 'end'] %}
+                        {% set count_type = 'ignore' %}
+                        {% set units = 'none' %}
+                    {% elif k.endswith('name') %}
+                        {% set count_type = 'unique' %}
+                        {% set units = 'none' %}
+                    {% else %}
+                        {% set count_type = 'count' %}
+                        {% set units = 'none' %}
+                    {% endif %}
+                    {% if  v == None %}
+                        {% set class = " class=sorttable_nosort" %}
+                    {% endif %}
+                    <th{{ class }} unit="{{ units }}" count_type="{{ count_type }}">
+                        {{ k }}
+                    </th>
+                {% endfor %}
+                    <th class="sorttable_nosort" count_type="ignore">
+                        <a href="/admin/group/add">
+                            <img src="{{ url_for('static', filename='pictures/plus_blue.png') }}"/>
+                        </a>
+                    </th>
+                </tr>
+            </thead>
+            <tbody id="fbody2">
+            {% for g in groups %}
+                <tr>
+                {% for k, v in groups_fields %}
+                    <td>
+                    {% if v == 'group_name' %}
+                        <a href="/admin/groups/{{ g.id }}">{{ g[v] }}</a>
+                    {% elif v in ('members','servers') %}
+                        {{ g[v]|count }}
+                    {% else %}
+                        {{ g[v] }}
+                    {% endif %}
+                    <span class="custom_count" style="display:none">{{ g[v] }}}</span>
+                    </td>
+                {% endfor %}
+                    <td>
+                        <img src="{{ url_for('static', filename='pictures/minus_blue.png') }}"
+                             onclick="delete_group({{ g.id }})"/>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        No groups
+        <p>
+            <a href="/admin/group/add">Add Group</a>
+        </p>
+    {% endif %}
+
+    <!-- Projects -->
+    {% set project_fields = (('Project ID','id'),('Name','name'),
+    ('Group','primary_group'),('Owner','owner'),('Start Date','start_date'),
+    ('Completion Date','target_end_date'),('Status','status')) %}
+    <h2>Projects</h2>
+    <p><span><input id="searchInput3" placeholder="Filter"> <input type="checkbox" id="archive_checkbox" value="show_archived" onclick="toggle_archived()">Show archived projects.</span></p>
+    {% set alternate = 'There are no projects yet.
+    <p>
+        <a href="/projects/add">Add Project</a>
+    </p>' %}
+    {{ project_macros.table(projects,user,3,alternate,project_fields) }}
+
+    <!-- Rooms -->
+    <h2>Rooms</h2>
+    {% if rooms %}
+        <p><input id="searchInput4" placeholder="Filter"></p>
+        <table class="sortable pane bigtable stripped count">
+            <thead>
+                <tr class="header">
+                {% for k, v in room_fields %}
+                    {# set count types for columns #}
+                    {% set count_type = 'count' %}
+                    {% set units = 'none' %}
+                    {% if  v == None %}
+                        {% set class = " class=sorttable_nosort" %}
+                    {% endif %}
+                    <th{{ class }} unit="{{ units }}" count_type="{{ count_type }}">
+                        {{ k }}
+                    </th>
+                {% endfor %}
+                    <th class="sorttable_nosort" count_type="ignore">
+                        <a href="/admin/rooms/add">
+                            <img src="{{ url_for('static', filename='pictures/plus_blue.png') }}"/>
+                        </a>
+                    </th>
+                </tr>
+            </thead>
+            <tbody id="fbody4">
+            {% for room in rooms %}
+                <tr>
+                {% for k, v in room_fields %}
+                    <td>
+                    {% if v == 'name' %}
+                        <a href="/admin/rooms/{{ room.id }}">{{ room[v] }}</a>
+                    {% else %}
+                        {{ room[v] }}
+                    {% endif %}
+                    <span class="custom_count" style="display:none">{{ room[v] }}}</span>
+                    </td>
+                {% endfor %}
+                    <td>
+                        <img src="{{ url_for('static', filename='pictures/minus_blue.png') }}"
+                             onclick="delete_room({{ room.id }})"/>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        No rooms
+        <p>
+            <a href="/admin/rooms/add">Add Room</a>
+        </p>
+    {% endif %}
+{% endblock %}

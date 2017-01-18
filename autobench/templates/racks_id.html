@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% import 'inventory_macros.html' as inventory_macros %}
+
+{% set server_fields = (('S', 'available'),('U','u'),('ID', 'id'),
+('Group','group'),('Name','get_name'),('Model','model'),
+('Memory','memory_capacity')) %}
+
+{% set rack_fields = (('ID','mongo_id'),('Make','make'),('Model','model'),
+('Serial Number','serial_number'),('Location','location'),('Number','number')) %}
+
+{% block links %}
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/filterTable.js') }}></script>
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/inventory.js') }}></script>
+    <script type="text/javascript" src={{ url_for('static', filename='javascript/admin.js') }}></script>
+{% endblock %}
+
+{% block content %}
+    <!-- Basic Info -->
+    <h2>Rack Info</h2>
+    <div class="pane-frame">
+        <table class="pane bigtable stripped">
+            <thead>
+                <tr class="header">
+                {# create header for inventory table #}
+                    <th colspan="2" style="text-align:center;">
+                        Rack Info
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+            {# loop over servers in inventory #}
+            {% for k, v in rack_fields %}
+                <tr>
+                    <td style="text-align:right;">
+                        {{ k }}:
+                    </td>
+                    <td>
+                        {% if v == 'make' %}
+                        <i>{{ rack.model.make }}</i>
+                        {% elif rack[v].render %}
+                            <i>{{ rack[v].render|safe }}</i>
+                        {% else %}
+                            <i>{{ rack[v] }}</i>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div style="padding-top:5px;">
+        <a href="/admin/racks/{{ rack.mongo_id }}/edit">Edit Rack Info</a>
+    </div>
+
+    <!-- Servers -->
+    <h2>Servers</h2>
+    {{ inventory_macros.servers_table(servers,user,server_fields=server_fields,
+            alternate='There are no servers in this rack.') }}
+{% endblock %}

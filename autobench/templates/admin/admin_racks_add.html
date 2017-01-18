@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+
+{% set add_rack_fields = ('location','make','model','serial_number','number') %}
+
+{% block content %}
+    <h2>Add Rack</h2>
+    <div style="display:block;">
+        <div style="display:block;">
+            <form action="" method="POST" name="add_room">
+                {{ form.hidden_tag() }}
+                <div style="height:150px;margin:auto;float:left;">
+                    <table class="edit_info bigtable pane bigtable stripped" style="width:auto;">
+                        <thead>
+                            <tr>
+                                <th colspan="2">
+                                    Rack Info
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {# loop over servers in inventory #}
+                        {% for field_name in add_rack_fields %}
+                            <tr>
+                            {% set field = form[field_name] %}
+                                <td style="text-align:right;">
+                                {{ field.label.text }}:
+                                </td>
+                                <td style="text-align:left;">
+                                {% if field == 'model' %}
+                                {{ field(disabled=True) }}
+                                {% else %}
+                                    {{ field }}
+                                {% endif %}
+                                </td>
+                                {% if field.errors %}
+                                    <td>
+                                    {% for error in field.errors %}
+                                        <span style="color:red;">[{{ error }}]</span>
+                                    {% endfor %}
+                                    </td>
+                                {% endif %}
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                    <input type="submit" value="Submit" style="margin-top:10px;">
+                </div>
+            </form>
+        </div>
+        <div style="display:block;">
+            Don't see the model you're looking for?<br>
+            <a href="/admin/racks/models/add">Add Rack Model</a>
+        </div>
+    </div>
+{% endblock %}
